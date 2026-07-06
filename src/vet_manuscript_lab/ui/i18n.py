@@ -203,6 +203,62 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Review endpoints, eligibility, and STROBE-Vet mapping.",
         "zh": "审阅终点、纳入排除标准与 STROBE-Vet 规范映射。",
     },
+    "gate.search_strategy.title": {
+        "en": "Approve search strategy and database queries",
+        "zh": "审批检索策略与数据库查询",
+    },
+    "gate.search_strategy.summary": {
+        "en": "Review databases, query strings, and date filters before screening.",
+        "zh": "在筛选前审阅数据库、查询字符串与日期范围。",
+    },
+    # literature + evidence view labels
+    "section_literature": {"en": "Literature records", "zh": "文献记录"},
+    "section_evidence": {"en": "Evidence items", "zh": "证据条目"},
+    "section_source_spans": {"en": "Source spans", "zh": "来源段落"},
+    "col_record_id": {"en": "Record ID", "zh": "记录 ID"},
+    "col_title": {"en": "Title", "zh": "标题"},
+    "col_doi": {"en": "DOI", "zh": "DOI"},
+    "col_decision": {"en": "Screening", "zh": "筛选"},
+    "col_page": {"en": "Page", "zh": "页码"},
+    "col_section": {"en": "Section", "zh": "章节"},
+    "col_concept": {"en": "Concept", "zh": "概念"},
+    "col_value": {"en": "Value", "zh": "值"},
+    "col_review": {"en": "Needs review", "zh": "待审核"},
+    "col_status": {"en": "Status", "zh": "状态"},
+    "col_span_id": {"en": "Span ID", "zh": "段落 ID"},
+    "label_yes": {"en": "Yes", "zh": "是"},
+    "label_no": {"en": "No", "zh": "否"},
+    "info_no_literature": {
+        "en": "No literature records yet.",
+        "zh": "暂无文献记录。",
+    },
+    "info_no_evidence": {
+        "en": "No evidence items extracted yet.",
+        "zh": "暂无提取的证据条目。",
+    },
+    "label_included_count": {"en": "Included", "zh": "纳入"},
+    "label_excluded_count": {"en": "Excluded", "zh": "排除"},
+    "label_total_evidence": {"en": "Total evidence", "zh": "证据总数"},
+    "label_items_review": {
+        "en": "Items requiring review",
+        "zh": "待审核条目",
+    },
+    "app_caption_full": {
+        "en": "Literature & evidence pipeline: search → screen → extract → audit",
+        "zh": "文献与证据流水线：检索 → 筛选 → 提取 → 审计",
+    },
+    "button_start_full_run": {
+        "en": "Start literature & evidence run",
+        "zh": "启动文献与证据工作流",
+    },
+    "workflow_header_full": {
+        "en": "Literature & evidence workflow",
+        "zh": "文献与证据工作流",
+    },
+    "success_pipeline_complete": {
+        "en": "Pipeline complete: evidence extracted and audited.",
+        "zh": "流水线完成：证据已提取并审计。",
+    },
 }
 
 
