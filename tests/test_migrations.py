@@ -28,6 +28,12 @@ class MigrationTests(unittest.TestCase):
                     "approvals",
                     "locks",
                     "audit_events",
+                    "literature_records",
+                    "attachment_versions",
+                    "source_spans",
+                    "evidence_items",
+                    "screening_decisions",
+                    "provenance_links",
                     "alembic_version",
                 }.issubset(tables)
             )

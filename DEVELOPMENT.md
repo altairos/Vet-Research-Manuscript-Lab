@@ -89,9 +89,13 @@ artifacts/           # 本地运行产物，不提交 Git
 
 ## 4. 阶段化实施流程
 
-### 阶段 0：工程基线与决策冻结
+### 阶段 0：工程基线与决策冻结 ✅
 
 目标：把讨论结论转成可执行的工程边界。
+
+状态：**已完成。** Python 3.12 + src layout、pyproject.toml、Alembic、Ruff、
+mypy、pytest 均已配置；ADR-0001 至 ADR-0005 已建立；golden project fixture
+已就位。
 
 任务：
 
@@ -102,7 +106,7 @@ artifacts/           # 本地运行产物，不提交 Git
 5. 定义 ID、UTC 时间、hash、错误码和 artifact 类型规范。
 6. 建立不含真实病例或隐私信息的 golden project fixture。
 
-交付物：可安装的空包、测试基线、CI 基线、ADR-001 至 ADR-004。
+交付物：可安装的空包、测试基线、CI 基线、ADR-0001 至 ADR-005。
 
 退出门槛：
 
@@ -111,9 +115,13 @@ artifacts/           # 本地运行产物，不提交 Git
 - 非法主流程转换被拒绝；
 - 仓库中不存在密钥或真实病例数据。
 
-### 阶段 1：Foundation 纵向切片
+### 阶段 1：Foundation 纵向切片 ✅
 
 目标：不依赖真实 LLM 和外部 API，跑通项目创建、审批、锁定和恢复。
+
+状态：**已完成。** Foundation graph 从 Project Init 运行到 Protocol Lock，
+支持 interrupt/resume、版本化 artifact、审批与锁定策略、checkpoint 恢复。
+迁移 0001_foundation 已就位。
 
 任务：
 
@@ -137,15 +145,33 @@ artifacts/           # 本地运行产物，不提交 Git
 
 目标：实现从 Zotero 条目到可定位 EvidenceItem 的完整证据链。
 
-任务：
+状态：**数据结构已就绪，业务逻辑开发中。**
+
+已完成的准备（ADR-0005、迁移 0002_literature_evidence）：
+
+- `literature_records`、`attachment_versions`、`source_spans`、`evidence_items`、
+  `screening_decisions`、`provenance_links` 六张关系表；
+- DOI/PMID 项目内去重唯一约束；
+- `LiteratureRepository` 事务仓库（CRUD + 去重 + 筛选计数 + 溯源链接）；
+- `domain/policies/evidence.py` 策略层（源跨度前置、检索审批前置、筛选完成
+  前置、引用去重）；
+- `WorkflowState` 扩展 `LiteratureSummary` 和 `EvidenceSummary` 引用字段；
+- `ArtifactType` 补充 `SCREENING_RESULT`、`LITERATURE_BATCH`、
+  `DATASET_DICTIONARY`、`REVIEWER_CRITIQUE`、`GUIDELINE_CHECKLIST`、
+  `CITATION_AUDIT`、`AI_USAGE_LOG` 七个类型；
+- 20 个新增测试覆盖仓库操作与策略不变量。
+
+待实现任务：
 
 1. 实现 Zotero API v3 只读同步和增量版本记录。
 2. 实现 PDF 附件导入、hash、解析状态和失败重试。
 3. 实现文本分块元数据；保留页码、章节、字符位置和附件版本。
 4. 接入 LlamaIndex 混合检索与 rerank，但只输出候选 chunk。
-5. 实现 `SourceSpan`、`EvidenceItem` 和 screening decision。
+5. 实现 `SourceSpan`、`EvidenceItem` 和 screening decision 的 LangGraph
+   节点（数据库表和策略层已就绪）。
 6. 实现搜索策略审批、纳排原因和冲突人工处理。
 7. 实现第一版 citation/evidence audit。
+8. 扩展 Foundation graph 到 `LITERATURE_SEARCH` → `EVIDENCE_AUDIT` 阶段。
 
 MVP 限制：复杂表格、扫描件、无法可靠定位页码的内容必须标记
 `needs_human_review`，不承诺自动提取。
@@ -341,16 +367,32 @@ documentation updated when contracts change
 
 按依赖顺序建立首批 issue：
 
-1. 初始化 Python 包、测试和静态检查配置。
-2. 整理 `WorkflowState` 并编写转换/序列化测试。
-3. 实现 Artifact/ArtifactVersion 和本地 artifact store。
-4. 实现 Approval/Lock/AuditEvent 与 policy 校验。
-5. 实现 SQLite schema 和首个 Alembic migration。
-6. 构建 Project Init -> Question Approval 的 mock LangGraph 切片。
-7. 扩展到 Protocol Approval -> Protocol Lock。
-8. 添加 Streamlit 项目、运行和审批页面。
-9. 添加 checkpoint 中断恢复与 approval bypass 集成测试。
-10. 建立不含真实病例数据的 golden project fixture。
+1. ✅ 初始化 Python 包、测试和静态检查配置。
+2. ✅ 整理 `WorkflowState` 并编写转换/序列化测试。
+3. ✅ 实现 Artifact/ArtifactVersion 和本地 artifact store。
+4. ✅ 实现 Approval/Lock/AuditEvent 与 policy 校验。
+5. ✅ 实现 SQLite schema 和首个 Alembic migration。
+6. ✅ 构建 Project Init -> Question Approval 的 mock LangGraph 切片。
+7. ✅ 扩展到 Protocol Approval -> Protocol Lock。
+8. ✅ 添加 Streamlit 项目、运行和审批页面。
+9. ✅ 添加 checkpoint 中断恢复与 approval bypass 集成测试。
+10. ✅ 建立不含真实病例数据的 golden project fixture。
 
 完成这十项后，再进入 Zotero、PDF 和 LlamaIndex 集成。
+
+### Phase 2 前置任务（数据结构层）
+
+1. ✅ 评估 Phase 2 所需的领域表结构（对照 IDEA.md 与 domain_model.md）。
+2. ✅ 创建迁移 0002_literature_evidence（6 张关系表 + 唯一约束 + 索引）。
+3. ✅ 添加 ORM 模型（LiteratureRecord、AttachmentVersionRecord、
+   SourceSpanRecord、EvidenceItemRecord、ScreeningDecisionRecord、
+   ProvenanceLinkRecord）。
+4. ✅ 补充 ArtifactType 枚举（7 个新类型）。
+5. ✅ 创建 domain/policies/evidence.py（4 个策略函数 + 3 个 dataclass）。
+6. ✅ 创建 LiteratureRepository（CRUD + 去重 + 筛选 + 溯源）。
+7. ✅ 扩展 WorkflowState（LiteratureSummary、EvidenceSummary）。
+8. ✅ 编写测试（20 个新测试覆盖仓库 + 策略 + 迁移）。
+9. ✅ 记录 ADR-0005。
+
+### Phase 2 业务逻辑开发任务（下一步）
 

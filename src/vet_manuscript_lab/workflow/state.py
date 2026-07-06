@@ -124,6 +124,24 @@ class EventRecord(TypedDict):
     metadata: NotRequired[dict[str, Any]]
 
 
+class LiteratureSummary(TypedDict):
+    """Compact literature/search summary kept in state (references only)."""
+
+    total_records: int
+    included_count: int
+    excluded_count: int
+    search_strategy_version_id: NotRequired[str]
+    evidence_ledger_version_id: NotRequired[str]
+
+
+class EvidenceSummary(TypedDict):
+    """Compact evidence extraction summary kept in state (references only)."""
+
+    total_evidence_items: int
+    items_requiring_review: int
+    evidence_ledger_version_id: NotRequired[str]
+
+
 class WorkflowState(TypedDict, total=False):
     """LangGraph state containing references and compact decisions only."""
 
@@ -146,6 +164,8 @@ class WorkflowState(TypedDict, total=False):
     artifacts: dict[str, ArtifactRef]
     approvals: dict[str, ApprovalRef]
     locks: dict[str, LockRef]
+    literature_summary: NotRequired[LiteratureSummary | None]
+    evidence_summary: NotRequired[EvidenceSummary | None]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -246,6 +266,8 @@ def new_workflow_state(
         "artifacts": {},
         "approvals": {},
         "locks": {},
+        "literature_summary": None,
+        "evidence_summary": None,
         "pending_interrupt": None,
         "resume_decision": None,
         "errors": [],
@@ -305,8 +327,10 @@ __all__ = [
     "ApprovalDecision",
     "ApprovalRef",
     "ArtifactRef",
+    "EvidenceSummary",
     "GateType",
     "InterruptPayload",
+    "LiteratureSummary",
     "LockRef",
     "RunStatus",
     "WorkflowStage",
