@@ -21,6 +21,15 @@ from vet_manuscript_lab.infrastructure.database.repository import (
     FoundationRepository,
     ProjectInput,
 )
+from vet_manuscript_lab.ui.i18n import (
+    DEFAULT_LANGUAGE,
+    LANGUAGE_LABELS,
+    SUPPORTED_LANGUAGES,
+    gate_field,
+    stage_label,
+    status_label,
+    translate,
+)
 from vet_manuscript_lab.workflow.foundation_graph import build_foundation_graph
 from vet_manuscript_lab.workflow.state import new_workflow_state
 
@@ -59,15 +68,35 @@ def _interrupt_values(snapshot: Any) -> list[dict[str, Any]]:
     return values
 
 
+def _render_language_switch() -> None:
+    """Persist the active UI language (English / Chinese) in session state."""
+
+    options = list(SUPPORTED_LANGUAGES)
+    current = st.session_state.get("language", DEFAULT_LANGUAGE)
+    if current not in options:
+        current = DEFAULT_LANGUAGE
+    selected = st.sidebar.selectbox(
+        translate("language_label"),
+        options=options,
+        format_func=lambda code: LANGUAGE_LABELS[code],
+        index=options.index(current),
+    )
+    st.session_state["language"] = selected
+
+
 def _render_project_creation(app: Application) -> None:
-    st.subheader("Create project")
+    st.subheader(translate("create_project_header"))
+    species_options = ["canine", "feline"]
     with st.form("create_project", clear_on_submit=True):
-        title = st.text_input("Project title")
-        owner_id = st.text_input("Owner ID")
+        title = st.text_input(translate("field_project_title"))
+        owner_id = st.text_input(translate("field_owner_id"))
         species = st.multiselect(
-            "Species scope", ["canine", "feline"], default=["canine"]
+            translate("field_species_scope"),
+            species_options,
+            format_func=lambda code: translate(f"species_{code}"),
+            default=["canine"],
         )
-        submitted = st.form_submit_button("Create")
+        submitted = st.form_submit_button(translate("button_create"))
     if submitted:
         try:
             project = app.repository.create_project(
@@ -82,18 +111,18 @@ def _render_project_creation(app: Application) -> None:
             st.error(str(exc))
         else:
             st.session_state["project_id"] = project.id
-            st.success(f"Created project {project.id}")
+            st.success(translate("success_project_created", id=project.id))
             st.rerun()
 
 
 def _render_projects(app: Application) -> None:
     projects = app.repository.list_projects()
     if not projects:
-        st.info("No projects yet.")
+        st.info(translate("info_no_projects"))
         return
     labels = {project.id: f"{project.title} ({project.id[:8]})" for project in projects}
     selected = st.selectbox(
-        "Active project",
+        translate("field_active_project"),
         options=list(labels),
         format_func=lambda project_id: labels[project_id],
         index=0,
@@ -117,8 +146,8 @@ def _start_workflow(app: Application, project_id: str) -> None:
 
 
 def _render_workflow(app: Application, project_id: str) -> None:
-    st.subheader("Foundation workflow")
-    if st.button("Start new Foundation run"):
+    st.subheader(translate("workflow_header"))
+    if st.button(translate("button_start_run")):
         _start_workflow(app, project_id)
         st.rerun()
 
@@ -130,16 +159,16 @@ def _render_workflow(app: Application, project_id: str) -> None:
     state = snapshot.values
     st.write(
         {
-            "thread_id": thread_id,
-            "stage": state.get("current_stage"),
-            "status": state.get("run_status"),
-            "next": snapshot.next,
+            translate("label_thread_id"): thread_id,
+            translate("label_stage"): stage_label(state.get("current_stage")),
+            translate("label_status"): status_label(state.get("run_status")),
+            translate("label_next"): snapshot.next,
         }
     )
 
-    with st.expander("Artifact references", expanded=False):
+    with st.expander(translate("expander_artifact_refs"), expanded=False):
         st.json(state.get("artifacts", {}))
-    with st.expander("Approvals and locks", expanded=False):
+    with st.expander(translate("expander_approvals_locks"), expanded=False):
         st.json(
             {
                 "approvals": state.get("approvals", {}),
@@ -150,18 +179,28 @@ def _render_workflow(app: Application, project_id: str) -> None:
     pending = _interrupt_values(snapshot)
     if not pending:
         if state.get("run_status") == "complete":
-            st.success("Protocol is approved and locked.")
+            st.success(translate("success_protocol_locked"))
         return
 
     gate = pending[0]
-    st.warning(gate["title"])
-    st.caption(gate["summary"])
+    gate_name = gate["gate"]
+    st.warning(gate_field(gate_name, "title"))
+    st.caption(gate_field(gate_name, "summary"))
+    role_options = ["investigator", "statistician"]
     with st.form(f"approval_{gate['gate']}"):
-        reviewer_id = st.text_input("Reviewer ID")
-        reviewer_role = st.selectbox("Reviewer role", ["investigator", "statistician"])
-        decision = st.selectbox("Decision", gate["allowed_decisions"])
-        comment = st.text_area("Comment")
-        submitted = st.form_submit_button("Submit decision")
+        reviewer_id = st.text_input(translate("field_reviewer_id"))
+        reviewer_role = st.selectbox(
+            translate("field_reviewer_role"),
+            role_options,
+            format_func=lambda role: translate(f"role_{role}"),
+        )
+        decision = st.selectbox(
+            translate("field_decision"),
+            gate["allowed_decisions"],
+            format_func=lambda value: translate(f"decision.{value}"),
+        )
+        comment = st.text_area(translate("field_comment"))
+        submitted = st.form_submit_button(translate("button_submit_decision"))
     if submitted:
         try:
             app.graph.invoke(
@@ -183,9 +222,10 @@ def _render_workflow(app: Application, project_id: str) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Vet Research Manuscript Lab", layout="wide")
-    st.title("Vet Research Manuscript Lab")
-    st.caption("Foundation MVP: project setup, approval gates, and protocol lock")
+    st.set_page_config(page_title=translate("page_title"), layout="wide")
+    _render_language_switch()
+    st.title(translate("app_title"))
+    st.caption(translate("app_caption"))
     app = get_application()
     _render_project_creation(app)
     st.divider()

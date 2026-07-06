@@ -41,6 +41,10 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# CJK translation catalog uses fullwidth punctuation legitimately
+"src/vet_manuscript_lab/ui/i18n.py" = ["RUF001", "RUF002", "RUF003"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
