@@ -244,20 +244,130 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "待审核条目",
     },
     "app_caption_full": {
-        "en": "Literature & evidence pipeline: search → screen → extract → audit",
-        "zh": "文献与证据流水线：检索 → 筛选 → 提取 → 审计",
+        "en": (
+            "Full pipeline: research question -> literature -> "
+            "evidence -> methodology -> statistics"
+        ),
+        "zh": "完整流水线：研究问题 → 文献 → 证据 → 方法学 → 统计分析",
     },
     "button_start_full_run": {
-        "en": "Start literature & evidence run",
-        "zh": "启动文献与证据工作流",
+        "en": "Start full analysis pipeline",
+        "zh": "启动完整分析流水线",
     },
     "workflow_header_full": {
-        "en": "Literature & evidence workflow",
-        "zh": "文献与证据工作流",
+        "en": "Analysis pipeline",
+        "zh": "分析流水线",
     },
     "success_pipeline_complete": {
-        "en": "Pipeline complete: evidence extracted and audited.",
-        "zh": "流水线完成：证据已提取并审计。",
+        "en": "Pipeline complete: statistical results approved.",
+        "zh": "流水线完成：统计结果已审批。",
+    },
+    # methodology + analysis views
+    "section_methodology": {"en": "Methodology findings", "zh": "方法学发现"},
+    "section_analysis_plan": {"en": "Analysis plan", "zh": "分析计划"},
+    "section_results": {"en": "Statistical results", "zh": "统计结果"},
+    "col_category": {"en": "Category", "zh": "类别"},
+    "col_severity": {"en": "Severity", "zh": "严重度"},
+    "col_rationale": {"en": "Rationale", "zh": "理由"},
+    "col_recommendation": {"en": "Recommendation", "zh": "建议"},
+    "col_analysis_name": {"en": "Analysis", "zh": "分析名称"},
+    "col_estimand": {"en": "Estimand", "zh": "估计量"},
+    "col_estimate": {"en": "Estimate", "zh": "估计值"},
+    "col_ci": {"en": "95% CI", "zh": "95% CI"},
+    "col_p_value": {"en": "P value", "zh": "P 值"},
+    "col_method": {"en": "Method", "zh": "方法"},
+    "col_class": {"en": "Class", "zh": "类型"},
+    "label_findings_count": {"en": "Total findings", "zh": "发现总数"},
+    "label_warnings_count": {
+        "en": "Warnings",
+        "zh": "警告数",
+    },
+    "label_analysis_count": {"en": "Analyses", "zh": "分析数量"},
+    "label_plan_locked": {"en": "Plan locked", "zh": "计划已锁定"},
+    "label_dataset_locked": {
+        "en": "Dataset locked",
+        "zh": "数据集已锁定",
+    },
+    "label_run_status": {"en": "Run status", "zh": "运行状态"},
+    "label_result_count": {"en": "Results", "zh": "结果数"},
+    "label_reproducible": {
+        "en": "Reproducible",
+        "zh": "可复现",
+    },
+    "info_no_methodology": {
+        "en": "No methodology findings yet.",
+        "zh": "暂无方法学发现。",
+    },
+    "info_no_analysis_plan": {
+        "en": "No analysis plan generated yet.",
+        "zh": "暂无分析计划。",
+    },
+    "info_no_results": {
+        "en": "No statistical results yet.",
+        "zh": "暂无统计结果。",
+    },
+    "gate.analysis_plan.title": {
+        "en": "Approve analysis plan and dataset lock",
+        "zh": "审批分析计划并锁定数据集",
+    },
+    "gate.analysis_plan.summary": {
+        "en": (
+            "Review analyses, variable mappings, models, "
+            "and exclusion criteria before locking."
+        ),
+        "zh": "在锁定前审阅分析项、变量映射、模型与排除标准。",
+    },
+    "gate.results_interpretation.title": {
+        "en": "Review statistical results",
+        "zh": "审阅统计结果",
+    },
+    "gate.results_interpretation.summary": {
+        "en": "Review estimates, confidence intervals, and p-values before proceeding.",
+        "zh": "在继续前审阅估计值、置信区间和 P 值。",
+    },
+    "section_usage": {
+        "en": "AI usage & cost",
+        "zh": "AI 调用与成本",
+    },
+    "label_total_invocations": {
+        "en": "Total invocations",
+        "zh": "总调用次数",
+    },
+    "label_total_cost": {
+        "en": "Total cost",
+        "zh": "总成本",
+    },
+    "label_input_tokens": {
+        "en": "Input tokens",
+        "zh": "输入 Token",
+    },
+    "label_output_tokens": {
+        "en": "Output tokens",
+        "zh": "输出 Token",
+    },
+    "label_fallbacks": {
+        "en": "Fallbacks",
+        "zh": "降级次数",
+    },
+    "label_failures": {
+        "en": "Failures",
+        "zh": "失败次数",
+    },
+    "col_task_kind": {
+        "en": "Task type",
+        "zh": "任务类型",
+    },
+    "col_invocations": {
+        "en": "Calls",
+        "zh": "调用数",
+    },
+    "col_cost_cents": {
+        "en": "Cost",
+        "zh": "费用",
+    },
+    "col_tokens": {
+        "en": "Tokens",
+        "zh": "Token 数",
     },
 }
 

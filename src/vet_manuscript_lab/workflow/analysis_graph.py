@@ -93,6 +93,32 @@ from vet_manuscript_lab.workflow.state import (
 )
 
 # ---------------------------------------------------------------------------
+# AI usage tracking helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_usage(
+    gateway: ModelGateway | None,
+) -> dict[str, Any]:
+    """Extract a compact usage summary from the gateway if available."""
+
+    if gateway is None:
+        return {}
+    log = gateway.usage_log
+    return {
+        "ai_usage": {
+            "total_invocations": len(log.invocations),
+            "total_cost_cents": log.total_cost_cents,
+            "total_input_tokens": log.total_input_tokens,
+            "total_output_tokens": log.total_output_tokens,
+            "fallback_count": log.fallback_count,
+            "failure_count": log.failure_count,
+            "cost_by_stage": log.cost_report_by_stage(),
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
 # Mock data generators (offline fallback)
 # ---------------------------------------------------------------------------
 
@@ -218,6 +244,81 @@ def _mock_dataset_summary(state: WorkflowState) -> DatasetSummary:
 # ---------------------------------------------------------------------------
 
 
+def _parse_gateway_findings(
+    text: str,
+    project_id: str,
+    invocation_id: str,
+) -> list[MethodologyFinding]:
+    """Parse structured findings from gateway output.
+
+    The gateway is prompted to return JSON of the form::
+
+        {"findings": [{"category": ..., "severity": ..., "rationale": ...,
+                        "recommendation": ...}, ...]}
+
+    If JSON parsing fails the raw text is wrapped as a single
+    unstructured finding so the pipeline never crashes on malformed LLM
+    output.
+    """
+
+    import json as _json
+
+    valid_severities = {"info", "warning", "error"}
+    valid_categories = {
+        "confounding",
+        "missing_data",
+        "selection_bias",
+        "measurement_bias",
+        "sample_size",
+        "population_heterogeneity",
+        "model_assumptions",
+        "multiplicity",
+        "other",
+    }
+
+    try:
+        data = _json.loads(text)
+        raw_findings = data.get("findings", [])
+    except (ValueError, TypeError):
+        raw_findings = []
+
+    findings: list[MethodologyFinding] = []
+    for i, rf in enumerate(raw_findings):
+        if not isinstance(rf, dict):
+            continue
+        severity = str(rf.get("severity", "info")).lower()
+        if severity not in valid_severities:
+            severity = "info"
+        category = str(rf.get("category", "other")).lower()
+        if category not in valid_categories:
+            category = "other"
+        findings.append(
+            MethodologyFinding(
+                finding_id=_stable_id(
+                    project_id, "finding", "gateway", invocation_id, str(i)
+                ),
+                category=category,
+                severity=severity,
+                rationale=str(rf.get("rationale", "")),
+                recommendation=str(rf.get("recommendation", "")),
+                status="open",
+            )
+        )
+
+    if not findings:
+        findings.append(
+            MethodologyFinding(
+                finding_id=_stable_id(project_id, "finding", "gateway", invocation_id),
+                category="other",
+                severity="info",
+                rationale=text[:500] if text else "Gateway returned no output.",
+                recommendation="Review gateway output and address findings manually.",
+                status="open",
+            )
+        )
+    return findings
+
+
 def methodology_critic_node(
     state: WorkflowState,
     *,
@@ -226,8 +327,12 @@ def methodology_critic_node(
     """Produce structured methodology findings via the Model Gateway.
 
     When a ``gateway`` is supplied the critic routes through the
-    ``METHODOLOGY_CRITIC`` task kind.  Otherwise deterministic mock
-    findings are generated so the pipeline remains runnable offline.
+    ``METHODOLOGY_CRITIC`` task kind.  The gateway is prompted to return
+    structured JSON findings; if parsing fails the raw text is wrapped
+    as a single unstructured finding.
+
+    Otherwise deterministic mock findings are generated so the pipeline
+    remains runnable offline.
     """
 
     evidence = state.get("evidence_summary")
@@ -244,27 +349,22 @@ def methodology_critic_node(
             run_id=state["workflow_run_id"],
             stage=WorkflowStage.METHODOLOGY_CRITIC.value,
         )
-        result: GatewayResult = gateway.invoke(
-            spec,
-            prompt="Review methodology for confounders, missing data, "
-            "and bias in the evidence summary.",
+        prompt = (
+            "Review the study methodology and return structured findings as JSON. "
+            "Categories: confounding, missing_data, selection_bias, "
+            "measurement_bias, sample_size, population_heterogeneity, "
+            "model_assumptions, multiplicity, other. "
+            "Severities: info, warning, error. "
+            'Format: {"findings": [{"category": "...", '
+            '"severity": "...", "rationale": "...", '
+            '"recommendation": "..."}]}'
         )
-        # The gateway produces text; we wrap it as a single finding
-        findings: list[MethodologyFinding] = [
-            MethodologyFinding(
-                finding_id=_stable_id(
-                    state["project_id"],
-                    "finding",
-                    "gateway",
-                    result.invocation.invocation_id,
-                ),
-                category="model_gateway_review",
-                severity="info",
-                rationale=result.text,
-                recommendation="Review gateway output and address findings.",
-                status="open",
-            )
-        ]
+        result: GatewayResult = gateway.invoke(spec, prompt=prompt)
+        findings = _parse_gateway_findings(
+            result.text,
+            state["project_id"],
+            result.invocation.invocation_id,
+        )
     else:
         findings = _mock_methodology_findings(state)
 
@@ -304,6 +404,7 @@ def methodology_critic_node(
                 WorkflowStage.METHODOLOGY_CRITIC,
             )
         ],
+        **_extract_usage(gateway),
     }
 
 

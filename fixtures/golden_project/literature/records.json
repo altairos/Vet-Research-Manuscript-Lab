@@ -1,0 +1,65 @@
+{
+  "fixture_version": "1.0.0",
+  "records": [
+    {
+      "literature_id": "lit-001",
+      "title": "Retrospective survival analysis in canine oncology: a review of methods",
+      "authors": ["Synthetic Author A", "Synthetic Author B"],
+      "year": 2023,
+      "journal": "Journal of Synthetic Veterinary Research",
+      "doi": "10.1000/synth.2023.001",
+      "item_type": "journalArticle",
+      "species_scope": ["canine"],
+      "abstract": "This synthetic review examines survival analysis methods commonly used in canine retrospective studies. We discuss Kaplan-Meier estimation, log-rank tests, and Cox proportional hazards models with emphasis on handling small sample sizes and censoring patterns typical in veterinary clinical data.",
+      "tags": ["survival", "retrospective", "canine", "review"]
+    },
+    {
+      "literature_id": "lit-002",
+      "title": "Feline clinical trial design: challenges and opportunities",
+      "authors": ["Synthetic Author C", "Synthetic Author D"],
+      "year": 2022,
+      "journal": "Synthetic Feline Medicine Journal",
+      "doi": "10.1000/synth.2022.002",
+      "item_type": "journalArticle",
+      "species_scope": ["feline"],
+      "abstract": "A synthetic discussion of clinical trial design considerations in feline medicine, including sample size estimation, endpoint selection, and statistical power in small animal studies.",
+      "tags": ["feline", "clinical trial", "design"]
+    },
+    {
+      "literature_id": "lit-003",
+      "title": "STROBE-Vet reporting guidelines for observational studies",
+      "authors": ["STROBE-Vet Working Group"],
+      "year": 2021,
+      "journal": "Synthetic Veterinary Epidemiology",
+      "doi": "10.1000/synth.2021.003",
+      "item_type": "journalArticle",
+      "species_scope": ["canine", "feline"],
+      "abstract": "Synthetic version of the STROBE-Vet checklist for reporting observational studies in veterinary medicine. Covers title, abstract, introduction, methods, results, and discussion sections with specific veterinary adaptations.",
+      "tags": ["STROBE-Vet", "reporting", "guideline", "checklist"]
+    },
+    {
+      "literature_id": "lit-004",
+      "title": "Confounders in veterinary observational studies: a methodological review",
+      "authors": ["Synthetic Author E"],
+      "year": 2023,
+      "journal": "Synthetic Veterinary Epidemiology",
+      "doi": "10.1000/synth.2023.004",
+      "item_type": "journalArticle",
+      "species_scope": ["canine", "feline"],
+      "abstract": "This synthetic review covers confounding variable identification and adjustment strategies in veterinary retrospective studies, including age, species, and comorbidity adjustments.",
+      "tags": ["confounding", "observational", "methods"]
+    },
+    {
+      "literature_id": "lit-005",
+      "title": "Missing data handling in small-sample veterinary clinical research",
+      "authors": ["Synthetic Author F", "Synthetic Author G"],
+      "year": 2022,
+      "journal": "Journal of Synthetic Veterinary Statistics",
+      "doi": "10.1000/synth.2022.005",
+      "item_type": "journalArticle",
+      "species_scope": ["canine", "feline"],
+      "abstract": "A synthetic guide to handling missing data in veterinary clinical datasets with small sample sizes, covering complete-case analysis, multiple imputation, and sensitivity analysis.",
+      "tags": ["missing data", "imputation", "small sample"]
+    }
+  ]
+}

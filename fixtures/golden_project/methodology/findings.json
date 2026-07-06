@@ -1,0 +1,37 @@
+{
+  "fixture_version": "1.0.0",
+  "findings": [
+    {
+      "finding_id": "finding-confounders",
+      "category": "confounding",
+      "severity": "warning",
+      "rationale": "Age distribution differs between treatment groups in the synthetic dataset. Consider age-adjusted models to account for potential confounding.",
+      "recommendation": "Include age_years as a covariate in survival models, particularly for the secondary analysis.",
+      "status": "open"
+    },
+    {
+      "finding_id": "finding-missing-data",
+      "category": "missing_data",
+      "severity": "info",
+      "rationale": "Two cases (CASE-007 and CASE-029) have missing survival_months values. Document the missingness pattern and consider sensitivity analyses.",
+      "recommendation": "Report missingness rates per variable in results. Consider complete-case vs imputed sensitivity analysis.",
+      "status": "open"
+    },
+    {
+      "finding_id": "finding-sample-size",
+      "category": "sample_size",
+      "severity": "info",
+      "rationale": "The synthetic dataset contains 30 cases, which limits statistical power for detecting small-to-moderate effects.",
+      "recommendation": "Report power calculations and interpret results with appropriate caution given the limited sample size.",
+      "status": "open"
+    },
+    {
+      "finding_id": "finding-species-mixing",
+      "category": "population_heterogeneity",
+      "severity": "warning",
+      "rationale": "Canine and feline cases are pooled in the primary analysis, which may introduce heterogeneity due to species-specific survival patterns.",
+      "recommendation": "Consider species-stratified analysis as a secondary endpoint or include species as a covariate in adjusted models.",
+      "status": "open"
+    }
+  ]
+}

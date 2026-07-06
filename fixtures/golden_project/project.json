@@ -3,16 +3,37 @@
   "synthetic": true,
   "project": {
     "project_id": "00000000-0000-4000-8000-000000000001",
-    "title": "Synthetic canine retrospective cohort study",
+    "title": "Synthetic canine/feline retrospective survival cohort study",
     "study_type": "retrospective_observational_clinical_study",
-    "species_scope": ["canine"],
+    "species_scope": ["canine", "feline"],
     "reporting_guideline": "STROBE-Vet"
   },
   "research_question": {
-    "population": "Synthetic dogs presenting to a fictional referral hospital",
-    "exposure": "Synthetic exposure A",
-    "comparator": "No synthetic exposure A",
-    "outcome": "Synthetic 30-day outcome"
+    "population": "Synthetic dogs and cats presenting to a fictional referral hospital",
+    "exposure": "Synthetic treatment A (binary: 1 = treated, 0 = control)",
+    "comparator": "No synthetic treatment A",
+    "outcome": "Overall survival time in months from enrollment"
+  },
+  "dataset": {
+    "file": "data/cases_synthetic.csv",
+    "rows": 30,
+    "columns": 5,
+    "content_note": "Fully synthetic values generated for fixture testing; no real clinical data"
+  },
+  "analysis_plan": {
+    "file": "analysis_plan/analyses.json",
+    "primary_analysis": "primary_survival (log-rank test of survival difference)",
+    "secondary_analyses": ["age_adjusted_survival (Cox model)", "species_stratified (Cox model)"]
+  },
+  "literature": {
+    "file": "literature/records.json",
+    "record_count": 5,
+    "note": "All titles, authors, DOIs, and abstracts are synthetic"
+  },
+  "methodology_findings": {
+    "file": "methodology/findings.json",
+    "finding_count": 4,
+    "categories": ["confounding", "missing_data", "sample_size", "population_heterogeneity"]
   },
   "data_classification": "synthetic_non_sensitive",
   "contains_real_clinical_data": false

@@ -286,6 +286,43 @@ class ModelGatewayTests(unittest.TestCase):
         self.assertEqual(data["invocations"][0]["task_kind"], "section_writing")
         self.assertEqual(data["invocations"][0]["status"], "success")
 
+    def test_cost_report_by_stage(self) -> None:
+        """cost_report_by_stage groups invocations by task kind."""
+
+        long_prompt = "Draft the methods section in detail. " * 2000
+        self.gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt=long_prompt,
+        )
+        self.gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt=long_prompt,
+        )
+        self.gateway.invoke(
+            _spec(TaskKind.METHODOLOGY_CRITIC),
+            prompt=long_prompt,
+        )
+        report = self.gateway.usage_log.cost_report_by_stage()
+        self.assertIn("section_writing", report)
+        self.assertIn("methodology_critic", report)
+        self.assertIn("__total__", report)
+        self.assertEqual(report["section_writing"]["invocations"], 2)
+        self.assertEqual(report["methodology_critic"]["invocations"], 1)
+        self.assertEqual(report["__total__"]["invocations"], 3)
+        self.assertGreater(report["__total__"]["cost_cents"], 0)
+
+    def test_to_dict_includes_cost_by_stage(self) -> None:
+        """to_dict serializes the cost_by_stage breakdown."""
+
+        self.gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt="Draft methods.",
+        )
+        data = self.gateway.usage_log.to_dict()
+        self.assertIn("cost_by_stage", data)
+        self.assertIn("section_writing", data["cost_by_stage"])
+        self.assertIn("__total__", data["cost_by_stage"])
+
     def test_budget_exhausted_blocks_invocation(self) -> None:
         budget = BudgetLimit(scope="run", limit_cents=1, spent_cents=1)
         with self.assertRaises(BudgetExhaustedError):

@@ -10,6 +10,9 @@ from vet_manuscript_lab.services.analysis.runner import (
     RunResult,
     StatisticsRunner,
 )
+from vet_manuscript_lab.services.analysis.subprocess_runner import (
+    SubprocessStatisticsRunner,
+)
 from vet_manuscript_lab.services.analysis.types import (
     AnalysisClass,
     AnalysisSpec,
@@ -32,6 +35,7 @@ __all__ = [
     "ResultSpec",
     "RunResult",
     "StatisticsRunner",
+    "SubprocessStatisticsRunner",
     "VariableRole",
     "VariableSpec",
     "VariableType",

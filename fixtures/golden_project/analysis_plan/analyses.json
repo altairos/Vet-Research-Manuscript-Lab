@@ -1,0 +1,49 @@
+{
+  "fixture_version": "1.0.0",
+  "plan": {
+    "version": 1,
+    "is_exploratory": false,
+    "analyses": [
+      {
+        "name": "primary_survival",
+        "estimand": "Median survival time difference between treatment and control groups",
+        "model_type": "log_rank",
+        "variable_names": ["survival_months", "treatment_group"],
+        "analysis_class": "primary",
+        "exclusion_criteria": [
+          "Exclude cases with missing survival_months"
+        ],
+        "population": "All enrolled canine and feline cases"
+      },
+      {
+        "name": "age_adjusted_survival",
+        "estimand": "Age-adjusted treatment effect on survival",
+        "model_type": "cox",
+        "variable_names": [
+          "survival_months",
+          "treatment_group",
+          "age_years",
+          "species"
+        ],
+        "analysis_class": "secondary",
+        "exclusion_criteria": [
+          "Exclude cases with missing survival_months or age_years"
+        ],
+        "population": "All enrolled canine and feline cases with complete covariate data"
+      },
+      {
+        "name": "species_stratified",
+        "estimand": "Species-stratified treatment effect on survival",
+        "model_type": "cox",
+        "variable_names": [
+          "survival_months",
+          "treatment_group",
+          "age_years"
+        ],
+        "analysis_class": "secondary",
+        "exclusion_criteria": [],
+        "population": "All enrolled cases, stratified by species"
+      }
+    ]
+  }
+}

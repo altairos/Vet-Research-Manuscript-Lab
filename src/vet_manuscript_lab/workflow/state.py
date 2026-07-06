@@ -268,6 +268,18 @@ class EvidenceDraft(TypedDict, total=False):
     extraction_status: str
 
 
+class AIUsageSummary(TypedDict):
+    """Compact AI model usage summary for UI display and cost tracking."""
+
+    total_invocations: int
+    total_cost_cents: int
+    total_input_tokens: int
+    total_output_tokens: int
+    fallback_count: int
+    failure_count: int
+    cost_by_stage: dict[str, dict[str, int]]
+
+
 class WorkflowState(TypedDict, total=False):
     """LangGraph state containing references and compact decisions only."""
 
@@ -302,6 +314,7 @@ class WorkflowState(TypedDict, total=False):
     variable_spec_drafts: NotRequired[list[VariableSpecDraft]]
     analysis_spec_drafts: NotRequired[list[AnalysisSpecDraft]]
     result_drafts: NotRequired[list[ResultDraft]]
+    ai_usage: NotRequired[AIUsageSummary | None]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -411,6 +424,7 @@ def new_workflow_state(
         "variable_spec_drafts": [],
         "analysis_spec_drafts": [],
         "result_drafts": [],
+        "ai_usage": None,
         "pending_interrupt": None,
         "resume_decision": None,
         "errors": [],
@@ -467,6 +481,7 @@ def validate_stage_preconditions(state: WorkflowState, target: str) -> None:
 __all__ = [
     "ALLOWED_TRANSITIONS",
     "REQUIRED_GATE_FOR_STAGE",
+    "AIUsageSummary",
     "AnalysisPlanSummary",
     "AnalysisRunSummary",
     "AnalysisSpecDraft",

@@ -1,0 +1,52 @@
+{
+  "fixture_version": "1.0.0",
+  "dataset": {
+    "name": "Synthetic canine/feline clinical dataset",
+    "description": "30-row synthetic dataset for golden project regression testing",
+    "file": "data/cases_synthetic.csv",
+    "row_count": 30,
+    "column_count": 5
+  },
+  "variables": [
+    {
+      "name": "case_id",
+      "var_type": "categorical",
+      "role": "id",
+      "unit": null,
+      "missing_code": null,
+      "description": "Unique case identifier (e.g., CASE-001)"
+    },
+    {
+      "name": "species",
+      "var_type": "categorical",
+      "role": "covariate",
+      "unit": null,
+      "missing_code": "unknown",
+      "description": "Animal species: canine or feline"
+    },
+    {
+      "name": "age_years",
+      "var_type": "continuous",
+      "role": "covariate",
+      "unit": "years",
+      "missing_code": "NA",
+      "description": "Age at enrollment in years"
+    },
+    {
+      "name": "treatment_group",
+      "var_type": "binary",
+      "role": "exposure",
+      "unit": null,
+      "missing_code": null,
+      "description": "Treatment assignment: 1 = treated, 0 = control"
+    },
+    {
+      "name": "survival_months",
+      "var_type": "continuous",
+      "role": "outcome",
+      "unit": "months",
+      "missing_code": "NA",
+      "description": "Overall survival time from enrollment in months"
+    }
+  ]
+}

@@ -207,6 +207,37 @@ class UsageLog:
     def failure_count(self) -> int:
         return sum(1 for inv in self.invocations if inv.status == "failed")
 
+    def cost_report_by_stage(self) -> dict[str, dict[str, int]]:
+        """Return per-task-kind and project-level cost summary.
+
+        The outer dict maps ``task_kind`` strings to sub-dicts containing
+        ``invocations``, ``cost_cents``, ``input_tokens``, and
+        ``output_tokens``.  The special key ``"__total__"`` aggregates
+        across all task kinds.
+        """
+
+        report: dict[str, dict[str, int]] = {}
+        for inv in self.invocations:
+            key = inv.task_kind.value
+            if key not in report:
+                report[key] = {
+                    "invocations": 0,
+                    "cost_cents": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                }
+            report[key]["invocations"] += 1
+            report[key]["cost_cents"] += inv.usage.cost_cents
+            report[key]["input_tokens"] += inv.usage.input_tokens
+            report[key]["output_tokens"] += inv.usage.output_tokens
+        report["__total__"] = {
+            "invocations": len(self.invocations),
+            "cost_cents": self.total_cost_cents,
+            "input_tokens": self.total_input_tokens,
+            "output_tokens": self.total_output_tokens,
+        }
+        return report
+
     def to_dict(self) -> dict[str, object]:
         """Serialise to a JSON-safe dict for artifact payload."""
 
@@ -217,6 +248,7 @@ class UsageLog:
             "total_output_tokens": self.total_output_tokens,
             "fallback_count": self.fallback_count,
             "failure_count": self.failure_count,
+            "cost_by_stage": self.cost_report_by_stage(),
             "invocations": [
                 {
                     "invocation_id": inv.invocation_id,
