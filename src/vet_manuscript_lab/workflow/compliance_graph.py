@@ -49,9 +49,11 @@ from vet_manuscript_lab.services.compliance import (
     MockComplianceAuditor,
 )
 from vet_manuscript_lab.services.export import (
+    DocxRenderer,
     ExportGenerator,
     ExportInput,
     MockExportGenerator,
+    create_docx_renderer,
 )
 from vet_manuscript_lab.services.writing import (
     Reviewer,
@@ -104,7 +106,7 @@ def _collect_artifact_hashes(state: WorkflowState) -> dict[str, str]:
         h = art.get("content_hash") if isinstance(art, dict) else None
         if h:
             hashes[key] = h
-    manuscript = state.get("manuscript_summary") or {}
+    manuscript: dict[str, Any] = dict(state.get("manuscript_summary") or {})
     if manuscript.get("content_hash"):
         hashes["manuscript"] = manuscript["content_hash"]
     return hashes
@@ -141,8 +143,8 @@ def _enrich_for_audit(
     for cit in citations:
         ec = dict(cit)
         if not ec.get("claim_id"):
-            sid = ec.get("section_id", "")
-            cids = section_claims.get(sid, [])
+            citation_sid: str = str(ec.get("section_id") or "")
+            cids = section_claims.get(citation_sid, [])
             if cids:
                 ec["claim_id"] = cids[0]
         enriched.append(ec)
@@ -180,8 +182,9 @@ def _enrich_for_audit(
             covered.add(cid)
 
     # Derive title from research question fields
-    rq = state.get("artifacts", {}).get("research_question", {}) or {}
-    raw_guideline = state.get("artifacts", {}).get("guideline_mapping", {}) or {}
+    artifacts: dict[str, Any] = dict(state.get("artifacts") or {})
+    rq: dict[str, Any] = dict(artifacts.get("research_question") or {})
+    raw_guideline: dict[str, Any] = dict(artifacts.get("guideline_mapping") or {})
     title = (
         f"{rq.get('population', 'Veterinary')} "
         f"{rq.get('exposure', '')} vs {rq.get('comparator', '')}: "
@@ -209,9 +212,9 @@ def final_compliance_audit_node(
     findings, checklist summary, and readiness assessment in state.
     """
 
-    sections = tuple(state.get("section_drafts", []))
-    claims = tuple(state.get("claim_drafts", []))
-    results = tuple(state.get("result_drafts", []))
+    sections = tuple(dict(s) for s in state.get("section_drafts", []))
+    claims = tuple(dict(c) for c in state.get("claim_drafts", []))
+    results = tuple(dict(r) for r in state.get("result_drafts", []))
     citations, guideline_mapping = _enrich_for_audit(state)
 
     actual_auditor = auditor or MockComplianceAuditor()
@@ -364,7 +367,7 @@ def final_sign_off_node(state: WorkflowState) -> dict[str, Any]:
         )
     )
 
-    manuscript = state.get("manuscript_summary") or {}
+    manuscript: dict[str, Any] = dict(state.get("manuscript_summary") or {})
     ctx = SignOffContext(
         manuscript_version_id=manuscript.get("manuscript_id", ""),
         manuscript_hash=manuscript.get("content_hash", ""),
@@ -373,13 +376,14 @@ def final_sign_off_node(state: WorkflowState) -> dict[str, Any]:
     )
     require_signoff_preconditions(ctx)
 
+    checklist: dict[str, Any] = dict(state.get("checklist_summary") or {})
     resume = interrupt(
         {
             "gate": "final_sign_off",
             "title": "Final manuscript sign-off",
             "summary": (
-                f"Checklist: {state.get('checklist_summary', {}).get('passed', 0)} "
-                f"passed, {state.get('checklist_summary', {}).get('failed', 0)} "
+                f"Checklist: {checklist.get('passed', 0)} "
+                f"passed, {checklist.get('failed', 0)} "
                 f"failed. Readiness: {state.get('export_readiness', 'unknown')}."
             ),
             "required_authoriser_role": "principal_investigator",
@@ -455,7 +459,8 @@ def route_sign_off_decision(state: WorkflowState) -> str:
     - ``rejected`` -> ``section_writing`` (rewrite and re-audit)
     """
 
-    approval = state.get("approvals", {}).get("final_sign_off", {})
+    approvals: dict[str, Any] = dict(state.get("approvals") or {})
+    approval: dict[str, Any] = dict(approvals.get("final_sign_off") or {})
     if approval.get("decision") == "approved":
         return "export"
     return "section_writing"
@@ -492,19 +497,22 @@ def export_node(
         current_hashes=current_hashes,
     )
 
-    sections = tuple(state.get("section_drafts", []))
-    citations = tuple(state.get("citation_drafts", []))
-    results = tuple(state.get("result_drafts", []))
-    literature_records = tuple(state.get("literature_record_drafts", []))
-    analysis_plan_summary = state.get("analysis_plan_summary") or {}
-    ai_usage = state.get("ai_usage") or {}
-    manuscript_summary = state.get("manuscript_summary") or {}
+    sections = tuple(dict(s) for s in state.get("section_drafts", []))
+    citations = tuple(dict(c) for c in state.get("citation_drafts", []))
+    results = tuple(dict(r) for r in state.get("result_drafts", []))
+    literature_records = tuple(
+        dict(rec) for rec in state.get("literature_record_drafts", [])
+    )
+    analysis_plan_summary: dict[str, Any] = dict(
+        state.get("analysis_plan_summary") or {}
+    )
+    ai_usage: dict[str, Any] = dict(state.get("ai_usage") or {})
+    manuscript_summary: dict[str, Any] = dict(state.get("manuscript_summary") or {})
 
-    sign_off_approval = state.get("approvals", {}).get("final_sign_off", {})
-    sign_off_approval = {
-        **sign_off_approval,
-        "approval_id": binding.get("approval_id", ""),
-    }
+    sign_off_approval: dict[str, Any] = dict(
+        state.get("approvals", {}).get("final_sign_off", {})
+    )
+    sign_off_approval["approval_id"] = binding.get("approval_id", "")
 
     actual_generator = generator or MockExportGenerator()
     export_result = actual_generator.generate(
@@ -625,6 +633,8 @@ class CompliancePipeline:
     reviser: Reviser | None = None
     auditor: ComplianceAuditor | None = None
     generator: ExportGenerator | None = None
+    docx_renderer: DocxRenderer | None = None
+    auto_docx: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -667,6 +677,18 @@ def build_compliance_pipeline_graph(
 
     auditor = compliance_pipeline.auditor if compliance_pipeline else None
     generator = compliance_pipeline.generator if compliance_pipeline else None
+
+    # Determine DOCX renderer
+    docx_renderer: DocxRenderer | None = None
+    if compliance_pipeline and compliance_pipeline.docx_renderer is not None:
+        docx_renderer = compliance_pipeline.docx_renderer
+    elif compliance_pipeline is None or compliance_pipeline.auto_docx:
+        # Auto-detect: use Quarto/Pandoc if available, else Mock
+        docx_renderer = create_docx_renderer()
+
+    # Wire up the generator with the DOCX renderer
+    if generator is None and docx_renderer is not None:
+        generator = MockExportGenerator(docx_renderer=docx_renderer)
 
     # Compliance stage nodes
     builder.add_node(

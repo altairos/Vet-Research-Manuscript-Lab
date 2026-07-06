@@ -158,32 +158,35 @@ def section_writing_node(
     """
 
     locks = state.get("locks", {})
+    approvals: dict[str, Any] = dict(state.get("approvals") or {})
+    results_approval: dict[str, Any] = dict(
+        approvals.get("results_interpretation") or {}
+    )
     ctx = AuditContext(
         protocol_locked="protocol" in locks,
         evidence_audited=state.get("evidence_summary") is not None,
-        results_approved=state.get("approvals", {})
-        .get("results_interpretation", {})
-        .get("decision")
-        == "approved",
+        results_approved=results_approval.get("decision") == "approved",
     )
     require_writing_inputs_approved(ctx)
 
     result_drafts = state.get("result_drafts", [])
-    evidence_summary = state.get("evidence_summary") or {}
-    literature_summary = state.get("literature_summary") or {}
+    evidence_summary: dict[str, Any] = dict(state.get("evidence_summary") or {})
+    literature_summary_raw: dict[str, Any] = dict(state.get("literature_summary") or {})
     literature_records = (
-        literature_summary.get("records", [])
-        if isinstance(literature_summary, dict)
+        literature_summary_raw.get("records", [])
+        if isinstance(literature_summary_raw, dict)
         else []
     )
-    analysis_plan_summary = state.get("analysis_plan_summary") or {}
+    analysis_plan_summary: dict[str, Any] = dict(
+        state.get("analysis_plan_summary") or {}
+    )
 
     actual_writer = writer or MockSectionWriter()
     output = actual_writer.write_sections(
         WritingInput(
             project_id=state["project_id"],
             evidence_summary=evidence_summary,
-            result_drafts=list(result_drafts),
+            result_drafts=[dict(r) for r in result_drafts],
             literature_records=list(literature_records),
             analysis_plan_summary=dict(analysis_plan_summary),
         )
@@ -217,8 +220,8 @@ def section_writing_node(
             citation_key=c.citation_key,
             literature_record_id=c.literature_record_id,
             section_id=c.section_id,
-            claim_id=c.claim_id,
-            locator=c.locator,
+            claim_id=c.claim_id or "",
+            locator=c.locator or "",
         )
         for c in output.citations
     ]
@@ -611,12 +614,15 @@ def revision_node(
                 }
 
     new_hash = _content_hash("".join(s["content"] for s in new_sections))
-    manuscript_summary = state.get("manuscript_summary") or {}
+    prev_summary: dict[str, Any] = dict(state.get("manuscript_summary") or {})
     updated_manuscript: ManuscriptSummary = {
-        **manuscript_summary,
+        "manuscript_id": prev_summary.get("manuscript_id", ""),
+        "version_id": prev_summary.get("version_id", ""),
+        "version": prev_summary.get("version", 1) + 1,
         "content_hash": new_hash,
-        "version": manuscript_summary.get("version", 1) + 1,
         "section_count": len(new_sections),
+        "claim_count": prev_summary.get("claim_count", 0),
+        "status": "revised",
     }
 
     revision_summary: RevisionSummary = {
@@ -658,7 +664,8 @@ def route_results_to_writing(state: WorkflowState) -> str:
 
 
 def route_claim_audit_decision(state: WorkflowState) -> str:
-    audit = state.get("artifacts", {}).get("claim_audit", {})
+    artifacts: dict[str, Any] = dict(state.get("artifacts") or {})
+    audit: dict[str, Any] = dict(artifacts.get("claim_audit") or {})
     if audit.get("status") == "audit_failed":
         return "section_writing"
     return "review"
@@ -699,7 +706,7 @@ def _make_writing_builder(
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     writing_pipeline: WritingPipeline | None = None,
-) -> StateGraph:
+) -> Any:
     """Create the StateGraph builder with all writing-pipeline nodes and edges.
 
     Returns the **uncompiled** builder so downstream graph assemblers

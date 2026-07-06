@@ -454,7 +454,7 @@ class WorkflowState(TypedDict, total=False):
     revision_summary: NotRequired[RevisionSummary | None]
     compliance_findings: NotRequired[list[ComplianceFindingEntry]]
     checklist_summary: NotRequired[ChecklistSummary | None]
-    export_readiness: NotRequired[str]
+    export_readiness: NotRequired[str | None]
     sign_off_binding: NotRequired[SignOffBinding | None]
     export_package: NotRequired[ExportPackageSummary | None]
     pending_interrupt: InterruptPayload | None

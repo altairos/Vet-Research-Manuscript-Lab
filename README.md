@@ -44,7 +44,7 @@ Domain Services
     |-- LlamaIndex retrieval
     |-- PDF/source-span extraction
     |-- R/Python analysis runner (mock-first)
-    `-- Quarto/Pandoc exporter
+    `-- Quarto/Pandoc DOCX exporter
     |
 Storage
     |-- SQLite (MVP) / PostgreSQL
@@ -66,7 +66,8 @@ Question -> protocol approval -> protocol lock
          -> methodology critic -> analysis-plan approval -> analysis-plan lock
          -> statistics execution -> results approval
          -> writing -> claim audit
-         -> review/revision (bounded) -> final audit -> human sign-off -> export
+         -> review/revision (bounded) -> final compliance audit
+         -> human sign-off -> export -> complete
 ```
 
 Every interrupt checkpoint is serializable, so the workflow can resume from any
@@ -78,18 +79,23 @@ approval gate after a process restart.
 src/vet_manuscript_lab/
   domain/
     conventions.py    # IDs, timestamps, hashes, ArtifactType enum
-    policies/         # pure policy functions (foundation, evidence, analysis)
+    policies/         # pure policy functions (foundation, evidence, analysis,
+                      #   writing, compliance)
   workflow/
-    state.py          # WorkflowState TypedDict + stage transitions
+    state.py               # WorkflowState TypedDict + stage transitions
     foundation_graph.py    # PROJECT_INIT → PROTOCOL_LOCK
     literature_graph.py    # LITERATURE_SEARCH → EVIDENCE_AUDIT
     analysis_graph.py      # METHODOLOGY_CRITIC → RESULTS_APPROVAL
+    writing_graph.py       # WRITING → REVIEW → REVISION
+    compliance_graph.py    # FINAL_COMPLIANCE_AUDIT → EXPORT → COMPLETE
   services/
     zotero/           # Zotero API client + mapper + synchroniser
     retrieval/        # chunker + hybrid retriever (BM25 / LlamaIndex)
     documents/        # PDF parser + importer
     analysis/         # dictionary + importer + statistics runner
-    export/           # (Phase 5)
+    writing/          # section writer + reviewer + reviser (Protocol + Mock)
+    compliance/       # STROBE-Vet checklist + auditor (Protocol + Mock)
+    export/           # export generator + DOCX renderer (Protocol + Mock)
   infrastructure/
     database/         # SQLAlchemy ORM + Alembic migrations
     artifacts/        # content-addressed artifact store
@@ -104,9 +110,9 @@ fixtures/
   golden_project/     # synthetic dataset + analysis plan + literature
 artifacts/            # local development only; ignored by Git
 migrations/
-  versions/           # Alembic migrations (0001–0002)
+  versions/           # Alembic migrations (0001–0005)
 docs/
-  adr/                # Architecture Decision Records (0001–0007)
+  adr/                # Architecture Decision Records (0001–0009)
 ```
 
 ## Delivery phases
@@ -130,34 +136,60 @@ docs/
 4. **Phase 2.5 — Model Gateway / Router Agent** ✅
    Deterministic router policy, pricing catalog, mock provider,
    fallback chains, budget hard-stop, AI usage log artifact.
-   36 tests covering routing, gateway, pricing, and adversarial cases.
 
 5. **Phase 3 — Methodology & statistics vertical slice** ✅
    Dataset dictionary validation, CSV importer, content-hash versioning,
    analysis-plan approval and dual lock (plan + dataset),
    deterministic mock statistics runner with full provenance,
    methodology critic via Model Gateway.
-   32 new tests covering all 5 exit-gate invariants.
+
+6. **Phase 4 — Writing, review & revision** ✅
+   Section drafting through the Model Gateway, claim/citation audit,
+   bounded revision loop with human-dispositioned findings.
+   7 policy functions, 5 graph nodes, Mock writer/reviewer/reviser.
+   38 new tests covering all 5 exit-gate invariants.
+
+7. **Phase 5 — Compliance & export** ✅
+   STROBE-Vet 22-item checklist, final compliance audit, human sign-off
+   with artifact hash binding, Quarto/Pandoc DOCX export, provenance
+   bundle with manifest + AI usage log, hash-addressed export package.
+   5 policy functions, 5 graph nodes, auto-detect DOCX renderer
+   (Quarto → Pandoc → Mock fallback chain).
+   55 new tests across policy, graph, and renderer.
 
 ### Planned
 
-6. **Phase 4 — Writing, review & revision** — Section drafting through the
-   Model Gateway, claim/citation audit, bounded revision loop.
-
-7. **Phase 5 — Compliance & export** — STROBE-Vet checklist, Quarto/Pandoc
-   DOCX export, provenance bundle, AI usage log.
-
 8. **Phase 6 — Production** — PostgreSQL, authentication, background jobs,
    object storage, observability, backup and deployment.
+
+## DOCX export
+
+The export pipeline assembles a Quarto markdown (`.qmd`) source from approved
+manuscript sections and renders it to Word DOCX via the best available tool:
+
+1. **Quarto CLI** (preferred) — `quarto render --to docx`
+2. **pandoc** (fallback) — `pandoc --to docx`
+3. **MockDocxRenderer** (offline) — deterministic placeholder
+
+Auto-detection is handled by `create_docx_renderer()`, which probes for the
+tools at runtime. When neither Quarto nor pandoc is installed, the pipeline
+falls back to a mock renderer so tests and local development work without
+external dependencies.
+
+To install Quarto: see <https://quarto.org/>.
+To install pandoc: see <https://pandoc.org/installing.html>.
+
+A `reference-doc.docx` style template can be passed via `DocxRenderInput` for
+consistent journal formatting.
 
 ## Current quality gate status
 
 | Gate | Status |
 |---|---|
 | ruff check | All checks passed |
-| ruff format | 80+ files formatted |
-| pytest | 242 tests passed |
-| mypy | No issues in 57 source files |
+| ruff format | 105+ files formatted |
+| pytest | 335 tests passed |
+| mypy | No issues in source files |
 
 ## Architecture Decision Records
 
@@ -168,8 +200,10 @@ docs/
 | [0003](docs/adr/0003-langgraph-state-boundary.md) | LangGraph state boundary |
 | [0004](docs/adr/0004-human-approval-and-scope-locks.md) | Human approval and scope locks |
 | [0005](docs/adr/0005-relational-literature-evidence-tables.md) | Relational literature/evidence tables |
-| [0006](docs/adr/0006-methodology-and-statistics-architecture.md) | Methodology and statistics architecture 
+| [0006](docs/adr/0006-methodology-and-statistics-architecture.md) | Methodology and statistics architecture |
 | [0007](docs/adr/0007-model-gateway-and-router-agent.md) | Model Gateway and Router Agent |
+| [0008](docs/adr/0008-writing-review-and-revision-architecture.md) | Writing, review, and revision architecture |
+| [0009](docs/adr/0009-compliance-and-export-architecture.md) | Compliance, sign-off, and export architecture |
 
 ## Golden project fixture
 
@@ -219,12 +253,14 @@ under `artifacts/`, and LangGraph checkpoints in a separate SQLite file.
 
 ## Quality gates
 
-The test suite (242 tests across 21 files) includes schema and routing tests,
+The test suite (335 tests across 24 files) includes schema and routing tests,
 checkpoint resume tests, idempotency tests, approval-bypass attempts,
 immutable-version tests, adversarial citation tests, claim-inflation tests,
 statistical reproducibility, model-routing bypass tests, budget-downgrade
-adversarial tests, evidence-pipeline integration tests, and golden-project
-end-to-end regression tests.
+adversarial tests, evidence-pipeline integration tests, golden-project
+end-to-end regression tests, writing/revision cycle tests, compliance audit
+tests, sign-off fail-closed tests, DOCX renderer tests, and export package
+integrity tests.
 
 ## Safety statement
 
