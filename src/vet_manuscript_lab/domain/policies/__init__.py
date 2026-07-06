@@ -31,13 +31,3 @@ __all__ = [
     "require_source_span_for_evidence",
     "require_unlocked_subject",
 ]
-"""Deterministic approval, lock, and immutability policies."""
-
-
-__all__ = [
-    "ApprovalSnapshot",
-    "LockSnapshot",
-    "PolicyViolation",
-    "require_approved_subject",
-    "require_unlocked_subject",
-]

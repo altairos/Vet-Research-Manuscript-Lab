@@ -145,7 +145,7 @@ mypy、pytest 均已配置；ADR-0001 至 ADR-0005 已建立；golden project fi
 
 目标：实现从 Zotero 条目到可定位 EvidenceItem 的完整证据链。
 
-状态：**数据结构已就绪，业务逻辑开发中。**
+状态：**文献与证据纵向切片（mock）已就绪，外部集成开发中。**
 
 已完成的准备（ADR-0005、迁移 0002_literature_evidence）：
 
@@ -167,11 +167,14 @@ mypy、pytest 均已配置；ADR-0001 至 ADR-0005 已建立；golden project fi
 2. 实现 PDF 附件导入、hash、解析状态和失败重试。
 3. 实现文本分块元数据；保留页码、章节、字符位置和附件版本。
 4. 接入 LlamaIndex 混合检索与 rerank，但只输出候选 chunk。
-5. 实现 `SourceSpan`、`EvidenceItem` 和 screening decision 的 LangGraph
-   节点（数据库表和策略层已就绪）。
-6. 实现搜索策略审批、纳排原因和冲突人工处理。
-7. 实现第一版 citation/evidence audit。
-8. 扩展 Foundation graph 到 `LITERATURE_SEARCH` → `EVIDENCE_AUDIT` 阶段。
+5. ✅ 实现 `SourceSpan`、`EvidenceItem` 和 screening decision 的 LangGraph
+   节点（mock 确定性版本，基于已就绪的数据库表和策略层）。
+6. ✅ 实现搜索策略审批、纳排原因和冲突人工处理（mock 版本，
+   含 species-scope 纳排逻辑和审批拒绝回退）。
+7. ✅ 实现第一版 citation/evidence audit（source-span 关联校验、
+   hash 校验、adversarial citation 检查）。
+8. ✅ 扩展 Foundation graph 到 `LITERATURE_SEARCH` → `EVIDENCE_AUDIT` 阶段
+   （`build_evidence_pipeline_graph`，全流程可中断恢复）。
 
 MVP 限制：复杂表格、扫描件、无法可靠定位页码的内容必须标记
 `needs_human_review`，不承诺自动提取。
@@ -394,5 +397,31 @@ documentation updated when contracts change
 8. ✅ 编写测试（20 个新测试覆盖仓库 + 策略 + 迁移）。
 9. ✅ 记录 ADR-0005。
 
-### Phase 2 业务逻辑开发任务（下一步）
+### Phase 2 业务逻辑开发任务（mock 切片已完成）
+
+已完成的 mock 纵向切片覆盖了任务 5–8（确定性 stub 版本），
+先跑通从 `PROTOCOL_LOCK` 到 `EVIDENCE_AUDIT` 的完整证据链，
+所有策略不变量（source-span 前置、search-gate 前置、
+screening 完整性、hash 校验）均在节点内强制执行。
+
+新增文件与改动：
+
+- `src/vet_manuscript_lab/workflow/literature_graph.py`：5 个节点
+  （literature_search、search_approval、screening、evidence_extraction、
+  evidence_audit）+ 路由 + `build_evidence_pipeline_graph`。
+- `src/vet_manuscript_lab/workflow/state.py`：扩展 `LiteratureRecordDraft`、
+  `SourceSpanDraft`、`EvidenceDraft` 三个 TypedDict 及对应 state 字段。
+- `src/vet_manuscript_lab/domain/policies/__init__.py`：修复重复
+  `__all__` 导致 evidence 策略导出丢失的缺陷。
+- `tests/test_literature_graph.py`：9 个测试（3 集成 + 6 对抗），
+  覆盖完整流程、跨实例 checkpoint 恢复、审批拒绝回退、
+  source-span 缺失拒绝、未知 span 引用拒绝、hash 篡改拒绝。
+
+下一步（外部集成层）：
+
+1. 将 `literature_search_node` 的 mock records 替换为 Zotero API v3
+   只读同步。
+2. 将 `evidence_extraction_node` 的 mock spans/evidence 替换为
+   PDF 解析 + LlamaIndex 检索的候选 chunk。
+3. 保持现有节点合同和策略校验不变，只替换数据来源。
 

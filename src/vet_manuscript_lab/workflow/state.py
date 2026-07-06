@@ -142,6 +142,49 @@ class EvidenceSummary(TypedDict):
     evidence_ledger_version_id: NotRequired[str]
 
 
+class LiteratureRecordDraft(TypedDict, total=False):
+    """Mock literature record passed between graph nodes.
+
+    In the production pipeline these rows live in the database via
+    ``LiteratureRepository``; the mock pipeline keeps a compact draft in state
+    so that downstream nodes can exercise the full evidence chain without an
+    external Zotero / PDF integration.
+    """
+
+    record_id: Required[str]
+    title: str
+    doi: str | None
+    pmid: str | None
+    journal: str | None
+    publication_year: int | None
+    screening_decision: str
+
+
+class SourceSpanDraft(TypedDict, total=False):
+    """Mock source span carrying an attachment hash for audit verification."""
+
+    span_id: Required[str]
+    literature_record_id: str
+    attachment_version_id: str
+    page: int | None
+    section_label: str | None
+    quote_hash: str
+
+
+class EvidenceDraft(TypedDict, total=False):
+    """Mock evidence item with explicit source-span linkage for auditing."""
+
+    evidence_id: Required[str]
+    concept: str
+    value: str | None
+    units: str | None
+    population: str | None
+    literature_record_id: str
+    source_span_ids: list[str]
+    requires_human_review: bool
+    extraction_status: str
+
+
 class WorkflowState(TypedDict, total=False):
     """LangGraph state containing references and compact decisions only."""
 
@@ -166,6 +209,9 @@ class WorkflowState(TypedDict, total=False):
     locks: dict[str, LockRef]
     literature_summary: NotRequired[LiteratureSummary | None]
     evidence_summary: NotRequired[EvidenceSummary | None]
+    literature_record_drafts: NotRequired[list[LiteratureRecordDraft]]
+    source_span_drafts: NotRequired[list[SourceSpanDraft]]
+    evidence_drafts: NotRequired[list[EvidenceDraft]]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -327,12 +373,15 @@ __all__ = [
     "ApprovalDecision",
     "ApprovalRef",
     "ArtifactRef",
+    "EvidenceDraft",
     "EvidenceSummary",
     "GateType",
     "InterruptPayload",
+    "LiteratureRecordDraft",
     "LiteratureSummary",
     "LockRef",
     "RunStatus",
+    "SourceSpanDraft",
     "WorkflowStage",
     "WorkflowState",
     "assert_json_serializable",
