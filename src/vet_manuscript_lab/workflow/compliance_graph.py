@@ -256,11 +256,14 @@ def final_compliance_audit_node(
         },
     )
 
+    artifacts = dict(state.get("artifacts", {}))
+    artifacts["compliance_audit"] = artifact
+
     return {
         "compliance_findings": finding_entries,
         "checklist_summary": summary,
         "export_readiness": output.readiness,
-        "artifacts": {"compliance_audit": artifact},
+        "artifacts": artifacts,
         "current_stage": WorkflowStage.FINAL_COMPLIANCE_AUDIT.value,
         "updated_at": utc_now(),
         "audit_events": [
@@ -563,9 +566,12 @@ def export_node(
         },
     )
 
+    artifacts = dict(state.get("artifacts", {}))
+    artifacts["export_package"] = artifact
+
     return {
         "export_package": package_summary,
-        "artifacts": {"export_package": artifact},
+        "artifacts": artifacts,
         "current_stage": WorkflowStage.EXPORT.value,
         "run_status": RunStatus.COMPLETE.value,
         "updated_at": utc_now(),

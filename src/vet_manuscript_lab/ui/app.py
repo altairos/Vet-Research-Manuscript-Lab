@@ -5,8 +5,10 @@ Run with: streamlit run src/vet_manuscript_lab/ui/app.py
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -30,8 +32,40 @@ from vet_manuscript_lab.ui.i18n import (
     status_label,
     translate,
 )
-from vet_manuscript_lab.workflow.analysis_graph import build_analysis_pipeline_graph
+from vet_manuscript_lab.workflow.compliance_graph import build_compliance_pipeline_graph
 from vet_manuscript_lab.workflow.state import new_workflow_state
+
+
+GOLDEN_FIXTURE_ROOT = (
+    Path(__file__).resolve().parents[3] / "fixtures" / "golden_project"
+)
+
+
+@st.cache_data(show_spinner=False)
+def _load_golden_fixture() -> dict[str, Any] | None:
+    """Load all golden project fixture JSON files (cached).
+
+    Returns ``None`` and records the error in session state when the
+    fixture directory cannot be read so the UI can show a helpful message.
+    """
+
+    try:
+
+        def _read_json(rel: str) -> dict[str, Any]:
+            return json.loads(
+                (GOLDEN_FIXTURE_ROOT / rel).read_text(encoding="utf-8")
+            )
+
+        return {
+            "project": _read_json("project.json"),
+            "literature": _read_json("literature/records.json"),
+            "methodology": _read_json("methodology/findings.json"),
+            "dictionary": _read_json("dictionary/variables.json"),
+            "analysis_plan": _read_json("analysis_plan/analyses.json"),
+        }
+    except (OSError, ValueError) as exc:
+        st.session_state["golden_fixture_error"] = str(exc)
+        return None
 
 
 @dataclass(slots=True)
@@ -50,7 +84,7 @@ def get_application() -> Application:
     repository = FoundationRepository(database.sessions)
     governance = GovernanceRepository(database.sessions)
     connection, checkpointer = open_sqlite_checkpointer(settings.checkpoint_path)
-    graph = build_analysis_pipeline_graph(checkpointer)
+    graph = build_compliance_pipeline_graph(checkpointer)
     return Application(
         repository=repository,
         governance=governance,
@@ -82,6 +116,36 @@ def _render_language_switch() -> None:
         index=options.index(current),
     )
     st.session_state["language"] = selected
+
+
+def _render_view_mode_switch() -> str:
+    """Render the main view mode switcher in the sidebar.
+
+    Returns either ``'workflow'`` (default project/run view) or
+    ``'golden_demo'`` (Golden Project fixture browser + demo run).
+    """
+
+    options = ["workflow", "golden_demo"]
+    current = st.session_state.get("view_mode", "workflow")
+    if current not in options:
+        current = "workflow"
+
+    def _label(code: str) -> str:
+        return (
+            translate("view_workflow")
+            if code == "workflow"
+            else translate("view_golden_demo")
+        )
+
+    selected = st.sidebar.radio(
+        translate("view_mode_label"),
+        options=options,
+        format_func=_label,
+        index=options.index(current),
+        horizontal=True,
+    )
+    st.session_state["view_mode"] = selected
+    return selected
 
 
 def _render_project_creation(app: Application) -> None:
@@ -448,6 +512,707 @@ def _render_usage_summary(state: dict[str, Any]) -> None:
             st.dataframe(stage_rows, use_container_width=True, hide_index=True)
 
 
+# ---------------------------------------------------------------------------
+# Golden Project demo view
+# ---------------------------------------------------------------------------
+
+
+def _render_golden_overview(fixture: dict[str, Any]) -> None:
+    """Render the project overview card from project.json."""
+
+    st.subheader(translate("golden_section_overview"))
+    project = fixture["project"]["project"]
+    rq = fixture["project"].get("research_question", {})
+    dataset_meta = fixture["project"].get("dataset", {})
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write(
+            f"**{translate('golden_label_project_id')}**: "
+            f"`{project.get('project_id', '')}`"
+        )
+        st.write(f"**{translate('golden_label_title')}**: {project.get('title', '')}")
+        st.write(
+            f"**{translate('golden_label_study_type')}**: "
+            f"`{project.get('study_type', '')}`"
+        )
+        species = project.get("species_scope", [])
+        st.write(f"**{translate('golden_label_species')}**: {', '.join(species)}")
+        st.write(
+            f"**{translate('golden_label_guideline')}**: "
+            f"{project.get('reporting_guideline', '')}"
+        )
+    with col2:
+        synthetic = fixture["project"].get("synthetic")
+        st.write(
+            f"**{translate('golden_label_synthetic')}**: "
+            f"{translate('label_yes') if synthetic else translate('label_no')}"
+        )
+        st.write(
+            f"**{translate('golden_label_classification')}**: "
+            f"{fixture['project'].get('data_classification', '')}"
+        )
+        st.write(f"**{translate('golden_label_rows')}**: {dataset_meta.get('rows', '')}")
+        st.write(
+            f"**{translate('golden_label_columns')}**: "
+            f"{dataset_meta.get('columns', '')}"
+        )
+
+    if rq:
+        with st.expander(translate("golden_label_peco"), expanded=False):
+            st.write(
+                f"**{translate('golden_label_population')}**: "
+                f"{rq.get('population', '')}"
+            )
+            st.write(
+                f"**{translate('golden_label_exposure')}**: "
+                f"{rq.get('exposure', '')}"
+            )
+            st.write(
+                f"**{translate('golden_label_comparator')}**: "
+                f"{rq.get('comparator', '')}"
+            )
+            st.write(
+                f"**{translate('golden_label_outcome')}**: "
+                f"{rq.get('outcome', '')}"
+            )
+
+
+def _render_golden_literature(fixture: dict[str, Any]) -> None:
+    """Render the literature records table from records.json."""
+
+    records = fixture["literature"].get("records", [])
+    if not records:
+        st.info(translate("info_no_literature"))
+        return
+
+    st.subheader(translate("golden_section_literature"))
+    st.caption(f"{len(records)} records")
+
+    rows = []
+    for rec in records:
+        rows.append(
+            {
+                translate("col_record_id"): rec.get("literature_id", ""),
+                translate("col_title"): rec.get("title", ""),
+                translate("col_authors"): ", ".join(rec.get("authors", [])),
+                translate("col_year"): rec.get("year", ""),
+                translate("col_journal"): rec.get("journal", ""),
+                translate("col_doi"): rec.get("doi", ""),
+                translate("col_tags"): ", ".join(rec.get("tags", [])),
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    for rec in records:
+        abstract = rec.get("abstract", "")
+        if abstract:
+            label = f"{rec.get('literature_id', '')} \u2014 {rec.get('title', '')[:60]}"
+            with st.expander(label):
+                st.write(abstract)
+
+
+def _render_golden_methodology(fixture: dict[str, Any]) -> None:
+    """Render the methodology findings table from findings.json."""
+
+    findings = fixture["methodology"].get("findings", [])
+    if not findings:
+        st.info(translate("info_no_methodology"))
+        return
+
+    st.subheader(translate("golden_section_methodology"))
+    warning_count = sum(1 for f in findings if f.get("severity") == "warning")
+    col1, col2 = st.columns(2)
+    col1.metric(translate("label_findings_count"), len(findings))
+    col2.metric(translate("label_warnings_count"), warning_count)
+
+    rows = []
+    for f in findings:
+        rows.append(
+            {
+                translate("col_category"): f.get("category", ""),
+                translate("col_severity"): f.get("severity", ""),
+                translate("col_status"): f.get("status", ""),
+                translate("col_rationale"): f.get("rationale", ""),
+                translate("col_recommendation"): f.get("recommendation", ""),
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_golden_dictionary(fixture: dict[str, Any]) -> None:
+    """Render the data dictionary table from variables.json."""
+
+    variables = fixture["dictionary"].get("variables", [])
+    if not variables:
+        return
+
+    st.subheader(translate("golden_section_dictionary"))
+    rows = []
+    for v in variables:
+        rows.append(
+            {
+                translate("col_var_name"): v.get("name", ""),
+                translate("col_var_type"): v.get("var_type", ""),
+                translate("col_var_role"): v.get("role", ""),
+                translate("col_unit"): v.get("unit") or "\u2014",
+                translate("col_missing_code"): v.get("missing_code") or "\u2014",
+                translate("col_description"): v.get("description", ""),
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_golden_analysis_plan(fixture: dict[str, Any]) -> None:
+    """Render the analysis plan table from analyses.json."""
+
+    analyses = fixture["analysis_plan"].get("plan", {}).get("analyses", [])
+    if not analyses:
+        st.info(translate("info_no_analysis_plan"))
+        return
+
+    st.subheader(translate("golden_section_analysis_plan"))
+    rows = []
+    for a in analyses:
+        rows.append(
+            {
+                translate("col_analysis_name"): a.get("name", ""),
+                translate("col_estimand"): a.get("estimand", ""),
+                translate("col_method"): a.get("model_type", ""),
+                translate("col_class"): a.get("analysis_class", ""),
+                translate("col_variables"): ", ".join(a.get("variable_names", [])),
+                translate("col_population"): a.get("population", "") or "\u2014",
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    rows2 = []
+    for a in analyses:
+        for crit in a.get("exclusion_criteria", []):
+            rows2.append(
+                {
+                    translate("col_analysis_name"): a.get("name", ""),
+                    translate("col_exclusion"): crit,
+                }
+            )
+    if rows2:
+        with st.expander(translate("col_exclusion"), expanded=False):
+            st.dataframe(rows2, use_container_width=True, hide_index=True)
+
+
+def _render_golden_dataset() -> None:
+    """Render the synthetic CSV dataset preview using stdlib csv."""
+
+    import csv
+
+    st.subheader(translate("golden_section_dataset"))
+    try:
+        csv_path = GOLDEN_FIXTURE_ROOT / "data" / "cases_synthetic.csv"
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        if rows:
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.caption(f"{len(rows)} {translate('golden_label_rows').lower()}")
+        else:
+            st.info(translate("golden_section_dataset"))
+    except OSError as exc:
+        st.error(translate("golden_demo_load_error", error=str(exc)))
+
+
+def _auto_resume_payload(interrupt: dict[str, Any]) -> dict[str, Any]:
+    """Build a resume payload matching the interrupt's gate type.
+
+    The compliance pipeline has three interrupt shapes:
+    - Standard approval gates (question/protocol/search/analysis_plan/results):
+      ``{decision, reviewer_id, reviewer_role}``
+    - Review disposition gate: ``{reviewer_id, reviewer_role, decisions: [...]}``
+    - Final sign-off gate: ``{decision, authoriser_id, authoriser_role}``
+    """
+
+    gate = interrupt.get("gate", "")
+    if gate == "review":
+        findings = interrupt.get("findings", [])
+        decisions = [
+            {"finding_id": f.get("finding_id", ""), "decision": "reject"}
+            for f in findings
+        ]
+        return {
+            "reviewer_id": "golden-demo",
+            "reviewer_role": "reviewer",
+            "decisions": decisions,
+        }
+    if gate == "final_sign_off":
+        return {
+            "decision": "approved",
+            "authoriser_id": "golden-demo-pi",
+            "authoriser_role": "principal_investigator",
+            "reason": "Auto-approved for golden project demo",
+        }
+    # Standard approval gate
+    return {
+        "decision": "approved",
+        "reviewer_id": "golden-demo",
+        "reviewer_role": "investigator",
+    }
+
+
+def _run_golden_demo_pipeline(app: Application) -> str:
+    """Run the full end-to-end pipeline with golden project defaults.
+
+    All approval gates are auto-approved (including review disposition and
+    final sign-off) so the pipeline runs all the way through to DOCX export
+    without manual intervention. Returns the thread_id of the demo run.
+    """
+
+    thread_id = f"golden-demo-{uuid.uuid4().hex[:8]}"
+    state = new_workflow_state(
+        project_id="00000000-0000-4000-8000-000000000001",
+        workflow_run_id=f"golden-demo-run-{thread_id[-8:]}",
+        thread_id=thread_id,
+        now=utc_now(),
+        species_scope=["canine", "feline"],
+    )
+    config = {"configurable": {"thread_id": thread_id}}
+
+    # Run to the first interrupt, then auto-approve every gate until the
+    # pipeline reaches a terminal stage or no more interrupts are pending.
+    app.graph.invoke(state, config)
+    for _ in range(50):  # safety bound on revision loops
+        snapshot = app.graph.get_state(config)
+        pending = _interrupt_values(snapshot)
+        if not pending:
+            break
+        app.graph.invoke(
+            Command(resume=_auto_resume_payload(pending[0])),
+            config,
+        )
+    return thread_id
+
+
+def _render_manuscript(state: dict[str, Any]) -> None:
+    """Display manuscript sections with word counts and content."""
+
+    summary = state.get("manuscript_summary")
+    sections = state.get("section_drafts", [])
+    if not summary and not sections:
+        st.info(translate("info_no_manuscript"))
+        return
+
+    st.subheader(translate("section_manuscript"))
+
+    if summary:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric(
+            translate("label_manuscript_version"),
+            summary.get("version", 1),
+        )
+        col2.metric(translate("label_section_count"), summary.get("section_count", 0))
+        col3.metric(translate("label_claim_count"), summary.get("claim_count", 0))
+        status = summary.get("status", "")
+        col4.metric(translate("label_manuscript_status"), status)
+
+    total_words = sum(s.get("word_count", 0) for s in sections)
+    if total_words:
+        st.caption(f"{translate('label_word_count')}: {total_words}")
+
+    for section in sorted(sections, key=lambda s: s.get("order", 0)):
+        stype = section.get("section_type", "section")
+        content = section.get("content", "")
+        with st.expander(stype.title(), expanded=False):
+            st.write(content)
+
+
+def _render_claims(state: dict[str, Any]) -> None:
+    """Display manuscript claims with support linkage."""
+
+    claims = state.get("claim_drafts", [])
+    supports = state.get("support_drafts", [])
+    if not claims:
+        st.info(translate("info_no_claims"))
+        return
+
+    st.subheader(translate("section_claims"))
+
+    support_counts: dict[str, int] = {}
+    for s in supports:
+        cid = s.get("claim_id", "")
+        support_counts[cid] = support_counts.get(cid, 0) + 1
+
+    rows = []
+    for c in claims:
+        cid = c.get("claim_id", "")
+        count = support_counts.get(cid, 0)
+        rows.append(
+            {
+                translate("col_claim_type"): c.get("claim_type", ""),
+                translate("col_claim_text"): c.get("text", "")[:200],
+                translate("col_certainty"): c.get("certainty", ""),
+                translate("col_has_support"): (
+                    translate("label_yes") if count else translate("label_no")
+                ),
+                translate("col_support_count"): count,
+                translate("col_ref_numbers"): str(c.get("referenced_numbers", [])),
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_citations(state: dict[str, Any]) -> None:
+    """Display citation drafts linking claims to literature records."""
+
+    citations = state.get("citation_drafts", [])
+    if not citations:
+        st.info(translate("info_no_citations"))
+        return
+
+    st.subheader(translate("section_citations"))
+    rows = []
+    for c in citations:
+        rows.append(
+            {
+                translate("col_citation_key"): c.get("citation_key", ""),
+                translate("col_lit_record"): c.get("literature_record_id", "")[:16],
+                translate("col_section"): c.get("section_id", "")[:24],
+                translate("col_claim_type"): c.get("claim_id", "")[:24],
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_claim_audit(state: dict[str, Any]) -> None:
+    """Display claim audit results (factual support, numeric consistency, etc.)."""
+
+    artifacts = state.get("artifacts", {})
+    audit = artifacts.get("claim_audit")
+    if audit is None:
+        st.info(translate("info_no_claim_audit"))
+        return
+
+    st.subheader(translate("section_claim_audit"))
+
+    payload = audit.get("content_hash", "")  # only metadata stored in ArtifactRef
+    status = audit.get("status", "")
+    col1, col2 = st.columns(2)
+    col1.metric(
+        translate("label_audit_passed"),
+        translate("label_yes") if "passed" in status else translate("label_no"),
+    )
+    col2.metric(
+        translate("label_audit_errors"),
+        "0" if "passed" in status else ">0",
+    )
+    st.caption(f"status: {status}")
+
+
+def _render_review(state: dict[str, Any]) -> None:
+    """Display reviewer critique findings and revision decisions."""
+
+    findings = state.get("review_findings", [])
+    decisions = state.get("revision_decisions", [])
+    revision_summary = state.get("revision_summary")
+    if not findings and not revision_summary:
+        st.info(translate("info_no_review"))
+        return
+
+    st.subheader(translate("section_review"))
+
+    if findings:
+        decision_map = {d.get("finding_id", ""): d.get("decision", "") for d in decisions}
+        rows = []
+        for f in findings:
+            rows.append(
+                {
+                    translate("col_category"): f.get("category", ""),
+                    translate("col_severity"): f.get("severity", ""),
+                    translate("col_location"): f.get("location", ""),
+                    translate("col_rationale"): f.get("rationale", ""),
+                    translate("col_recommendation"): f.get("recommendation", ""),
+                    translate("col_status"): f.get("status", ""),
+                }
+            )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    if revision_summary:
+        with st.expander(translate("section_revision"), expanded=False):
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric(translate("label_revision_round"), revision_summary.get("round", 0))
+            col2.metric(translate("label_accepted"), revision_summary.get("accepted_count", 0))
+            col3.metric(translate("label_rejected"), revision_summary.get("rejected_count", 0))
+            col4.metric(translate("label_deferred"), revision_summary.get("deferred_count", 0))
+
+
+def _render_compliance(state: dict[str, Any]) -> None:
+    """Display STROBE-Vet compliance audit findings and checklist summary."""
+
+    findings = state.get("compliance_findings", [])
+    checklist = state.get("checklist_summary")
+    readiness = state.get("export_readiness")
+    if not findings and checklist is None:
+        st.info(translate("info_no_compliance"))
+        return
+
+    st.subheader(translate("section_compliance"))
+
+    if readiness:
+        st.metric(translate("label_export_readiness"), readiness)
+
+    if checklist:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric(translate("label_passed"), checklist.get("passed", 0))
+        col2.metric(translate("label_failed"), checklist.get("failed", 0))
+        col3.metric(translate("label_not_applicable"), checklist.get("not_applicable", 0))
+        col4.metric(translate("label_needs_review"), checklist.get("needs_review", 0))
+
+    if findings:
+        rows = []
+        for f in findings:
+            rows.append(
+                {
+                    translate("col_rule_id"): f.get("rule_id", ""),
+                    translate("col_category"): f.get("category", ""),
+                    translate("col_severity"): f.get("severity", ""),
+                    translate("col_status"): f.get("status", ""),
+                    translate("col_evidence"): f.get("evidence", ""),
+                    translate("col_recommendation"): f.get("recommendation", ""),
+                }
+            )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+@st.cache_data(show_spinner=False)
+def _regenerate_export_package(_state_hash: str) -> tuple[Any, ...] | None:
+    """Placeholder kept for potential future caching; current implementation
+    regenerates inline in ``_render_export`` to access live state.
+    """
+
+    return None
+
+
+def _render_export(state: dict[str, Any]) -> None:
+    """Display export package summary with download buttons for components."""
+
+    package = state.get("export_package")
+    if package is None:
+        st.info(translate("info_no_export"))
+        return
+
+    st.subheader(translate("section_export"))
+
+    col1, col2 = st.columns(2)
+    col1.metric(translate("col_components"), package.get("component_count", 0))
+    col2.metric(
+        translate("label_manuscript_status"),
+        package.get("status", ""),
+    )
+    st.caption(f"{translate('col_package_uri')}: `{package.get('package_uri', '')}`")
+
+    # Regenerate components for download from current state
+    from vet_manuscript_lab.services.export import (
+        ExportInput,
+        MockExportGenerator,
+        create_docx_renderer,
+    )
+
+    sections = tuple(dict(s) for s in state.get("section_drafts", []))
+    citations = tuple(dict(c) for c in state.get("citation_drafts", []))
+    results = tuple(dict(r) for r in state.get("result_drafts", []))
+    literature = tuple(dict(r) for r in state.get("literature_record_drafts", []))
+    analysis_plan = dict(state.get("analysis_plan_summary") or {})
+    ai_usage = dict(state.get("ai_usage") or {})
+    manuscript = dict(state.get("manuscript_summary") or {})
+    sign_off = dict(state.get("approvals", {}).get("final_sign_off", {}))
+    sign_off["approval_id"] = (
+        state.get("sign_off_binding", {}).get("approval_id", "")
+        if state.get("sign_off_binding")
+        else ""
+    )
+
+    try:
+        renderer = create_docx_renderer()
+        generator = MockExportGenerator(docx_renderer=renderer)
+        export_result = generator.generate(
+            ExportInput(
+                sections=sections,
+                citations=citations,
+                results=results,
+                literature_records=literature,
+                analysis_plan_summary=analysis_plan,
+                ai_usage=ai_usage,
+                sign_off_approval=sign_off,
+                manuscript_summary=manuscript,
+            )
+        )
+    except Exception as exc:
+        st.error(f"{translate('label_regenerating')} {exc}")
+        return
+
+    # Download buttons for each component
+    import base64
+
+    dl_cols = st.columns(min(len(export_result.components), 5))
+    for i, comp in enumerate(export_result.components):
+        col = dl_cols[i % len(dl_cols)]
+        label_key = {
+            "manuscript": "label_download_qmd",
+            "references": "label_download_bib",
+            "manifest": "label_download_manifest",
+            "docx": "label_download_docx",
+        }.get(comp.role, "col_filename")
+        label = translate(label_key) if label_key != "col_filename" else comp.filename
+
+        # DOCX content is base64; other components are plain text
+        is_binary = comp.media_type in (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/octet-stream",
+        )
+        if is_binary:
+            try:
+                data = base64.b64decode(comp.content)
+                col.download_button(
+                    label,
+                    data=data,
+                    file_name=comp.filename,
+                    mime=comp.media_type,
+                    key=f"dl-{comp.role}",
+                )
+            except Exception:
+                col.download_button(
+                    label,
+                    data=comp.content.encode(),
+                    file_name=comp.filename,
+                    mime="text/plain",
+                    key=f"dl-{comp.role}-fallback",
+                )
+        else:
+            col.download_button(
+                label,
+                data=comp.content.encode("utf-8"),
+                file_name=comp.filename,
+                mime=comp.media_type,
+                key=f"dl-{comp.role}",
+            )
+
+    # Component table
+    comp_rows = []
+    for comp in export_result.components:
+        comp_rows.append(
+            {
+                translate("col_filename"): comp.filename,
+                translate("col_media_type"): comp.media_type,
+                translate("col_task_kind"): comp.role,
+            }
+        )
+    if comp_rows:
+        st.dataframe(comp_rows, use_container_width=True, hide_index=True)
+
+
+def _render_golden_demo_run(app: Application) -> None:
+    """Render the demo pipeline run section and its derived results."""
+
+    st.subheader(translate("golden_run_header"))
+    st.caption(translate("golden_run_description_full"))
+
+    col_run, col_clear = st.columns([1, 1])
+    run_clicked = col_run.button(translate("golden_button_run"))
+    clear_clicked = col_clear.button(translate("golden_button_clear"))
+
+    if clear_clicked:
+        st.session_state.pop("golden_demo_thread_id", None)
+        st.rerun()
+
+    if run_clicked:
+        with st.spinner(translate("golden_run_header")):
+            try:
+                thread_id = _run_golden_demo_pipeline(app)
+                st.session_state["golden_demo_thread_id"] = thread_id
+                st.success(translate("golden_run_started"))
+            except (LookupError, PermissionError, ValueError) as exc:
+                st.error(str(exc))
+                st.session_state.pop("golden_demo_thread_id", None)
+
+    thread_id = st.session_state.get("golden_demo_thread_id")
+    if not isinstance(thread_id, str):
+        st.info(translate("golden_run_no_thread"))
+        return
+
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = app.graph.get_state(config)
+    state = snapshot.values
+
+    st.write(
+        {
+            translate("label_thread_id"): thread_id,
+            translate("golden_run_stage"): stage_label(state.get("current_stage")),
+            translate("label_status"): status_label(state.get("run_status")),
+            translate("label_next"): snapshot.next,
+        }
+    )
+
+    st.subheader(translate("golden_pipeline_results"))
+
+    # Literature + evidence outputs
+    _render_literature_records(state)
+    _render_evidence_items(state)
+
+    # Methodology + analysis outputs
+    _render_methodology_findings(state)
+    _render_analysis_plan(state)
+    _render_statistical_results(state)
+
+    # Writing + claim audit outputs
+    _render_manuscript(state)
+    _render_claims(state)
+    _render_citations(state)
+    _render_claim_audit(state)
+
+    # Reviewer critique + revision
+    _render_review(state)
+
+    # Compliance audit (STROBE-Vet)
+    _render_compliance(state)
+
+    # Export package (DOCX + provenance)
+    _render_export(state)
+
+    # AI usage / cost views (appear after any gateway call)
+    _render_usage_summary(state)
+
+
+def _render_golden_demo(app: Application) -> None:
+    """Render the full Golden Project demo view.
+
+    Combines a static fixture browser (read directly from the JSON/CSV
+    files) with a one-click demo pipeline run that shows the
+    workflow-derived results (evidence items, statistical results, etc.).
+    """
+
+    st.title(translate("golden_demo_title"))
+    st.caption(translate("golden_demo_caption"))
+
+    error = st.session_state.pop("golden_fixture_error", None)
+    if error:
+        st.error(translate("golden_demo_load_error", error=error))
+
+    fixture = _load_golden_fixture()
+    if fixture is None:
+        st.error(translate("golden_demo_load_error", error="fixture not found"))
+        return
+
+    _render_golden_overview(fixture)
+    st.divider()
+    _render_golden_literature(fixture)
+    st.divider()
+    _render_golden_dataset()
+    _render_golden_dictionary(fixture)
+    st.divider()
+    _render_golden_analysis_plan(fixture)
+    st.divider()
+    _render_golden_methodology(fixture)
+    st.divider()
+    _render_golden_demo_run(app)
+
+
 def _render_workflow(app: Application, project_id: str) -> None:
     st.subheader(translate("workflow_header_full"))
     if st.button(translate("button_start_full_run")):
@@ -541,9 +1306,15 @@ def _render_workflow(app: Application, project_id: str) -> None:
 def main() -> None:
     st.set_page_config(page_title=translate("page_title"), layout="wide")
     _render_language_switch()
+    view_mode = _render_view_mode_switch()
+    app = get_application()
+
+    if view_mode == "golden_demo":
+        _render_golden_demo(app)
+        return
+
     st.title(translate("app_title"))
     st.caption(translate("app_caption_full"))
-    app = get_application()
     _render_project_creation(app)
     st.divider()
     _render_projects(app)

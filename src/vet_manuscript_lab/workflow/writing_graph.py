@@ -171,12 +171,7 @@ def section_writing_node(
 
     result_drafts = state.get("result_drafts", [])
     evidence_summary: dict[str, Any] = dict(state.get("evidence_summary") or {})
-    literature_summary_raw: dict[str, Any] = dict(state.get("literature_summary") or {})
-    literature_records = (
-        literature_summary_raw.get("records", [])
-        if isinstance(literature_summary_raw, dict)
-        else []
-    )
+    literature_records = list(state.get("literature_record_drafts", []))
     analysis_plan_summary: dict[str, Any] = dict(
         state.get("analysis_plan_summary") or {}
     )
@@ -187,7 +182,7 @@ def section_writing_node(
             project_id=state["project_id"],
             evidence_summary=evidence_summary,
             result_drafts=[dict(r) for r in result_drafts],
-            literature_records=list(literature_records),
+            literature_records=[dict(r) for r in literature_records],
             analysis_plan_summary=dict(analysis_plan_summary),
         )
     )

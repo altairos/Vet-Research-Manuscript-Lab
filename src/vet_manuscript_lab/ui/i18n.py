@@ -369,6 +369,260 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Tokens",
         "zh": "Token 数",
     },
+    # Golden Project demo view
+    "view_mode_label": {
+        "en": "View mode",
+        "zh": "视图模式",
+    },
+    "view_workflow": {
+        "en": "Workflow",
+        "zh": "工作流",
+    },
+    "view_golden_demo": {
+        "en": "Golden Project demo",
+        "zh": "Golden Project 演示",
+    },
+    "golden_demo_title": {
+        "en": "Golden Project demo data",
+        "zh": "Golden Project 演示数据",
+    },
+    "golden_demo_caption": {
+        "en": (
+            "Browse the synthetic fixture data and run a one-click demo "
+            "of the full analysis pipeline."
+        ),
+        "zh": "浏览合成测试数据，并一键运行完整分析流水线演示。",
+    },
+    "golden_demo_load_error": {
+        "en": "Could not load golden project fixture: {error}",
+        "zh": "无法加载 golden project 测试数据：{error}",
+    },
+    "golden_section_overview": {
+        "en": "Project overview",
+        "zh": "项目概览",
+    },
+    "golden_section_dataset": {
+        "en": "Dataset preview",
+        "zh": "数据集预览",
+    },
+    "golden_section_dictionary": {
+        "en": "Data dictionary",
+        "zh": "数据字典",
+    },
+    "golden_section_analysis_plan": {
+        "en": "Analysis plan",
+        "zh": "分析计划",
+    },
+    "golden_section_methodology": {
+        "en": "Methodology findings",
+        "zh": "方法学发现",
+    },
+    "golden_section_literature": {
+        "en": "Literature records",
+        "zh": "文献记录",
+    },
+    "golden_label_project_id": {"en": "Project ID", "zh": "项目 ID"},
+    "golden_label_title": {"en": "Title", "zh": "标题"},
+    "golden_label_study_type": {"en": "Study type", "zh": "研究类型"},
+    "golden_label_species": {"en": "Species scope", "zh": "物种范围"},
+    "golden_label_guideline": {
+        "en": "Reporting guideline",
+        "zh": "报告规范",
+    },
+    "golden_label_synthetic": {
+        "en": "Synthetic",
+        "zh": "合成数据",
+    },
+    "golden_label_classification": {
+        "en": "Data classification",
+        "zh": "数据分级",
+    },
+    "golden_label_peco": {
+        "en": "Research question (PECO)",
+        "zh": "研究问题（PECO）",
+    },
+    "golden_label_population": {"en": "Population", "zh": "人群/对象"},
+    "golden_label_exposure": {"en": "Exposure", "zh": "暴露"},
+    "golden_label_comparator": {"en": "Comparator", "zh": "对照"},
+    "golden_label_outcome": {"en": "Outcome", "zh": "结局"},
+    "golden_label_rows": {"en": "Rows", "zh": "行数"},
+    "golden_label_columns": {"en": "Columns", "zh": "列数"},
+    "col_authors": {"en": "Authors", "zh": "作者"},
+    "col_year": {"en": "Year", "zh": "年份"},
+    "col_journal": {"en": "Journal", "zh": "期刊"},
+    "col_abstract": {"en": "Abstract", "zh": "摘要"},
+    "col_tags": {"en": "Tags", "zh": "标签"},
+    "col_var_name": {"en": "Variable", "zh": "变量名"},
+    "col_var_type": {"en": "Type", "zh": "类型"},
+    "col_var_role": {"en": "Role", "zh": "角色"},
+    "col_unit": {"en": "Unit", "zh": "单位"},
+    "col_missing_code": {"en": "Missing code", "zh": "缺失码"},
+    "col_description": {"en": "Description", "zh": "描述"},
+    "col_variables": {"en": "Variables", "zh": "变量"},
+    "col_exclusion": {"en": "Exclusion criteria", "zh": "排除标准"},
+    "col_population": {"en": "Population", "zh": "适用人群"},
+    "golden_run_header": {
+        "en": "Demo pipeline run",
+        "zh": "演示流水线运行",
+    },
+    "golden_run_description": {
+        "en": (
+            "Run the full analysis pipeline (project init -> literature "
+            "-> evidence -> methodology -> statistics) with all approval "
+            "gates auto-approved using mock providers."
+        ),
+        "zh": (
+            "使用 mock 提供者运行完整分析流水线（项目初始化 → 文献 → 证据 → "
+            "方法学 → 统计分析），所有审批门自动通过。"
+        ),
+    },
+    "golden_button_run": {
+        "en": "Run demo pipeline",
+        "zh": "运行演示流水线",
+    },
+    "golden_button_clear": {
+        "en": "Clear demo run",
+        "zh": "清除演示运行",
+    },
+    "golden_run_started": {
+        "en": "Demo pipeline finished.",
+        "zh": "演示流水线已完成。",
+    },
+    "golden_run_stage": {
+        "en": "Reached stage",
+        "zh": "到达阶段",
+    },
+    "golden_run_no_thread": {
+        "en": "No demo run yet. Click the button above to start.",
+        "zh": "尚未运行演示。请点击上方按钮启动。",
+    },
+    "golden_pipeline_results": {
+        "en": "Pipeline-derived results",
+        "zh": "流水线衍生结果",
+    },
+    # manuscript / writing views
+    "section_manuscript": {
+        "en": "Manuscript draft",
+        "zh": "稿件草稿",
+    },
+    "section_claims": {"en": "Claims & support", "zh": "论点与支撑"},
+    "section_citations": {"en": "Citations", "zh": "引用"},
+    "section_claim_audit": {"en": "Claim audit", "zh": "论点审计"},
+    "section_review": {"en": "Reviewer critique", "zh": "审阅批评"},
+    "section_revision": {"en": "Revision summary", "zh": "修订摘要"},
+    "section_compliance": {"en": "STROBE-Vet compliance", "zh": "STROBE-Vet 合规"},
+    "section_export": {"en": "Export package", "zh": "导出包"},
+    "label_section_count": {"en": "Sections", "zh": "章节数"},
+    "label_claim_count": {"en": "Claims", "zh": "论点数"},
+    "label_word_count": {"en": "Words", "zh": "词数"},
+    "label_manuscript_version": {"en": "Version", "zh": "版本"},
+    "label_manuscript_status": {"en": "Status", "zh": "状态"},
+    "label_revision_round": {"en": "Revision round", "zh": "修订轮次"},
+    "col_section_type": {"en": "Section", "zh": "章节"},
+    "col_claim_type": {"en": "Type", "zh": "类型"},
+    "col_claim_text": {"en": "Claim text", "zh": "论点文本"},
+    "col_certainty": {"en": "Certainty", "zh": "确信度"},
+    "col_has_support": {"en": "Support", "zh": "支撑"},
+    "col_support_count": {"en": "Support count", "zh": "支撑数"},
+    "col_ref_numbers": {"en": "Numbers cited", "zh": "引用数字"},
+    "col_citation_key": {"en": "Citation key", "zh": "引用键"},
+    "col_lit_record": {"en": "Literature record", "zh": "文献记录"},
+    "col_support_type": {"en": "Support type", "zh": "支撑类型"},
+    "col_source": {"en": "Source", "zh": "来源"},
+    "col_check": {"en": "Check", "zh": "检查项"},
+    "col_audit_result": {"en": "Result", "zh": "结果"},
+    "label_audit_passed": {"en": "Audit passed", "zh": "审计通过"},
+    "label_audit_errors": {"en": "Errors", "zh": "错误数"},
+    "info_no_manuscript": {
+        "en": "No manuscript generated yet.",
+        "zh": "尚未生成稿件。",
+    },
+    "info_no_claims": {"en": "No claims yet.", "zh": "暂无论点。"},
+    "info_no_citations": {
+        "en": "No citations yet.",
+        "zh": "暂无引用。",
+    },
+    "info_no_claim_audit": {
+        "en": "No claim audit performed yet.",
+        "zh": "尚未执行论点审计。",
+    },
+    "info_no_review": {
+        "en": "No review findings yet.",
+        "zh": "暂无审阅发现。",
+    },
+    "info_no_revision": {
+        "en": "No revision performed.",
+        "zh": "未执行修订。",
+    },
+    "info_no_compliance": {
+        "en": "No compliance audit yet.",
+        "zh": "尚未执行合规审计。",
+    },
+    "info_no_export": {
+        "en": "No export package generated yet.",
+        "zh": "尚未生成导出包。",
+    },
+    "col_location": {"en": "Location", "zh": "位置"},
+    "label_review_findings": {
+        "en": "Review findings",
+        "zh": "审阅发现",
+    },
+    "label_accepted": {"en": "Accepted", "zh": "采纳"},
+    "label_rejected": {"en": "Rejected", "zh": "驳回"},
+    "label_deferred": {"en": "Deferred", "zh": "挂起"},
+    "label_passed": {"en": "Passed", "zh": "通过"},
+    "label_failed": {"en": "Failed", "zh": "失败"},
+    "label_not_applicable": {
+        "en": "N/A",
+        "zh": "不适用",
+    },
+    "label_needs_review": {
+        "en": "Needs review",
+        "zh": "待审核",
+    },
+    "label_export_readiness": {
+        "en": "Export readiness",
+        "zh": "导出就绪度",
+    },
+    "col_rule_id": {"en": "Rule ID", "zh": "规则 ID"},
+    "col_evidence": {"en": "Evidence", "zh": "证据"},
+    "col_filename": {"en": "File", "zh": "文件"},
+    "col_media_type": {"en": "Media type", "zh": "媒体类型"},
+    "col_components": {"en": "Components", "zh": "组件数"},
+    "col_package_uri": {"en": "Package URI", "zh": "包 URI"},
+    "label_download_docx": {
+        "en": "Download DOCX",
+        "zh": "下载 DOCX",
+    },
+    "label_download_qmd": {
+        "en": "Download manuscript (QMD)",
+        "zh": "下载稿件（QMD）",
+    },
+    "label_download_bib": {
+        "en": "Download references (BibTeX)",
+        "zh": "下载参考文献（BibTeX）",
+    },
+    "label_download_manifest": {
+        "en": "Download manifest (JSON)",
+        "zh": "下载清单（JSON）",
+    },
+    "label_regenerating": {
+        "en": "Regenerating export package...",
+        "zh": "正在重新生成导出包…",
+    },
+    "golden_run_description_full": {
+        "en": (
+            "Run the full end-to-end pipeline (project -> literature -> "
+            "evidence -> methodology -> statistics -> writing -> review -> "
+            "compliance audit -> sign-off -> DOCX export) with all approval "
+            "gates auto-approved using mock providers."
+        ),
+        "zh": (
+            "使用 mock 提供者运行完整端到端流水线（项目 → 文献 → 证据 → "
+            "方法学 → 统计 → 写作 → 审阅 → 合规审计 → 签署 → DOCX 导出），"
+            "所有审批门自动通过。"
+        ),
+    },
 }
 
 
