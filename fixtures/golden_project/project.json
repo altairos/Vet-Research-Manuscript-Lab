@@ -1,0 +1,20 @@
+{
+  "fixture_version": "1.0.0",
+  "synthetic": true,
+  "project": {
+    "project_id": "00000000-0000-4000-8000-000000000001",
+    "title": "Synthetic canine retrospective cohort study",
+    "study_type": "retrospective_observational_clinical_study",
+    "species_scope": ["canine"],
+    "reporting_guideline": "STROBE-Vet"
+  },
+  "research_question": {
+    "population": "Synthetic dogs presenting to a fictional referral hospital",
+    "exposure": "Synthetic exposure A",
+    "comparator": "No synthetic exposure A",
+    "outcome": "Synthetic 30-day outcome"
+  },
+  "data_classification": "synthetic_non_sensitive",
+  "contains_real_clinical_data": false
+}
+
