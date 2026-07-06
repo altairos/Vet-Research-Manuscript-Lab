@@ -16,7 +16,7 @@ from langgraph.types import Command
 
 from vet_manuscript_lab.config import Settings
 from vet_manuscript_lab.domain.conventions import utc_now
-from vet_manuscript_lab.infrastructure.checkpoints import open_sqlite_checkpointer
+from vet_manuscript_lab.infrastructure.checkpoints import open_checkpointer
 from vet_manuscript_lab.infrastructure.database import create_database
 from vet_manuscript_lab.infrastructure.database.governance import GovernanceRepository
 from vet_manuscript_lab.infrastructure.database.repository import (
@@ -35,7 +35,6 @@ from vet_manuscript_lab.ui.i18n import (
 from vet_manuscript_lab.workflow.compliance_graph import build_compliance_pipeline_graph
 from vet_manuscript_lab.workflow.state import new_workflow_state
 
-
 GOLDEN_FIXTURE_ROOT = (
     Path(__file__).resolve().parents[3] / "fixtures" / "golden_project"
 )
@@ -52,7 +51,7 @@ def _load_golden_fixture() -> dict[str, Any] | None:
     try:
 
         def _read_json(rel: str) -> dict[str, Any]:
-            return json.loads(
+            return json.loads(  # type: ignore[no-any-return]
                 (GOLDEN_FIXTURE_ROOT / rel).read_text(encoding="utf-8")
             )
 
@@ -79,11 +78,17 @@ class Application:
 @st.cache_resource
 def get_application() -> Application:
     settings = Settings.from_env()
-    database = create_database(settings.database_url)
+    database = create_database(
+        settings.database_url,
+        pool_config=settings.pool_config,
+    )
     database.create_schema()
     repository = FoundationRepository(database.sessions)
     governance = GovernanceRepository(database.sessions)
-    connection, checkpointer = open_sqlite_checkpointer(settings.checkpoint_path)
+    connection, checkpointer = open_checkpointer(
+        database_url=settings.database_url,
+        checkpoint_path=settings.checkpoint_path,
+    )
     graph = build_compliance_pipeline_graph(checkpointer)
     return Application(
         repository=repository,
@@ -552,7 +557,9 @@ def _render_golden_overview(fixture: dict[str, Any]) -> None:
             f"**{translate('golden_label_classification')}**: "
             f"{fixture['project'].get('data_classification', '')}"
         )
-        st.write(f"**{translate('golden_label_rows')}**: {dataset_meta.get('rows', '')}")
+        st.write(
+            f"**{translate('golden_label_rows')}**: {dataset_meta.get('rows', '')}"
+        )
         st.write(
             f"**{translate('golden_label_columns')}**: "
             f"{dataset_meta.get('columns', '')}"
@@ -565,16 +572,14 @@ def _render_golden_overview(fixture: dict[str, Any]) -> None:
                 f"{rq.get('population', '')}"
             )
             st.write(
-                f"**{translate('golden_label_exposure')}**: "
-                f"{rq.get('exposure', '')}"
+                f"**{translate('golden_label_exposure')}**: {rq.get('exposure', '')}"
             )
             st.write(
                 f"**{translate('golden_label_comparator')}**: "
                 f"{rq.get('comparator', '')}"
             )
             st.write(
-                f"**{translate('golden_label_outcome')}**: "
-                f"{rq.get('outcome', '')}"
+                f"**{translate('golden_label_outcome')}**: {rq.get('outcome', '')}"
             )
 
 
@@ -783,9 +788,7 @@ def _fixture_to_variable_drafts(fixture: dict[str, Any]) -> list[dict[str, Any]]
 def _fixture_to_analysis_drafts(fixture: dict[str, Any]) -> list[dict[str, Any]]:
     """Convert golden fixture analyses to WorkflowState drafts."""
 
-    return list(
-        fixture.get("analysis_plan", {}).get("plan", {}).get("analyses", [])
-    )
+    return list(fixture.get("analysis_plan", {}).get("plan", {}).get("analyses", []))
 
 
 def _fixture_to_methodology_findings(fixture: dict[str, Any]) -> list[dict[str, Any]]:
@@ -819,10 +822,10 @@ def _run_golden_demo_pipeline(app: Application) -> str:
     # literature_search_node, methodology_critic_node, and analysis_plan_node.
     fixture = _load_golden_fixture()
     if fixture:
-        state["literature_record_drafts"] = _fixture_to_literature_drafts(fixture)
-        state["variable_spec_drafts"] = _fixture_to_variable_drafts(fixture)
-        state["analysis_spec_drafts"] = _fixture_to_analysis_drafts(fixture)
-        state["methodology_findings"] = _fixture_to_methodology_findings(fixture)
+        state["literature_record_drafts"] = _fixture_to_literature_drafts(fixture)  # type: ignore[typeddict-item]
+        state["variable_spec_drafts"] = _fixture_to_variable_drafts(fixture)  # type: ignore[typeddict-item]
+        state["analysis_spec_drafts"] = _fixture_to_analysis_drafts(fixture)  # type: ignore[typeddict-item]
+        state["methodology_findings"] = _fixture_to_methodology_findings(fixture)  # type: ignore[typeddict-item]
 
     config = {"configurable": {"thread_id": thread_id}}
 
@@ -942,7 +945,6 @@ def _render_claim_audit(state: dict[str, Any]) -> None:
 
     st.subheader(translate("section_claim_audit"))
 
-    payload = audit.get("content_hash", "")  # only metadata stored in ArtifactRef
     status = audit.get("status", "")
     col1, col2 = st.columns(2)
     col1.metric(
@@ -969,7 +971,9 @@ def _render_review(state: dict[str, Any]) -> None:
     st.subheader(translate("section_review"))
 
     if findings:
-        decision_map = {d.get("finding_id", ""): d.get("decision", "") for d in decisions}
+        decision_map = {  # noqa: F841
+            d.get("finding_id", ""): d.get("decision", "") for d in decisions
+        }
         rows = []
         for f in findings:
             rows.append(
@@ -987,10 +991,22 @@ def _render_review(state: dict[str, Any]) -> None:
     if revision_summary:
         with st.expander(translate("section_revision"), expanded=False):
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric(translate("label_revision_round"), revision_summary.get("round", 0))
-            col2.metric(translate("label_accepted"), revision_summary.get("accepted_count", 0))
-            col3.metric(translate("label_rejected"), revision_summary.get("rejected_count", 0))
-            col4.metric(translate("label_deferred"), revision_summary.get("deferred_count", 0))
+            col1.metric(
+                translate("label_revision_round"),
+                revision_summary.get("round", 0),
+            )
+            col2.metric(
+                translate("label_accepted"),
+                revision_summary.get("accepted_count", 0),
+            )
+            col3.metric(
+                translate("label_rejected"),
+                revision_summary.get("rejected_count", 0),
+            )
+            col4.metric(
+                translate("label_deferred"),
+                revision_summary.get("deferred_count", 0),
+            )
 
 
 def _render_compliance(state: dict[str, Any]) -> None:
@@ -1012,7 +1028,10 @@ def _render_compliance(state: dict[str, Any]) -> None:
         col1, col2, col3, col4 = st.columns(4)
         col1.metric(translate("label_passed"), checklist.get("passed", 0))
         col2.metric(translate("label_failed"), checklist.get("failed", 0))
-        col3.metric(translate("label_not_applicable"), checklist.get("not_applicable", 0))
+        col3.metric(
+            translate("label_not_applicable"),
+            checklist.get("not_applicable", 0),
+        )
         col4.metric(translate("label_needs_review"), checklist.get("needs_review", 0))
 
     if findings:
@@ -1196,7 +1215,7 @@ def _render_golden_demo_status(app: Application) -> dict[str, Any] | None:
 
     config = {"configurable": {"thread_id": thread_id}}
     snapshot = app.graph.get_state(config)
-    state = snapshot.values
+    state: dict[str, Any] = snapshot.values
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(translate("label_thread_id"), thread_id[:20])
@@ -1216,17 +1235,15 @@ def _render_golden_demo_results(
 
     st.subheader(translate("golden_pipeline_results"))
 
-    tab_data, tab_lit, tab_method, tab_manuscript, tab_review, tab_export = (
-        st.tabs(
-            [
-                translate("tab_data_inputs"),
-                translate("tab_lit_evidence"),
-                translate("tab_method_stats"),
-                translate("tab_manuscript"),
-                translate("tab_review_compliance"),
-                translate("tab_export"),
-            ]
-        )
+    tab_data, tab_lit, tab_method, tab_manuscript, tab_review, tab_export = st.tabs(
+        [
+            translate("tab_data_inputs"),
+            translate("tab_lit_evidence"),
+            translate("tab_method_stats"),
+            translate("tab_manuscript"),
+            translate("tab_review_compliance"),
+            translate("tab_export"),
+        ]
     )
 
     with tab_data:

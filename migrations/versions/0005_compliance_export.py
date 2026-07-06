@@ -37,7 +37,10 @@ def upgrade() -> None:
         sa.Column("category", sa.String(128), nullable=False),
         sa.Column("severity", sa.String(32), nullable=False),
         sa.Column(
-            "status", sa.String(32), nullable=False, server_default="needs_review"
+            "status",
+            sa.String(32),
+            nullable=False,
+            server_default=sa.text("'needs_review'"),
         ),
         sa.Column("evidence", sa.Text, nullable=True),
         sa.Column("recommendation", sa.Text, nullable=True),
@@ -65,8 +68,15 @@ def upgrade() -> None:
         sa.Column("sign_off_approval_id", sa.String(36), nullable=False),
         sa.Column("manifest_hash", sa.String(80), nullable=False),
         sa.Column("package_hash", sa.String(80), nullable=False),
-        sa.Column("component_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("status", sa.String(32), nullable=False, server_default="generated"),
+        sa.Column(
+            "component_count", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
+        sa.Column(
+            "status",
+            sa.String(32),
+            nullable=False,
+            server_default=sa.text("'generated'"),
+        ),
         sa.Column("package_uri", sa.String(500), nullable=False),
         sa.UniqueConstraint("project_id", "manifest_hash"),
         sa.UniqueConstraint("package_hash"),

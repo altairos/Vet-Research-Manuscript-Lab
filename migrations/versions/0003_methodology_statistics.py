@@ -56,7 +56,9 @@ def upgrade() -> None:
         sa.Column("content_hash", sa.String(80), nullable=False),
         sa.Column("uri", sa.Text(), nullable=False),
         sa.Column("media_type", sa.String(100), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'draft'")
+        ),
         sa.Column("created_by_run_id", sa.String(36), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("dataset_id", "version"),
@@ -83,7 +85,9 @@ def upgrade() -> None:
         sa.Column("var_type", sa.String(64), nullable=False),
         sa.Column("unit", sa.String(128), nullable=True),
         sa.Column("missing_code", sa.String(64), nullable=True),
-        sa.Column("role", sa.String(64), nullable=False, server_default="covariate"),
+        sa.Column(
+            "role", sa.String(64), nullable=False, server_default=sa.text("'covariate'")
+        ),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("metadata_json", sa.JSON(), nullable=False),
         sa.UniqueConstraint("dataset_version_id", "name"),
@@ -107,7 +111,9 @@ def upgrade() -> None:
         ),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("content_hash", sa.String(80), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'draft'")
+        ),
         sa.Column(
             "is_exploratory",
             sa.Boolean(),
@@ -172,7 +178,9 @@ def upgrade() -> None:
         sa.Column("severity", sa.String(32), nullable=False),
         sa.Column("rationale", sa.Text(), nullable=False),
         sa.Column("recommendation", sa.Text(), nullable=True),
-        sa.Column("status", sa.String(32), nullable=False, server_default="open"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'open'")
+        ),
         sa.Column(
             "analysis_plan_version_id",
             sa.String(36),
@@ -213,7 +221,9 @@ def upgrade() -> None:
         sa.Column("stdout", sa.Text(), nullable=True),
         sa.Column("stderr", sa.Text(), nullable=True),
         sa.Column("exit_code", sa.Integer(), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="running"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'running'")
+        ),
         sa.Column(
             "is_exploratory",
             sa.Boolean(),
@@ -258,7 +268,9 @@ def upgrade() -> None:
         sa.Column("method", sa.String(200), nullable=True),
         sa.Column("population", sa.String(300), nullable=True),
         sa.Column("analysis_class", sa.String(32), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'draft'")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index(

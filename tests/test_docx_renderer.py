@@ -67,8 +67,8 @@ class MockDocxRendererTests(unittest.TestCase):
         """The DOCX must be a valid ZIP containing the required OOXML parts."""
         import base64
         import io
-        import zipfile
         import xml.etree.ElementTree as ET
+        import zipfile
 
         renderer = MockDocxRenderer()
         result = renderer.render(

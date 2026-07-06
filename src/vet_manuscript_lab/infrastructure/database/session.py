@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from vet_manuscript_lab.infrastructure.database.backends import (
+    DatabaseBackend,
+    PoolConfig,
+    select_backend,
+)
 from vet_manuscript_lab.infrastructure.database.base import Base
 
 
@@ -21,18 +26,41 @@ class Database:
 
         Base.metadata.create_all(self.engine)
 
+    def health_check(self) -> bool:
+        """Execute ``SELECT 1`` to verify the database connection is alive."""
 
-def create_database(url: str, *, echo: bool = False) -> Database:
-    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
-    engine = create_engine(url, echo=echo, connect_args=connect_args)
+        with self.sessions() as session:
+            result = session.execute(text("SELECT 1")).scalar()
+            return result == 1
 
-    if url.startswith("sqlite"):
+    @property
+    def dialect_name(self) -> str:
+        """Return the SQLAlchemy dialect name (e.g. ``sqlite``, ``postgresql``)."""
 
-        @event.listens_for(engine, "connect")
-        def enable_sqlite_foreign_keys(dbapi_connection: object, _: object) -> None:
-            cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.close()
+        return self.engine.dialect.name
+
+
+def create_database(
+    url: str,
+    *,
+    echo: bool = False,
+    pool_config: PoolConfig | None = None,
+    backend: DatabaseBackend | None = None,
+) -> Database:
+    """Create a ``Database`` bound to *url*.
+
+    The backend is auto-selected from the URL scheme unless *backend* is
+    provided (useful for testing).  *pool_config* only affects PostgreSQL.
+    """
+
+    if pool_config is None:
+        pool_config = PoolConfig()
+    if backend is None:
+        backend = select_backend(url)
+
+    engine = backend.create_engine(url, pool_config=pool_config)
+    if echo:
+        engine.echo = True
 
     sessions = sessionmaker(engine, expire_on_commit=False)
     return Database(engine=engine, sessions=sessions)

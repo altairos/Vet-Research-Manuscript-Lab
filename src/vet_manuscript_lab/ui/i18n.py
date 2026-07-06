@@ -659,7 +659,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "them through all stages and produce derived outputs."
         ),
         "zh": (
-            "这些合成测试数据文件将在点击\"运行演示流水线\"后作为输入送入流水线。"
+            '这些合成测试数据文件将在点击"运行演示流水线"后作为输入送入流水线。'
             "流水线将经过所有阶段处理这些数据，产出衍生结果。"
         ),
     },

@@ -47,9 +47,15 @@ def upgrade() -> None:
         ),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("content_hash", sa.String(80), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
-        sa.Column("section_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("revision_round", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'draft'")
+        ),
+        sa.Column(
+            "section_count", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
+        sa.Column(
+            "revision_round", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
         sa.Column("created_by_run_id", sa.String(36), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("manuscript_id", "version"),
@@ -83,9 +89,11 @@ def upgrade() -> None:
             "section_order",
             sa.Integer(),
             nullable=False,
-            server_default="0",
+            server_default=sa.text("0"),
         ),
-        sa.Column("word_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "word_count", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("manuscript_version_id", "section_type"),
     )
@@ -110,7 +118,9 @@ def upgrade() -> None:
         sa.Column("span_start", sa.Integer(), nullable=True),
         sa.Column("span_end", sa.Integer(), nullable=True),
         sa.Column("certainty", sa.String(32), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False, server_default="active"),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default=sa.text("'active'")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index(
@@ -137,7 +147,7 @@ def upgrade() -> None:
             "audit_status",
             sa.String(32),
             nullable=False,
-            server_default="pending",
+            server_default=sa.text("'pending'"),
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
@@ -198,10 +208,12 @@ def upgrade() -> None:
             "status",
             sa.String(32),
             nullable=False,
-            server_default="open",
+            server_default=sa.text("'open'"),
         ),
         sa.Column("reviewer_id", sa.String(100), nullable=True),
-        sa.Column("revision_round", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "revision_round", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index(

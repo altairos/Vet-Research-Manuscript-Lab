@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -9,6 +10,14 @@ from vet_manuscript_lab.infrastructure.database import models  # noqa: F401
 from vet_manuscript_lab.infrastructure.database.base import Base
 
 config = context.config
+
+# Allow the VET_LAB_DATABASE_URL environment variable to override
+# the sqlalchemy.url from alembic.ini.  This makes it possible to run
+# migrations against PostgreSQL in production without editing alembic.ini.
+env_url = os.getenv("VET_LAB_DATABASE_URL")
+if env_url:
+    config.set_main_option("sqlalchemy.url", env_url)
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -22,6 +31,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        compare_server_default=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -38,6 +48,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            compare_server_default=True,
         )
         with context.begin_transaction():
             context.run_migrations()

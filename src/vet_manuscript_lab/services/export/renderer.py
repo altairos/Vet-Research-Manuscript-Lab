@@ -278,7 +278,7 @@ def _qmd_to_body_xml(qmd_content: str, *, title: str) -> str:
     # Title paragraph
     paragraphs.append(
         '<w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr>'
-        f"<w:r><w:t xml:space=\"preserve\">{_escape_xml(title)}</w:t></w:r></w:p>"
+        f'<w:r><w:t xml:space="preserve">{_escape_xml(title)}</w:t></w:r></w:p>'
     )
 
     for line in content.splitlines():
@@ -289,19 +289,19 @@ def _qmd_to_body_xml(qmd_content: str, *, title: str) -> str:
             heading = _escape_xml(stripped[4:])
             paragraphs.append(
                 '<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr>'
-                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+                f'<w:r><w:t xml:space="preserve">{heading}</w:t></w:r></w:p>'
             )
         elif stripped.startswith("## "):
             heading = _escape_xml(stripped[3:])
             paragraphs.append(
                 '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr>'
-                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+                f'<w:r><w:t xml:space="preserve">{heading}</w:t></w:r></w:p>'
             )
         elif stripped.startswith("# "):
             heading = _escape_xml(stripped[2:])
             paragraphs.append(
                 '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr>'
-                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+                f'<w:r><w:t xml:space="preserve">{heading}</w:t></w:r></w:p>'
             )
         else:
             text = _escape_xml(stripped)
@@ -309,7 +309,7 @@ def _qmd_to_body_xml(qmd_content: str, *, title: str) -> str:
                 f'<w:p><w:r><w:t xml:space="preserve">{text}</w:t></w:r></w:p>'
             )
 
-    return "<w:body>" + "\n".join(paragraphs) + '<w:sectPr/></w:body>'
+    return "<w:body>" + "\n".join(paragraphs) + "<w:sectPr/></w:body>"
 
 
 # XML templates for the minimal DOCX package ---------------------------------
@@ -333,7 +333,8 @@ _RELS_XML = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
     '<Relationship Id="rId1" '
-    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+    'Type="http://schemas.openxmlformats.org/'
+    'officeDocument/2006/relationships/officeDocument" '
     'Target="word/document.xml"/>'
     "</Relationships>"
 )
@@ -350,8 +351,8 @@ _DOC_RELS_XML = (
 _STYLES_XML = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-    '<w:docDefaults>'
-    '<w:rPrDefault><w:rPr>'
+    "<w:docDefaults>"
+    "<w:rPrDefault><w:rPr>"
     '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="SimSun"/>'
     '<w:sz w:val="22"/><w:szCs w:val="22"/>'
     "</w:rPr></w:rPrDefault>"
@@ -361,25 +362,25 @@ _STYLES_XML = (
     '<w:name w:val="Title"/>'
     '<w:pPr><w:spacing w:after="240"/></w:pPr>'
     '<w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>'
-    '</w:style>'
+    "</w:style>"
     # Heading 1
     '<w:style w:type="paragraph" w:styleId="Heading1">'
     '<w:name w:val="heading 1"/>'
     '<w:pPr><w:spacing w:before="360" w:after="120"/></w:pPr>'
     '<w:rPr><w:b/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>'
-    '</w:style>'
+    "</w:style>"
     # Heading 2
     '<w:style w:type="paragraph" w:styleId="Heading2">'
     '<w:name w:val="heading 2"/>'
     '<w:pPr><w:spacing w:before="280" w:after="100"/></w:pPr>'
     '<w:rPr><w:b/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>'
-    '</w:style>'
+    "</w:style>"
     # Heading 3
     '<w:style w:type="paragraph" w:styleId="Heading3">'
     '<w:name w:val="heading 3"/>'
     '<w:pPr><w:spacing w:before="200" w:after="80"/></w:pPr>'
     '<w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>'
-    '</w:style>'
+    "</w:style>"
     "</w:styles>"
 )
 

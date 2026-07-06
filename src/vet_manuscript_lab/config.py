@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from vet_manuscript_lab.infrastructure.database.backends import PoolConfig
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -16,6 +18,9 @@ class Settings:
     zotero_api_key: str
     zotero_library_id: str
     zotero_library_type: str
+    db_pool_size: int
+    db_max_overflow: int
+    db_pool_recycle: int
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -29,6 +34,9 @@ class Settings:
             zotero_api_key=os.getenv("ZOTERO_API_KEY", ""),
             zotero_library_id=os.getenv("ZOTERO_LIBRARY_ID", ""),
             zotero_library_type=os.getenv("ZOTERO_LIBRARY_TYPE", "user"),
+            db_pool_size=int(os.getenv("VET_LAB_DB_POOL_SIZE", "5")),
+            db_max_overflow=int(os.getenv("VET_LAB_DB_MAX_OVERFLOW", "10")),
+            db_pool_recycle=int(os.getenv("VET_LAB_DB_POOL_RECYCLE", "1800")),
         )
 
     @property
@@ -36,3 +44,28 @@ class Settings:
         """True when both API key and library id are configured."""
 
         return bool(self.zotero_api_key.strip() and self.zotero_library_id.strip())
+
+    @property
+    def is_sqlite(self) -> bool:
+        """True when the configured database URL targets SQLite."""
+
+        return self.database_url.startswith("sqlite")
+
+    @property
+    def is_postgres(self) -> bool:
+        """True when the configured database URL targets PostgreSQL."""
+
+        return self.database_url.startswith(("postgresql", "postgresql+psycopg"))
+
+    @property
+    def pool_config(self) -> PoolConfig:
+        """Build a ``PoolConfig`` from the current settings.
+
+        Only effective for PostgreSQL; SQLite ignores pool parameters.
+        """
+
+        return PoolConfig(
+            pool_size=self.db_pool_size,
+            max_overflow=self.db_max_overflow,
+            pool_recycle=self.db_pool_recycle,
+        )
