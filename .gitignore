@@ -20,13 +20,13 @@ venv/
 *.key
 
 # Runtime state and sensitive/local artifacts
-artifacts/
-data/
+/artifacts/
+/data/
 *.db
 *.sqlite
 *.sqlite3
-indexes/
-exports/
+/indexes/
+/exports/
 
 # Editors and OS
 .idea/
