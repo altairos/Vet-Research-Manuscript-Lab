@@ -63,6 +63,40 @@ class MockDocxRendererTests(unittest.TestCase):
         )
         self.assertIn("wordprocessingml", result.media_type)
 
+    def test_output_is_valid_ooxml_zip(self) -> None:
+        """The DOCX must be a valid ZIP containing the required OOXML parts."""
+        import base64
+        import io
+        import zipfile
+        import xml.etree.ElementTree as ET
+
+        renderer = MockDocxRenderer()
+        result = renderer.render(
+            DocxRenderInput(
+                qmd_content="---\ntitle: Test\n---\n\n# Heading\n\nBody text.",
+                bib_content="",
+                title="Test Title",
+            )
+        )
+        data = base64.b64decode(result.docx_base64)
+
+        # Must start with ZIP magic bytes 'PK'
+        self.assertEqual(data[:2], b"PK")
+
+        # Must be a valid ZIP archive
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        names = zf.namelist()
+        self.assertIn("[Content_Types].xml", names)
+        self.assertIn("_rels/.rels", names)
+        self.assertIn("word/document.xml", names)
+        self.assertIn("word/styles.xml", names)
+        self.assertIn("word/_rels/document.xml.rels", names)
+
+        # Every XML part must be well-formed
+        for name in names:
+            ET.fromstring(zf.read(name))
+        zf.close()
+
 
 class QuartoDocxRendererTests(unittest.TestCase):
     def test_is_available_returns_bool(self) -> None:

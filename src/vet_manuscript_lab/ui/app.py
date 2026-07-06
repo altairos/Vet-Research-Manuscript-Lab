@@ -757,12 +757,52 @@ def _auto_resume_payload(interrupt: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _fixture_to_literature_drafts(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert golden fixture literature records to WorkflowState drafts."""
+
+    records = fixture.get("literature", {}).get("records", [])
+    return [
+        {
+            "record_id": rec.get("literature_id", ""),
+            "title": rec.get("title", ""),
+            "doi": rec.get("doi"),
+            "pmid": None,
+            "journal": rec.get("journal"),
+            "publication_year": rec.get("year"),
+        }
+        for rec in records
+    ]
+
+
+def _fixture_to_variable_drafts(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert golden fixture variables to WorkflowState drafts."""
+
+    return list(fixture.get("dictionary", {}).get("variables", []))
+
+
+def _fixture_to_analysis_drafts(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert golden fixture analyses to WorkflowState drafts."""
+
+    return list(
+        fixture.get("analysis_plan", {}).get("plan", {}).get("analyses", [])
+    )
+
+
+def _fixture_to_methodology_findings(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert golden fixture methodology findings to WorkflowState entries."""
+
+    return list(fixture.get("methodology", {}).get("findings", []))
+
+
 def _run_golden_demo_pipeline(app: Application) -> str:
-    """Run the full end-to-end pipeline with golden project defaults.
+    """Run the full end-to-end pipeline with golden project fixture data.
 
     All approval gates are auto-approved (including review disposition and
     final sign-off) so the pipeline runs all the way through to DOCX export
-    without manual intervention. Returns the thread_id of the demo run.
+    without manual intervention. Fixture literature records, variables,
+    analysis specs, and methodology findings are injected into the initial
+    state so that the pipeline output is consistent with the static fixture
+    display. Returns the thread_id of the demo run.
     """
 
     thread_id = f"golden-demo-{uuid.uuid4().hex[:8]}"
@@ -773,6 +813,17 @@ def _run_golden_demo_pipeline(app: Application) -> str:
         now=utc_now(),
         species_scope=["canine", "feline"],
     )
+
+    # Inject golden fixture data so pipeline output matches the static
+    # fixture display.  These pre-populated fields are respected by
+    # literature_search_node, methodology_critic_node, and analysis_plan_node.
+    fixture = _load_golden_fixture()
+    if fixture:
+        state["literature_record_drafts"] = _fixture_to_literature_drafts(fixture)
+        state["variable_spec_drafts"] = _fixture_to_variable_drafts(fixture)
+        state["analysis_spec_drafts"] = _fixture_to_analysis_drafts(fixture)
+        state["methodology_findings"] = _fixture_to_methodology_findings(fixture)
+
     config = {"configurable": {"thread_id": thread_id}}
 
     # Run to the first interrupt, then auto-approve every gate until the
@@ -1108,7 +1159,7 @@ def _render_export(state: dict[str, Any]) -> None:
 
 
 def _render_golden_demo_run(app: Application) -> None:
-    """Render the demo pipeline run section and its derived results."""
+    """Render the demo pipeline run controls (Run / Clear buttons)."""
 
     st.subheader(translate("golden_run_header"))
     st.caption(translate("golden_run_description_full"))
@@ -1131,60 +1182,111 @@ def _render_golden_demo_run(app: Application) -> None:
                 st.error(str(exc))
                 st.session_state.pop("golden_demo_thread_id", None)
 
+
+def _render_golden_demo_status(app: Application) -> dict[str, Any] | None:
+    """Return the pipeline state if a demo run exists, else ``None``.
+
+    When a run exists, renders a 4-column status bar with thread id,
+    stage, run status, and audit-event count.
+    """
+
     thread_id = st.session_state.get("golden_demo_thread_id")
     if not isinstance(thread_id, str):
-        st.info(translate("golden_run_no_thread"))
-        return
+        return None
 
     config = {"configurable": {"thread_id": thread_id}}
     snapshot = app.graph.get_state(config)
     state = snapshot.values
 
-    st.write(
-        {
-            translate("label_thread_id"): thread_id,
-            translate("golden_run_stage"): stage_label(state.get("current_stage")),
-            translate("label_status"): status_label(state.get("run_status")),
-            translate("label_next"): snapshot.next,
-        }
-    )
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(translate("label_thread_id"), thread_id[:20])
+    col2.metric(translate("label_stage"), stage_label(state.get("current_stage")))
+    col3.metric(translate("label_status"), status_label(state.get("run_status")))
+    audit_count = len(state.get("audit_events", []))
+    col4.metric(translate("pipeline_stage_count"), audit_count)
+
+    return state
+
+
+def _render_golden_demo_results(
+    state: dict[str, Any],
+    fixture: dict[str, Any],
+) -> None:
+    """Render pipeline-derived results organised into navigable tabs."""
 
     st.subheader(translate("golden_pipeline_results"))
 
-    # Literature + evidence outputs
-    _render_literature_records(state)
-    _render_evidence_items(state)
+    tab_data, tab_lit, tab_method, tab_manuscript, tab_review, tab_export = (
+        st.tabs(
+            [
+                translate("tab_data_inputs"),
+                translate("tab_lit_evidence"),
+                translate("tab_method_stats"),
+                translate("tab_manuscript"),
+                translate("tab_review_compliance"),
+                translate("tab_export"),
+            ]
+        )
+    )
 
-    # Methodology + analysis outputs
-    _render_methodology_findings(state)
-    _render_analysis_plan(state)
-    _render_statistical_results(state)
+    with tab_data:
+        _render_golden_dataset()
+        _render_golden_dictionary(fixture)
 
-    # Writing + claim audit outputs
-    _render_manuscript(state)
-    _render_claims(state)
-    _render_citations(state)
-    _render_claim_audit(state)
+    with tab_lit:
+        _render_literature_records(state)
+        _render_evidence_items(state)
 
-    # Reviewer critique + revision
-    _render_review(state)
+    with tab_method:
+        _render_methodology_findings(state)
+        _render_analysis_plan(state)
+        _render_statistical_results(state)
 
-    # Compliance audit (STROBE-Vet)
-    _render_compliance(state)
+    with tab_manuscript:
+        _render_manuscript(state)
+        _render_claims(state)
+        _render_citations(state)
+        _render_claim_audit(state)
 
-    # Export package (DOCX + provenance)
-    _render_export(state)
+    with tab_review:
+        _render_review(state)
+        _render_compliance(state)
 
-    # AI usage / cost views (appear after any gateway call)
-    _render_usage_summary(state)
+    with tab_export:
+        _render_export(state)
+        _render_usage_summary(state)
+
+
+def _render_golden_data_reference(fixture: dict[str, Any]) -> None:
+    """Show static fixture data in expanders before the pipeline runs."""
+
+    st.subheader(translate("golden_data_reference"))
+    st.caption(translate("golden_data_reference_hint"))
+
+    with st.expander(translate("golden_section_literature"), expanded=False):
+        _render_golden_literature(fixture)
+
+    with st.expander(translate("golden_section_dataset"), expanded=False):
+        _render_golden_dataset()
+
+    with st.expander(translate("golden_section_dictionary"), expanded=False):
+        _render_golden_dictionary(fixture)
+
+    with st.expander(translate("golden_section_analysis_plan"), expanded=False):
+        _render_golden_analysis_plan(fixture)
+
+    with st.expander(translate("golden_section_methodology"), expanded=False):
+        _render_golden_methodology(fixture)
 
 
 def _render_golden_demo(app: Application) -> None:
     """Render the full Golden Project demo view.
 
-    Combines a static fixture browser (read directly from the JSON/CSV
-    files) with a one-click demo pipeline run that shows the
-    workflow-derived results (evidence items, statistical results, etc.).
+    Project overview and pipeline controls are always visible. Before the
+    pipeline runs, static fixture data is shown in expanders as reference.
+    After running, all derived outputs are organised into navigable tabs:
+    Data inputs, Literature & evidence, Methodology & statistics,
+    Manuscript, Review & compliance, and Export.
     """
 
     st.title(translate("golden_demo_title"))
@@ -1199,18 +1301,21 @@ def _render_golden_demo(app: Application) -> None:
         st.error(translate("golden_demo_load_error", error="fixture not found"))
         return
 
+    # Project overview (always visible)
     _render_golden_overview(fixture)
     st.divider()
-    _render_golden_literature(fixture)
-    st.divider()
-    _render_golden_dataset()
-    _render_golden_dictionary(fixture)
-    st.divider()
-    _render_golden_analysis_plan(fixture)
-    st.divider()
-    _render_golden_methodology(fixture)
-    st.divider()
+
+    # Pipeline run controls
     _render_golden_demo_run(app)
+    st.divider()
+
+    # Results (if pipeline has run) or data reference (before running)
+    state = _render_golden_demo_status(app)
+    if state is not None:
+        _render_golden_demo_results(state, fixture)
+    else:
+        _render_golden_data_reference(fixture)
+        st.info(translate("golden_run_no_thread"))
 
 
 def _render_workflow(app: Application, project_id: str) -> None:

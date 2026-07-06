@@ -194,7 +194,10 @@ def literature_search_node(
     records are used so the pipeline remains runnable in offline development.
     """
 
-    if synchroniser is not None:
+    existing_records = state.get("literature_record_drafts")
+    if existing_records:
+        records = existing_records
+    elif synchroniser is not None:
         records = _sync_literature_records(state, synchroniser)
     else:
         records = _mock_literature_records(state)

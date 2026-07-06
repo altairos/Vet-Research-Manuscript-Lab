@@ -339,7 +339,10 @@ def methodology_critic_node(
     if evidence is None:
         raise PolicyViolation("Methodology Critic requires completed evidence audit")
 
-    if gateway is not None:
+    existing_findings = state.get("methodology_findings")
+    if existing_findings:
+        findings = existing_findings
+    elif gateway is not None:
         spec = AgentTaskSpec(
             task_kind=TaskKind.METHODOLOGY_CRITIC,
             estimated_input_tokens=2000,

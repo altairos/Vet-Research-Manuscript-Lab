@@ -247,22 +247,173 @@ def create_docx_renderer(
 # ---------------------------------------------------------------------------
 
 
-class MockDocxRenderer:
-    """Deterministic mock DOCX renderer for offline development.
+def _escape_xml(text: str) -> str:
+    """Escape XML special characters in text content."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
 
-    Produces a small binary blob that simulates a DOCX file.  The content
-    is deterministic so hashes are reproducible.
+
+def _qmd_to_body_xml(qmd_content: str, *, title: str) -> str:
+    """Convert Quarto markdown content into OOXML ``<w:body>`` XML.
+
+    Handles YAML front-matter stripping, ``#``/``##`` headings, and
+    plain-text paragraphs.  Produces well-formed XML that Word/LibreOffice
+    can open.
+    """
+
+    # Strip YAML front matter if present
+    content = qmd_content
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            content = parts[2].lstrip("\n")
+
+    paragraphs: list[str] = []
+
+    # Title paragraph
+    paragraphs.append(
+        '<w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr>'
+        f"<w:r><w:t xml:space=\"preserve\">{_escape_xml(title)}</w:t></w:r></w:p>"
+    )
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("### "):
+            heading = _escape_xml(stripped[4:])
+            paragraphs.append(
+                '<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr>'
+                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+            )
+        elif stripped.startswith("## "):
+            heading = _escape_xml(stripped[3:])
+            paragraphs.append(
+                '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr>'
+                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+            )
+        elif stripped.startswith("# "):
+            heading = _escape_xml(stripped[2:])
+            paragraphs.append(
+                '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr>'
+                f"<w:r><w:t xml:space=\"preserve\">{heading}</w:t></w:r></w:p>"
+            )
+        else:
+            text = _escape_xml(stripped)
+            paragraphs.append(
+                f'<w:p><w:r><w:t xml:space="preserve">{text}</w:t></w:r></w:p>'
+            )
+
+    return "<w:body>" + "\n".join(paragraphs) + '<w:sectPr/></w:body>'
+
+
+# XML templates for the minimal DOCX package ---------------------------------
+
+_CONTENT_TYPES_XML = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    '<Default Extension="rels" '
+    'ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    '<Default Extension="xml" ContentType="application/xml"/>'
+    '<Override PartName="/word/document.xml" '
+    'ContentType="application/vnd.openxmlformats-officedocument.'
+    'wordprocessingml.document.main+xml"/>'
+    '<Override PartName="/word/styles.xml" '
+    'ContentType="application/vnd.openxmlformats-officedocument.'
+    'wordprocessingml.styles+xml"/>'
+    "</Types>"
+)
+
+_RELS_XML = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Id="rId1" '
+    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+    'Target="word/document.xml"/>'
+    "</Relationships>"
+)
+
+_DOC_RELS_XML = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Id="rId1" '
+    'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" '
+    'Target="styles.xml"/>'
+    "</Relationships>"
+)
+
+_STYLES_XML = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    '<w:docDefaults>'
+    '<w:rPrDefault><w:rPr>'
+    '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="SimSun"/>'
+    '<w:sz w:val="22"/><w:szCs w:val="22"/>'
+    "</w:rPr></w:rPrDefault>"
+    "</w:docDefaults>"
+    # Title
+    '<w:style w:type="paragraph" w:styleId="Title">'
+    '<w:name w:val="Title"/>'
+    '<w:pPr><w:spacing w:after="240"/></w:pPr>'
+    '<w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>'
+    '</w:style>'
+    # Heading 1
+    '<w:style w:type="paragraph" w:styleId="Heading1">'
+    '<w:name w:val="heading 1"/>'
+    '<w:pPr><w:spacing w:before="360" w:after="120"/></w:pPr>'
+    '<w:rPr><w:b/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>'
+    '</w:style>'
+    # Heading 2
+    '<w:style w:type="paragraph" w:styleId="Heading2">'
+    '<w:name w:val="heading 2"/>'
+    '<w:pPr><w:spacing w:before="280" w:after="100"/></w:pPr>'
+    '<w:rPr><w:b/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>'
+    '</w:style>'
+    # Heading 3
+    '<w:style w:type="paragraph" w:styleId="Heading3">'
+    '<w:name w:val="heading 3"/>'
+    '<w:pPr><w:spacing w:before="200" w:after="80"/></w:pPr>'
+    '<w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>'
+    '</w:style>'
+    "</w:styles>"
+)
+
+
+class MockDocxRenderer:
+    """Deterministic DOCX renderer for offline development.
+
+    Generates a **valid** OOXML/ZIP package (``.docx``) that can be opened
+    by Microsoft Word, LibreOffice, Google Docs, or any compliant reader.
+    The QMD markdown content is converted to WordprocessingML paragraphs;
+    ``#``/``##``/``###`` headings become styled paragraph runs.
     """
 
     def render(self, inputs: DocxRenderInput) -> DocxRenderResult:
-        # Simulate DOCX content with a deterministic binary blob
-        header = b"PK\x03\x04"  # ZIP magic bytes (DOCX is a ZIP archive)
-        body = (
-            f"[Mock DOCX]\nTitle: {inputs.title}\n"
-            f"QMD hash: {_bytes_to_hash(inputs.qmd_content.encode())}\n"
-            f"BIB hash: {_bytes_to_hash(inputs.bib_content.encode())}\n"
-        ).encode()
-        docx_bytes = header + body
+        import io
+        import zipfile
+
+        body_xml = _qmd_to_body_xml(inputs.qmd_content, title=inputs.title)
+        document_xml = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            f"{body_xml}"
+            "</w:document>"
+        )
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("[Content_Types].xml", _CONTENT_TYPES_XML)
+            zf.writestr("_rels/.rels", _RELS_XML)
+            zf.writestr("word/document.xml", document_xml)
+            zf.writestr("word/styles.xml", _STYLES_XML)
+            zf.writestr("word/_rels/document.xml.rels", _DOC_RELS_XML)
+
+        docx_bytes = buf.getvalue()
         return DocxRenderResult(
             docx_base64=_bytes_to_base64(docx_bytes),
             content_hash=_bytes_to_hash(docx_bytes),

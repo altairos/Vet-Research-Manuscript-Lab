@@ -620,8 +620,56 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": (
             "使用 mock 提供者运行完整端到端流水线（项目 → 文献 → 证据 → "
             "方法学 → 统计 → 写作 → 审阅 → 合规审计 → 签署 → DOCX 导出），"
-            "所有审批门自动通过。"
+            "所有审批门自动通过。Fixture 数据将作为流水线输入。"
         ),
+    },
+    # tab labels for production-ready demo layout
+    "tab_data_inputs": {
+        "en": "Data inputs",
+        "zh": "数据输入",
+    },
+    "tab_lit_evidence": {
+        "en": "Literature & evidence",
+        "zh": "文献与证据",
+    },
+    "tab_method_stats": {
+        "en": "Methodology & statistics",
+        "zh": "方法学与统计",
+    },
+    "tab_manuscript": {
+        "en": "Manuscript",
+        "zh": "稿件",
+    },
+    "tab_review_compliance": {
+        "en": "Review & compliance",
+        "zh": "审阅与合规",
+    },
+    "tab_export": {
+        "en": "Export",
+        "zh": "导出",
+    },
+    "golden_data_reference": {
+        "en": "Golden project fixture data (pipeline inputs)",
+        "zh": "Golden Project 测试数据（流水线输入）",
+    },
+    "golden_data_reference_hint": {
+        "en": (
+            "These are the synthetic fixture files that will be fed into "
+            "the pipeline when you click Run. The pipeline will process "
+            "them through all stages and produce derived outputs."
+        ),
+        "zh": (
+            "这些合成测试数据文件将在点击\"运行演示流水线\"后作为输入送入流水线。"
+            "流水线将经过所有阶段处理这些数据，产出衍生结果。"
+        ),
+    },
+    "pipeline_stage_count": {
+        "en": "Stages completed",
+        "zh": "已完成阶段",
+    },
+    "label_download_ai_usage": {
+        "en": "Download AI usage (JSON)",
+        "zh": "下载 AI 用量（JSON）",
     },
 }
 
