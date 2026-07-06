@@ -292,6 +292,49 @@ class ScreeningDecisionRecord(Base):
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class ComplianceFindingRecord(Base):
+    """Checklist / audit outcome for the Final Compliance Audit."""
+
+    __tablename__ = "compliance_findings"
+    __table_args__ = (
+        Index("ix_compliance_findings_severity", "severity"),
+        Index("ix_compliance_findings_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    manuscript_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("manuscript_versions.id"), nullable=True
+    )
+    rule_id: Mapped[str] = mapped_column(String(200))
+    category: Mapped[str] = mapped_column(String(128))
+    severity: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="needs_review")
+    evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ExportPackageRecord(Base):
+    """Final immutable hash-addressed export bundle."""
+
+    __tablename__ = "export_packages"
+    __table_args__ = (
+        UniqueConstraint("project_id", "manifest_hash"),
+        UniqueConstraint("package_hash"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    sign_off_approval_id: Mapped[str] = mapped_column(String(36))
+    manifest_hash: Mapped[str] = mapped_column(String(80))
+    package_hash: Mapped[str] = mapped_column(String(80))
+    component_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), default="generated")
+    package_uri: Mapped[str] = mapped_column(String(500))
+
+
 class ProvenanceLinkRecord(Base):
     """Typed directed derivation edge between versioned domain objects."""
 

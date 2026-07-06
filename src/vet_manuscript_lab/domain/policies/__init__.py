@@ -24,6 +24,16 @@ from vet_manuscript_lab.domain.policies.evidence import (
     require_search_approved,
     require_source_span_for_evidence,
 )
+from vet_manuscript_lab.domain.policies.compliance import (
+    ComplianceFindingSnapshot,
+    ExportVersionBinding,
+    SignOffContext,
+    require_checklist_complete,
+    require_export_package_complete,
+    require_export_version_integrity,
+    require_no_blocking_findings,
+    require_signoff_preconditions,
+)
 from vet_manuscript_lab.domain.policies.foundation import (
     ApprovalSnapshot,
     LockSnapshot,

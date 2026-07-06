@@ -49,6 +49,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # CJK translation catalog uses fullwidth punctuation legitimately
 "src/vet_manuscript_lab/ui/i18n.py" = ["RUF001", "RUF002", "RUF003"]
+# STROBE-Vet checklist items are natural English sentences
+"src/vet_manuscript_lab/services/compliance/strobe_checklist.py" = ["E501"]
+"migrations/versions/*.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
