@@ -14,6 +14,7 @@ dependencies = [
   "alembic>=1.14,<2",
   "langgraph>=1.0,<2",
   "langgraph-checkpoint-sqlite>=2,<4",
+  "pyzotero>=1.5,<2",
   "sqlalchemy>=2.0,<3",
   "streamlit>=1.45,<2",
 ]
@@ -27,7 +28,7 @@ dev = [
 ]
 
 [tool.poetry]
-package-mode = false
+packages = [{include = "vet_manuscript_lab", from = "src"}]
 
 [tool.setuptools.packages.find]
 where = ["src"]

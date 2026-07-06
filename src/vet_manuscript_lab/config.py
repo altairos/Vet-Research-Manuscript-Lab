@@ -13,6 +13,9 @@ class Settings:
     database_url: str
     artifact_root: Path
     checkpoint_path: Path
+    zotero_api_key: str
+    zotero_library_id: str
+    zotero_library_type: str
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -23,4 +26,13 @@ class Settings:
             checkpoint_path=Path(
                 os.getenv("VET_LAB_CHECKPOINT_PATH", "./artifacts/checkpoints.sqlite")
             ),
+            zotero_api_key=os.getenv("ZOTERO_API_KEY", ""),
+            zotero_library_id=os.getenv("ZOTERO_LIBRARY_ID", ""),
+            zotero_library_type=os.getenv("ZOTERO_LIBRARY_TYPE", "user"),
         )
+
+    @property
+    def zotero_enabled(self) -> bool:
+        """True when both API key and library id are configured."""
+
+        return bool(self.zotero_api_key.strip() and self.zotero_library_id.strip())

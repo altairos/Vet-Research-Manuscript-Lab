@@ -163,7 +163,8 @@ mypy、pytest 均已配置；ADR-0001 至 ADR-0005 已建立；golden project fi
 
 待实现任务：
 
-1. 实现 Zotero API v3 只读同步和增量版本记录。
+1. ✅ 实现 Zotero API v3 只读同步和增量版本记录
+   （`services/zotero/`：client + mapper + sync，支持 mock 后端降级）。
 2. 实现 PDF 附件导入、hash、解析状态和失败重试。
 3. 实现文本分块元数据；保留页码、章节、字符位置和附件版本。
 4. 接入 LlamaIndex 混合检索与 rerank，但只输出候选 chunk。
@@ -419,9 +420,30 @@ screening 完整性、hash 校验）均在节点内强制执行。
 
 下一步（外部集成层）：
 
-1. 将 `literature_search_node` 的 mock records 替换为 Zotero API v3
-   只读同步。
+1. ✅ 将 `literature_search_node` 的 mock records 替换为 Zotero API v3
+   只读同步（`services/zotero/`：types + client + mapper + sync +
+   pyzotero 后端适配器。`build_evidence_pipeline_graph` 现接受
+   `synchroniser` 参数，未提供时自动降级为 mock）。
 2. 将 `evidence_extraction_node` 的 mock spans/evidence 替换为
    PDF 解析 + LlamaIndex 检索的候选 chunk。
 3. 保持现有节点合同和策略校验不变，只替换数据来源。
+
+Zotero 集成新增文件：
+
+- `src/vet_manuscript_lab/services/zotero/types.py`：`ZoteroItem`、
+  `ZoteroAttachment` dataclass + `parse_zotero_item`/
+  `parse_zotero_attachment` 解析器（含 PMID/DOI/年份提取）。
+- `src/vet_manuscript_lab/services/zotero/client.py`：`ZoteroClient`
+  只读封装 + `ZoteroBackend` Protocol（支持 mock 后端注入）。
+- `src/vet_manuscript_lab/services/zotero/_pyzotero_backend.py`：
+  pyzotero 适配器（懒加载，离线可导入）。
+- `src/vet_manuscript_lab/services/zotero/mapper.py`：
+  `map_zotero_item` 纯函数（ZoteroItem → LiteratureInput）。
+- `src/vet_manuscript_lab/services/zotero/sync.py`：
+  `ZoteroSynchroniser` 增量同步 + `SyncResult`。
+- `src/vet_manuscript_lab/config.py`：扩展 `Settings` 添加
+  `zotero_api_key`、`zotero_library_id`、`zotero_library_type`、
+  `zotero_enabled` 属性。
+- `tests/test_zotero.py`：17 个测试覆盖类型解析、mapper、
+  client（mock 后端）、synchroniser（增删、重复、跳过、增量）。
 

@@ -25,6 +25,7 @@ from vet_manuscript_lab.domain.policies import (
     require_screening_complete,
     require_source_span_for_evidence,
 )
+from vet_manuscript_lab.services.zotero.sync import ZoteroSynchroniser
 from vet_manuscript_lab.workflow.foundation_graph import (
     _DECISIONS,
     _event,
@@ -129,15 +130,48 @@ def _mock_literature_records(state: WorkflowState) -> list[LiteratureRecordDraft
     ]
 
 
+def _sync_literature_records(
+    state: WorkflowState, synchroniser: ZoteroSynchroniser
+) -> list[LiteratureRecordDraft]:
+    """Pull Zotero items and convert them to state-level record drafts."""
+
+    result = synchroniser.sync_library(project_id=state["project_id"])
+    drafts: list[LiteratureRecordDraft] = []
+    for record in result.created_records:
+        drafts.append(
+            LiteratureRecordDraft(
+                record_id=record.id,
+                title=record.title,
+                doi=record.doi,
+                pmid=record.pmid,
+                journal=record.journal,
+                publication_year=record.publication_year,
+            )
+        )
+    return drafts
+
+
 # ---------------------------------------------------------------------------
 # Stage nodes
 # ---------------------------------------------------------------------------
 
 
-def literature_search_node(state: WorkflowState) -> dict[str, Any]:
-    """Generate a search-strategy artifact and deterministic literature records."""
+def literature_search_node(
+    state: WorkflowState,
+    *,
+    synchroniser: ZoteroSynchroniser | None = None,
+) -> dict[str, Any]:
+    """Generate a search-strategy artifact and literature records.
 
-    records = _mock_literature_records(state)
+    When a ``synchroniser`` is provided (Zotero integration enabled), real
+    Zotero items are synced into the project.  Otherwise deterministic mock
+    records are used so the pipeline remains runnable in offline development.
+    """
+
+    if synchroniser is not None:
+        records = _sync_literature_records(state, synchroniser)
+    else:
+        records = _mock_literature_records(state)
     search_strategy = _make_artifact(
         state,
         role="search_strategy",
@@ -443,12 +477,17 @@ def _protocol_lock_running(state: WorkflowState) -> dict[str, Any]:
 
 def build_evidence_pipeline_graph(
     checkpointer: BaseCheckpointSaver[Any],
+    *,
+    synchroniser: ZoteroSynchroniser | None = None,
 ) -> Any:
-    """Compile the full mock pipeline from ``PROJECT_INIT`` to ``EVIDENCE_AUDIT``.
+    """Compile the full pipeline from ``PROJECT_INIT`` to ``EVIDENCE_AUDIT``.
 
     The foundation stage (project init → protocol lock) is reused unchanged;
     only the terminal ``run_status`` of protocol lock is adjusted so that the
     literature stage can continue.
+
+    When ``synchroniser`` is provided the ``literature_search`` node pulls
+    real Zotero items instead of generating mock records.
     """
 
     builder = StateGraph(WorkflowState)
@@ -460,7 +499,10 @@ def build_evidence_pipeline_graph(
     builder.add_node("protocol_approval", protocol_approval_node)
     builder.add_node("protocol_lock", _protocol_lock_running)
     # Literature + evidence stage
-    builder.add_node("literature_search", literature_search_node)
+    builder.add_node(
+        "literature_search",
+        lambda state: literature_search_node(state, synchroniser=synchroniser),
+    )
     builder.add_node("search_approval", search_approval_node)
     builder.add_node("screening", screening_node)
     builder.add_node("evidence_extraction", evidence_extraction_node)

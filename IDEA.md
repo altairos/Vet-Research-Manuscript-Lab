@@ -143,3 +143,590 @@ Project
 [5]: https://www.equator-network.org/reporting-guidelines/the-reflect-statement-methods-and-processes-of-creating-reporting-guidelines-for-randomized-controlled-trials-for-livestock-and-food-safety-by-modifying-the-consort-statement/?utm_source=chatgpt.com "methods and processes of creating reporting guidelines for ..."
 [6]: https://link.springer.com/article/10.1186/1471-2288-14-43?utm_source=chatgpt.com "SYRCLE's risk of bias tool for animal studies - Springer Nature"
 [7]: https://arxiv.org/abs/2511.16707?utm_source=chatgpt.com "Large language models for automated PRISMA 2020 adherence checking"
+
+------------------------
+
+
+建议先做“单研究类型、可追溯、强人工审批”的 MVP，不要一开始覆盖所有动物医学论文类型。LangGraph 适合承担状态机、检查点和人工中断；LlamaIndex只负责文献摄取与检索，不应成为工作流控制器。
+
+## 一、先调整工作流
+
+建议改为：
+
+```text
+Project Init
+  ↓
+Research Question
+  ↓ 人工审批：研究问题与研究类型
+Protocol / Guideline Mapping
+  ↓ 人工审批：方案与报告规范
+Literature Search
+  ↓ 人工审批：检索式与纳排标准
+Screening & Evidence Extraction
+  ↓ Citation / Evidence Audit
+Methodology Critic
+  ↓ 人工审批：方法与统计分析计划
+Statistics Execution
+  ↓ 人工审批：结果解释
+Writing
+  ↓
+Reviewer
+  ↓
+Revision Loop（限定轮次）
+  ↓
+Final Compliance Audit
+  ↓ 人工签署与导出
+```
+
+主要变化：
+
+- 将统计分析计划放在数据分析之前审批，避免事后选择方法。
+- 文献检索增加“检索式/纳排标准审批”。
+- Citation audit 不只运行一次，应在证据提取、写作和终审阶段重复运行。
+- Final Audit 之后必须保留人工签署，系统不能自行宣称论文“合规”。
+- Reviewer → Revision 必须有最大轮数、停止条件和升级人工处理机制。
+
+LangGraph 的持久化 checkpoint 和 `interrupt()` 正适合这种暂停、审批、恢复执行模式。[LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)、[LangGraph Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
+
+## 二、系统边界
+
+建议划分五层：
+
+| 层 | 职责 |
+|---|---|
+| Streamlit UI | 项目管理、审批、产物预览、差异比较、任务状态 |
+| LangGraph | 节点编排、条件分支、人工中断、重试、恢复 |
+| Domain Services | Zotero、文献检索、全文解析、统计运行、文档导出 |
+| Storage | PostgreSQL/SQLite、文件产物、索引、运行日志 |
+| Model Gateway | LLM 调用、结构化输出、重试、成本与模型记录 |
+
+关键原则：
+
+- LangGraph state 只保存状态和产物引用，不塞入全文、DataFrame 或 PDF。
+- Markdown/CSV/JSON 是正式产物；数据库保存索引、版本和关系。
+- 每次 Agent 输出必须同时产生结构化 JSON，Markdown 只是其人类可读视图。
+- 所有结论都要能回溯到证据、文献位置、提示词版本和模型版本。
+
+## 三、核心数据模型
+
+至少提前定义这些实体：
+
+- `Project`
+- `WorkflowRun`
+- `GraphCheckpoint`
+- `Artifact`
+- `ArtifactVersion`
+- `Approval`
+- `AgentRun`
+- `ResearchQuestion`
+- `ReportingGuideline`
+- `SearchStrategy`
+- `LiteratureRecord`
+- `ScreeningDecision`
+- `EvidenceClaim`
+- `Citation`
+- `Dataset`
+- `AnalysisPlan`
+- `AnalysisRun`
+- `ReviewFinding`
+- `ComplianceFinding`
+
+所有产物建议包含统一元数据：
+
+```json
+{
+  "artifact_id": "...",
+  "project_id": "...",
+  "type": "evidence_table",
+  "schema_version": "1.0",
+  "created_by": "evidence_extraction_agent",
+  "source_artifact_ids": [],
+  "agent_run_id": "...",
+  "status": "draft",
+  "content_hash": "...",
+  "created_at": "..."
+}
+```
+
+不要覆盖旧文件；使用不可变版本和 hash。
+
+## 四、各 Agent 的明确合同
+
+每个节点在开发前都要写清：
+
+1. 输入 schema  
+2. 输出 schema  
+3. 可调用工具  
+4. 禁止行为  
+5. 完成条件  
+6. 人工审批点  
+7. 失败与重试策略  
+
+例如 Writing Agent：
+
+- 只能引用已进入 evidence ledger 的证据。
+- 每个事实性主张必须绑定 `evidence_claim_id`。
+- 不得生成不存在的 DOI、页码、样本量或统计结果。
+- 遇到证据不足应输出缺口标记，而不是补写推断。
+- 只能读取已审批的方法和统计结果。
+
+## 五、技术选型建议
+
+### 数据库
+
+- 本地 MVP：SQLite。
+- 多用户或部署版：PostgreSQL。
+- 从第一天使用 SQLAlchemy + Alembic，避免后续迁移困难。
+- LangGraph checkpoint 与业务表分离，即使它们使用同一数据库。
+
+### Zotero
+
+优先通过 Zotero Web API v3 或本地 API 集成，不要直接读写 Zotero 的 SQLite；官方也指出直接访问数据库更脆弱。同步时保存 Zotero item key、version、library version、DOI 和附件映射。[Zotero Web API v3](https://www.zotero.org/support/dev/web_api/v3/basics)
+
+### LlamaIndex
+
+限定为：
+
+- PDF/全文摄取
+- 分块与元数据管理
+- 混合检索
+- 文献定位
+- evidence extraction 的候选上下文提供
+
+检索结果必须保留文献 ID、页码、章节、chunk ID 和原文片段范围。
+
+### 统计
+
+每次执行生成独立运行目录：
+
+```text
+analysis/
+  plan.json
+  input/
+  scripts/
+  output/
+  figures/
+  tables/
+  session-info.txt
+  run-manifest.json
+```
+
+优先使用隔离进程执行 R/Python；生产环境再增加容器沙箱、资源限制和包版本锁定。
+
+### 文档导出
+
+推荐以 Quarto manuscript 为主、Pandoc 为底层：
+
+- `manuscript.qmd` 作为主稿源
+- `references.bib` 由已审计文献生成
+- CSL 控制引用格式
+- `reference-doc.docx` 控制期刊 Word 样式
+- 图表来自已批准的统计产物
+
+Quarto manuscript 原生支持学术稿件、计算内容和 Word 输出，也支持 `reference-doc` 模板。[Quarto Manuscripts](https://quarto.org/docs/manuscripts/)、[Quarto Word Options](https://quarto.org/docs/reference/formats/docx.html)
+
+## 六、实施阶段
+
+### 阶段 0：需求与治理
+
+产物：
+
+- 支持的首个研究类型
+- 用户角色与权限
+- 数据敏感性分类
+- Agent 输入输出合同
+- 审批矩阵
+- 合规与免责声明
+- 成功指标
+
+建议 MVP 只选一种，例如回顾性观察研究或系统综述。
+
+### 阶段 1：工作流骨架
+
+实现：
+
+- Project/Run/Artifact/Approval
+- LangGraph 状态定义
+- checkpoint、暂停、恢复
+- Streamlit 项目页和审批页
+- 假数据节点贯通全流程
+
+验收：关闭程序后能够恢复到审批点，拒绝后能回退并生成新版本。
+
+### 阶段 2：文献与证据链
+
+实现：
+
+- Zotero 同步
+- PDF 摄取
+- 检索策略管理
+- screening 表
+- evidence ledger
+- citation audit
+
+验收：任一草稿引用都能定位到 Zotero 条目和原文位置。
+
+### 阶段 3：方法与统计
+
+实现：
+
+- 方法学 critic
+- 统计分析计划 schema
+- R/Python runner
+- 数据与脚本 hash
+- 结果表、图和运行环境记录
+
+验收：相同输入和环境能够重复生成相同核心结果。
+
+### 阶段 4：写作与审阅
+
+实现：
+
+- 分章节写作
+- 证据约束引用
+- reviewer findings
+- revision diff
+- 最大修订轮数
+- 人工接受/拒绝修改
+
+验收：任何修改都有来源、理由和前后差异。
+
+### 阶段 5：终审与导出
+
+实现：
+
+- 报告规范 checklist
+- 引用一致性检查
+- 表图编号检查
+- 统计值一致性检查
+- Quarto/Pandoc → DOCX
+- 审计包导出
+
+验收：生成 Word、最终 Markdown、参考文献、检查报告和完整 provenance 包。
+
+### 阶段 6：工程化
+
+最后再加入：
+
+- PostgreSQL 与多用户
+- 权限、审计日志
+- 后台任务队列
+- 对象存储
+- 可观测性和成本统计
+- 自动化测试与部署
+
+## 七、测试策略
+
+至少覆盖：
+
+- 节点 schema 单元测试
+- 条件路由测试
+- interrupt/resume 测试
+- 重试幂等性测试
+- Zotero 增量同步测试
+- 虚构引用检测
+- 引用与 evidence ledger 一致性
+- 统计脚本可复现性
+- Quarto 导出快照测试
+- 一套固定“金标准项目”的端到端回归测试
+
+## 八、MVP 完成标准
+
+第一版只要做到以下闭环即可：
+
+- 建立一个项目并定义研究问题
+- 人工批准关键节点
+- 从 Zotero 导入文献
+- 建立可追溯证据表
+- 生成并执行经批准的分析计划
+- 生成带可靠引用的稿件
+- 完成审阅、修订和合规检查
+- 导出 DOCX 与完整审计包
+- 中断后可恢复，历史版本不可丢失
+
+最应优先确定的不是模型，而是首个研究类型、数据 schema、证据追踪规则和审批机制。模型和提示词之后可以替换，这四项一旦设计混乱，后续重构成本会很高。
+
+------------------------
+
+这个方案非常好，而且已经从“概念性 agent 工作流”进入了“可落地的软件架构设计”。我会给出一个比较明确的判断：**这套设计方向是正确的，尤其是“单研究类型、强人工审批、产物不可变、LangGraph 只管状态、LlamaIndex 只管检索”这几条，基本抓住了科研型 agent 系统的命门。**
+
+我建议你不要大改，而是在几个地方再收紧边界、补足关键实体、降低 MVP 过载风险。
+
+第一，工作流本身是合理的。你把统计分析计划前置审批、检索式/纳排标准前置审批、Citation Audit 多阶段重复运行、Final Audit 后保留人工签署，这些都是对的。LangGraph 的定位也吻合：官方文档里，persistence 层通过 checkpointer 保存 graph state，可用于 human-in-the-loop、恢复执行、故障容错等场景；interrupt 也正是用于在图执行中暂停、等待外部输入，再通过 checkpoint 恢复。([Docs by LangChain][1])
+
+我会做的一个小调整是：在 `Protocol / Guideline Mapping` 之后增加一个更硬的 **Protocol Lock / Scope Freeze** 概念。也就是说，一旦研究类型、PICO/PECO、主要终点、纳排标准、统计分析计划被人工批准，后续所有 agent 只能提出“修订请求”，不能静默改变范围。否则论文工作流很容易在后期讨论中悄悄漂移，尤其是观察性研究和系统综述，最容易出现“看到结果后再重写问题”的 HARKing 风险。
+
+你的流程可以微调为：
+
+```text
+Project Init
+  ↓
+Research Question
+  ↓ 人工审批：研究问题与研究类型
+Protocol / Guideline Mapping
+  ↓ 人工审批：方案、报告规范、主要终点、纳排标准
+Protocol Lock
+  ↓
+Literature Search
+  ↓ 人工审批：检索式与纳排标准
+Screening & Evidence Extraction
+  ↓ Citation / Evidence Audit
+Methodology Critic
+  ↓ 人工审批：方法与统计分析计划
+Analysis Plan Lock
+  ↓
+Statistics Execution
+  ↓ 人工审批：结果解释
+Writing
+  ↓ Citation / Claim Audit
+Reviewer
+  ↓
+Revision Loop（限定轮次）
+  ↓ Citation / Claim Audit
+Final Compliance Audit
+  ↓ 人工签署与导出
+```
+
+第二，五层系统边界非常稳。尤其是你说“LangGraph state 只保存状态和产物引用，不塞全文、DataFrame 或 PDF”，这是一个很关键的工程判断。LangGraph checkpoint 适合保存执行游标、节点状态、短期状态快照，不适合变成文件仓库或知识库。官方文档也把 checkpointer 和 store 区分开：checkpointer 保存线程级 graph state，store 保存应用定义的长期数据。([Docs by LangChain][1])
+
+这里我只建议再加一个横切层：**Policy / Guardrail Layer**。它不一定是独立服务，但概念上应该存在。它负责判断哪些节点必须人工审批、哪些输出必须绑定证据、哪些 agent 不允许调用外部工具、哪些字段不能被模型改写、哪些失败必须升级给人。否则这些规则会散落在 prompt、UI、LangGraph 节点和业务服务里，后期会很难维护。
+
+调整后的系统边界可以是：
+
+```text
+Streamlit UI
+- 项目管理、审批、产物预览、diff、任务状态
+
+LangGraph
+- 节点编排、条件分支、interrupt、checkpoint、重试、恢复
+
+Domain Services
+- Zotero、文献检索、PDF 解析、统计运行、文档导出
+
+Storage
+- SQLite/PostgreSQL、artifact store、索引、日志、版本关系
+
+Model Gateway
+- LLM 调用、结构化输出、模型版本、成本、重试、超时
+
+Policy / Guardrail Layer
+- 审批规则、证据绑定规则、禁止行为、升级条件、合规声明
+```
+
+第三，核心数据模型已经很接近可开发状态，但我建议补几个实体。你现在的实体更偏“workflow 与 artifact 管理”，还需要加强“论文本体”和“审计可追溯”两条线。
+
+建议新增：
+
+```text
+PromptTemplate
+PromptVersion
+ModelInvocation
+ToolInvocation
+Claim
+ClaimSupport
+SourceSpan
+Manuscript
+ManuscriptSection
+TableFigure
+DatasetVersion
+DatasetVariable
+StatisticalResult
+AuditEvent
+ExportPackage
+```
+
+其中最重要的是 `Claim`、`ClaimSupport`、`SourceSpan`。我会把 `EvidenceClaim` 拆成两个概念：一个是从文献/数据中抽取出的证据项，另一个是论文正文里的主张。因为“文献说了什么”和“稿件声称了什么”不是同一个对象。真正的 citation audit 应该检查的是：**稿件中的 Claim 是否被 EvidenceItem / StatisticalResult 支持，支持关系是否过度外推。**
+
+可以这样设计：
+
+```json
+{
+  "claim_id": "claim_0034",
+  "project_id": "proj_001",
+  "manuscript_section": "discussion",
+  "sentence": "The observed association may reflect differences in age distribution rather than a direct treatment effect.",
+  "claim_type": "interpretation",
+  "certainty": "moderate",
+  "supports": [
+    {
+      "support_type": "statistical_result",
+      "target_id": "stat_0012"
+    },
+    {
+      "support_type": "evidence_item",
+      "target_id": "ev_0045"
+    }
+  ],
+  "status": "needs_human_review"
+}
+```
+
+再配一个 `SourceSpan`：
+
+```json
+{
+  "source_span_id": "span_0091",
+  "literature_record_id": "lit_017",
+  "zotero_item_key": "ABCD1234",
+  "page": 4,
+  "section": "Results",
+  "chunk_id": "chunk_017_004",
+  "char_start": 1280,
+  "char_end": 1622,
+  "quoted_text_hash": "sha256:..."
+}
+```
+
+这样你的系统才真正能做到“从句子回溯到文献位置”，而不只是“从句子回溯到一条参考文献”。
+
+第四，Zotero 的集成策略正确。不要直接操作 Zotero SQLite，这一点我赞同。Zotero Web API v3 目前是默认且推荐的 API 版本；官方也建议生产代码明确请求 API 版本，并支持通过 header 或 query parameter 指定版本。([Zotero][2]) 本地桌面端 API 对个人 MVP 会很方便，但如果后期做 SaaS，多用户 OAuth、附件同步、权限边界、Zotero library version 都要提前留接口。
+
+我建议 Zotero 同步时至少保存这些字段：
+
+```text
+zotero_library_id
+zotero_library_type
+zotero_item_key
+zotero_item_version
+zotero_library_version_at_sync
+doi
+pmid
+title
+creators
+year
+journal
+attachment_key
+attachment_hash
+local_pdf_path
+bibtex_key
+sync_status
+```
+
+另外，不要把 Zotero 当成唯一真源。Zotero 是 reference manager，不是证据数据库。你的系统里的 `LiteratureRecord` 应该可以引用 Zotero 条目，但 evidence ledger、screening decision、source span、claim support 必须保存在你自己的数据库和 artifact store 里。
+
+第五，LlamaIndex 的边界设定正确，但要进一步强调“检索不是证据”。LlamaIndex 可以做 PDF 摄取、分块、索引、混合检索、候选上下文提供；它的文档也明确提到 chunk size、chunk overlap 会影响 embedding，较小 chunk 更精确，较大 chunk 更概括但可能漏掉细粒度信息，且 hybrid search 可弥补纯向量检索不匹配关键词的问题。([Developer Documentation][3])
+
+这意味着你的 evidence extraction 不能直接相信 top-k chunk。更稳的做法是：
+
+```text
+Query
+  ↓
+Hybrid retrieval: vector + keyword
+  ↓
+Candidate chunks
+  ↓
+Rerank
+  ↓
+SourceSpan extraction
+  ↓
+EvidenceItem draft
+  ↓
+Human / audit validation
+```
+
+尤其是动物医学论文里，剂量、样本量、P 值、CI、物种、年龄、给药频率这些信息经常藏在表格或方法小段里，单纯 embedding 很容易漏。MVP 阶段可以先支持正文和简单表格，复杂 PDF 表格提取先标为“需人工核验”，不要一开始承诺完全自动化。
+
+第六，统计执行这部分设计得很对，但建议把“分析计划”和“运行结果”之间的关系做成硬约束。`AnalysisRun` 必须引用一个已审批的 `AnalysisPlanVersion`，并且 runner 只能读取已锁定的数据版本。不要允许统计 agent 在执行阶段临时改模型、改变量、改剔除规则。
+
+建议强制这些规则：
+
+```text
+AnalysisPlan.status 必须为 approved
+DatasetVersion.status 必须为 locked
+AnalysisRun 必须记录：
+- input dataset hash
+- script hash
+- plan version id
+- package versions
+- random seed
+- runner environment
+- stdout/stderr
+- generated artifacts
+```
+
+探索性分析可以存在，但必须以 `exploratory` 标记，不能混入主结果。这个标记后续也应进入 Discussion 和 Limitations 的写作约束。
+
+第七，Quarto / Pandoc 作为导出层是一个很好的选择。Quarto 支持 BibTeX / BibLaTeX 文献源和 CSL 样式来生成引用与参考文献，也支持 Pandoc 风格的 citation syntax。([Quarto][4]) DOCX 方面，Quarto 的 `reference-doc` 可以用指定 Word 文件作为样式参考，这正好适合不同期刊模板或你自己的 submission template。([Quarto][5])
+
+不过我建议 MVP 不要把 Quarto manuscript 做得太复杂。第一版可以是：
+
+```text
+manuscript.qmd
+references.bib
+figures/
+tables/
+reference-doc.docx
+audit/
+```
+
+先确保能稳定导出 Word。期刊级精修，比如 line numbering、复杂图题格式、supplementary files、cover letter，可以放到第二轮。
+
+第八，实施阶段规划很清楚，但 MVP 范围仍然略大。你列的 MVP 完成标准中，“生成并执行经批准的分析计划”与“生成带可靠引用的稿件”已经是相当重的闭环。如果你希望第一版尽快落地，我建议明确选择一个首发研究类型。
+
+我的建议是：**如果目标是产品差异化，首发选“兽医回顾性观察研究”；如果目标是最快做出演示，首发选“系统综述”。**
+
+系统综述的优点是数据源主要是文献，不涉及临床病例数据清洗和隐私；缺点是竞品最多，Elicit、Rayyan、Covidence、ASReview 这类工具已经很强。回顾性观察研究更能体现你的垂直壁垒：病例表、诊断标准、统计方案、STROBE-Vet、样本偏倚、单中心偏倚、病例连续性、失访、剂量单位、实验室指标参考区间，这些都是通用工具不擅长的地方。
+
+如果你有足够精力，我会选：
+
+```text
+MVP 研究类型：
+犬猫回顾性观察研究 / retrospective observational clinical study
+
+首个报告规范：
+STROBE-Vet
+
+首个数据输入：
+CSV / Excel 病例表 + Zotero 文献库 + 少量 PDF
+
+首个输出：
+evidence ledger
+analysis plan
+reviewer critique
+claim-citation audit
+manuscript draft
+DOCX + provenance package
+```
+
+如果想再降一档，第一版甚至可以不真正执行统计，而是先生成 `AnalysisPlan` 和假数据 runner，把 workflow 跑通；第二版再接 R/Python runner。
+
+第九，测试策略很专业。我会再补三类测试。
+
+一类是 **adversarial citation tests**：给系统一组真实文献和一组相似但不支持结论的文献，测试它是否会把“不相关但语义相近”的 chunk 当成证据。
+
+一类是 **claim inflation tests**：输入“相关性”“趋势”“样本量不足”的结果，看 Writing Agent 是否会偷偷写成“有效”“显著改善”“证明”。
+
+一类是 **approval bypass tests**：故意让某个节点试图读取未审批 artifact、覆盖旧版本、跳过 interrupt、修改 locked protocol，看系统是否能拦住。
+
+你这套系统真正的风险不是“agent 不够聪明”，而是“agent 太会把不确定内容写得像确定内容”。所以测试要围绕误引、过度推断、审批绕过、版本污染来做。
+
+我建议最终把 MVP 验收标准压缩成更锋利的 8 条：
+
+```text
+1. 项目可以在任意审批点中断并恢复。
+2. 所有正式产物都有不可变版本、hash、来源关系。
+3. 任何未审批 artifact 不能进入下游正式写作。
+4. 任一正文事实性 claim 都能追溯到 evidence item 或 statistical result。
+5. 任一 citation 都能追溯到 Zotero 条目和 PDF source span。
+6. 任一统计结果都能追溯到数据版本、脚本版本、运行环境和分析计划。
+7. 任一修订都有 reviewer finding、diff 和人工接受/拒绝记录。
+8. 最终导出包含 manuscript、references、figures/tables、checklist、AI usage log、provenance package。
+```
+
+总体来说，我认为这版方案已经可以作为开发蓝图。最值得坚持的是这四个判断：
+
+**LangGraph 只管流程状态，不管知识库。**
+
+**LlamaIndex 只提供候选证据，不直接决定事实。**
+
+**所有 agent 输出必须结构化，Markdown 只是人类阅读层。**
+
+**所有关键节点必须人工审批，系统只能给出检查结果，不能自行宣称合规。**
+
+如果下一步要落到代码，我建议先写三份东西：`domain_model.md`、`agent_contracts.md`、`workflow_state_schema.py`。这三份一旦稳定，后面的 UI、prompt、模型供应商、导出格式都可以替换；但如果数据模型和审批机制一开始含糊，后面会非常难改。
+
+[1]: https://docs.langchain.com/oss/python/langgraph/persistence "Persistence - Docs by LangChain"
+[2]: https://www.zotero.org/support/dev/web_api/v3/basics "Zotero Web API Documentation | Zotero Documentation"
+[3]: https://developers.llamaindex.ai/python/framework/optimizing/basic_strategies/basic_strategies/ "Basic Strategies | Developer Documentation"
+[4]: https://quarto.org/docs/authoring/citations.html "Citations – Quarto"
+[5]: https://quarto.org/docs/reference/formats/docx.html "MS Word Options – Quarto"
