@@ -512,3 +512,145 @@ class StatisticalResultRecord(Base):
     analysis_class: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(32), default="draft")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ManuscriptRecord(Base):
+    """Stable manuscript identity."""
+
+    __tablename__ = "manuscripts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    title: Mapped[str] = mapped_column(String(500))
+    target_journal: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ManuscriptVersionRecord(Base):
+    """Immutable assembled manuscript draft."""
+
+    __tablename__ = "manuscript_versions"
+    __table_args__ = (
+        UniqueConstraint("manuscript_id", "version"),
+        UniqueConstraint("manuscript_id", "content_hash"),
+        Index("ix_manuscript_versions_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    manuscript_id: Mapped[str] = mapped_column(ForeignKey("manuscripts.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    content_hash: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    section_count: Mapped[int] = mapped_column(Integer, default=0)
+    revision_round: Mapped[int] = mapped_column(Integer, default=0)
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ManuscriptSectionRecord(Base):
+    """Versioned manuscript section."""
+
+    __tablename__ = "manuscript_sections"
+    __table_args__ = (UniqueConstraint("manuscript_version_id", "section_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    manuscript_version_id: Mapped[str] = mapped_column(
+        ForeignKey("manuscript_versions.id"), index=True
+    )
+    section_type: Mapped[str] = mapped_column(String(64))
+    content_uri: Mapped[str] = mapped_column(Text)
+    content_hash: Mapped[str] = mapped_column(String(80))
+    section_order: Mapped[int] = mapped_column(Integer, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ClaimRecord(Base):
+    """Manuscript assertion with structured support tracking."""
+
+    __tablename__ = "claims"
+    __table_args__ = (Index("ix_claims_claim_type", "claim_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    manuscript_section_id: Mapped[str] = mapped_column(
+        ForeignKey("manuscript_sections.id"), index=True
+    )
+    claim_type: Mapped[str] = mapped_column(String(64))
+    text: Mapped[str] = mapped_column(Text)
+    span_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    span_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    certainty: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ClaimSupportRecord(Base):
+    """Claim-to-source relation for provenance tracking."""
+
+    __tablename__ = "claim_supports"
+    __table_args__ = (Index("ix_claim_supports_support_type", "support_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    claim_id: Mapped[str] = mapped_column(ForeignKey("claims.id"), index=True)
+    support_type: Mapped[str] = mapped_column(String(64))
+    source_id: Mapped[str] = mapped_column(String(36))
+    relation: Mapped[str] = mapped_column(String(64))
+    audit_status: Mapped[str] = mapped_column(String(32), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CitationRecord(Base):
+    """Citation occurrence linking claims to literature."""
+
+    __tablename__ = "citations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    claim_id: Mapped[str | None] = mapped_column(ForeignKey("claims.id"), nullable=True)
+    manuscript_section_id: Mapped[str] = mapped_column(
+        ForeignKey("manuscript_sections.id"), index=True
+    )
+    literature_record_id: Mapped[str] = mapped_column(String(36))
+    citation_key: Mapped[str] = mapped_column(String(200))
+    locator: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ReviewFindingRecord(Base):
+    """Actionable critique from the Reviewer Agent."""
+
+    __tablename__ = "review_findings"
+    __table_args__ = (
+        Index("ix_review_findings_severity", "severity"),
+        Index("ix_review_findings_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    manuscript_version_id: Mapped[str] = mapped_column(
+        ForeignKey("manuscript_versions.id"), index=True
+    )
+    category: Mapped[str] = mapped_column(String(128))
+    severity: Mapped[str] = mapped_column(String(32))
+    location: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rationale: Mapped[str] = mapped_column(Text)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="open")
+    reviewer_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    revision_round: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class RevisionDecisionRecord(Base):
+    """Human disposition of a review finding."""
+
+    __tablename__ = "revision_decisions"
+    __table_args__ = (UniqueConstraint("review_finding_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    review_finding_id: Mapped[str] = mapped_column(
+        ForeignKey("review_findings.id"), index=True
+    )
+    decision: Mapped[str] = mapped_column(String(32))
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewer_id: Mapped[str] = mapped_column(String(100))
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

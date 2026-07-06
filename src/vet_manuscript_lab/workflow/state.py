@@ -280,6 +280,94 @@ class AIUsageSummary(TypedDict):
     cost_by_stage: dict[str, dict[str, int]]
 
 
+class ManuscriptSummary(TypedDict):
+    """Compact manuscript version summary kept in state."""
+
+    manuscript_id: str
+    version_id: str
+    version: int
+    content_hash: str
+    section_count: int
+    claim_count: int
+    status: str
+
+
+class ManuscriptSectionDraft(TypedDict, total=False):
+    """Mock section draft passed between writing graph nodes."""
+
+    section_id: Required[str]
+    section_type: str
+    content: str
+    content_hash: str
+    order: int
+    word_count: int
+    claim_ids: list[str]
+
+
+class ManuscriptClaimDraft(TypedDict, total=False):
+    """Mock claim draft passed between writing graph nodes."""
+
+    claim_id: Required[str]
+    claim_type: str
+    text: str
+    certainty: str
+    section_id: str
+    has_support: bool
+    support_count: int
+    referenced_numbers: list[float]
+
+
+class ManuscriptSupportDraft(TypedDict, total=False):
+    """Mock claim-support link passed between writing graph nodes."""
+
+    claim_id: Required[str]
+    support_type: str
+    source_id: str
+    relation: str
+    audit_status: str
+
+
+class ManuscriptCitationDraft(TypedDict, total=False):
+    """Mock citation passed between writing graph nodes."""
+
+    citation_key: Required[str]
+    literature_record_id: str
+    section_id: str
+    claim_id: str
+    locator: str
+
+
+class ReviewFindingEntry(TypedDict, total=False):
+    """Review finding produced by the Reviewer Agent."""
+
+    finding_id: Required[str]
+    category: str
+    severity: str
+    location: str
+    rationale: str
+    recommendation: str
+    status: str
+
+
+class RevisionDecisionEntry(TypedDict, total=False):
+    """Human disposition of a review finding."""
+
+    finding_id: Required[str]
+    decision: str
+    reason: str
+    reviewer_id: str
+
+
+class RevisionSummary(TypedDict):
+    """Summary of a revision round."""
+
+    round: int
+    accepted_count: int
+    rejected_count: int
+    deferred_count: int
+    section_diffs: list[dict[str, Any]]
+
+
 class WorkflowState(TypedDict, total=False):
     """LangGraph state containing references and compact decisions only."""
 
@@ -315,6 +403,14 @@ class WorkflowState(TypedDict, total=False):
     analysis_spec_drafts: NotRequired[list[AnalysisSpecDraft]]
     result_drafts: NotRequired[list[ResultDraft]]
     ai_usage: NotRequired[AIUsageSummary | None]
+    manuscript_summary: NotRequired[ManuscriptSummary | None]
+    section_drafts: NotRequired[list[ManuscriptSectionDraft]]
+    claim_drafts: NotRequired[list[ManuscriptClaimDraft]]
+    support_drafts: NotRequired[list[ManuscriptSupportDraft]]
+    citation_drafts: NotRequired[list[ManuscriptCitationDraft]]
+    review_findings: NotRequired[list[ReviewFindingEntry]]
+    revision_decisions: NotRequired[list[RevisionDecisionEntry]]
+    revision_summary: NotRequired[RevisionSummary | None]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -425,6 +521,14 @@ def new_workflow_state(
         "analysis_spec_drafts": [],
         "result_drafts": [],
         "ai_usage": None,
+        "manuscript_summary": None,
+        "section_drafts": [],
+        "claim_drafts": [],
+        "support_drafts": [],
+        "citation_drafts": [],
+        "review_findings": [],
+        "revision_decisions": [],
+        "revision_summary": None,
         "pending_interrupt": None,
         "resume_decision": None,
         "errors": [],
@@ -496,8 +600,16 @@ __all__ = [
     "LiteratureRecordDraft",
     "LiteratureSummary",
     "LockRef",
+    "ManuscriptCitationDraft",
+    "ManuscriptClaimDraft",
+    "ManuscriptSectionDraft",
+    "ManuscriptSummary",
+    "ManuscriptSupportDraft",
     "MethodologyFinding",
     "ResultDraft",
+    "ReviewFindingEntry",
+    "RevisionDecisionEntry",
+    "RevisionSummary",
     "RunStatus",
     "SourceSpanDraft",
     "VariableSpecDraft",

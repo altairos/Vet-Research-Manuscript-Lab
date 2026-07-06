@@ -42,6 +42,14 @@ class MigrationTests(unittest.TestCase):
                     "methodology_findings",
                     "analysis_runs",
                     "statistical_results",
+                    "manuscripts",
+                    "manuscript_versions",
+                    "manuscript_sections",
+                    "claims",
+                    "claim_supports",
+                    "citations",
+                    "review_findings",
+                    "revision_decisions",
                     "alembic_version",
                 }.issubset(tables)
             )
