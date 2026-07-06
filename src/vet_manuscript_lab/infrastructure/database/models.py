@@ -13,6 +13,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -313,4 +314,201 @@ class ProvenanceLinkRecord(Base):
     target_type: Mapped[str] = mapped_column(String(64))
     relation: Mapped[str] = mapped_column(String(64))
     created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+# ---------------------------------------------------------------------------
+# Dataset and statistics aggregate (migration 0003)
+# ---------------------------------------------------------------------------
+
+
+class DatasetRecord(Base):
+    """Stable dataset identity within a project."""
+
+    __tablename__ = "datasets"
+    __table_args__ = (Index("ix_datasets_name", "name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    versions: Mapped[list[DatasetVersionRecord]] = relationship(
+        back_populates="dataset", cascade="all, delete-orphan"
+    )
+
+
+class DatasetVersionRecord(Base):
+    """Immutable content version of a dataset."""
+
+    __tablename__ = "dataset_versions"
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "version"),
+        UniqueConstraint("dataset_id", "content_hash"),
+        Index("ix_dataset_versions_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    row_count: Mapped[int] = mapped_column(Integer)
+    column_count: Mapped[int] = mapped_column(Integer)
+    content_hash: Mapped[str] = mapped_column(String(80))
+    uri: Mapped[str] = mapped_column(Text)
+    media_type: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    dataset: Mapped[DatasetRecord] = relationship(back_populates="versions")
+    variables: Mapped[list[DatasetVariableRecord]] = relationship(
+        back_populates="dataset_version", cascade="all, delete-orphan"
+    )
+
+
+class DatasetVariableRecord(Base):
+    """Variable dictionary entry for a dataset version."""
+
+    __tablename__ = "dataset_variables"
+    __table_args__ = (
+        UniqueConstraint("dataset_version_id", "name"),
+        Index("ix_dataset_variables_role", "role"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    dataset_version_id: Mapped[str] = mapped_column(
+        ForeignKey("dataset_versions.id"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    var_type: Mapped[str] = mapped_column(String(64))
+    unit: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    missing_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    role: Mapped[str] = mapped_column(String(64), default="covariate")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+    dataset_version: Mapped[DatasetVersionRecord] = relationship(
+        back_populates="variables"
+    )
+
+
+class AnalysisPlanVersionRecord(Base):
+    """Prespecified analysis plan version."""
+
+    __tablename__ = "analysis_plan_versions"
+    __table_args__ = (
+        UniqueConstraint("project_id", "version"),
+        UniqueConstraint("project_id", "content_hash"),
+        Index("ix_analysis_plan_versions_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    content_hash: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    is_exploratory: Mapped[bool] = mapped_column(Boolean, default=False)
+    methodology_version_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True
+    )
+    protocol_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AnalysisPlanLockRecord(Base):
+    """Approved analysis plan and dataset freeze."""
+
+    __tablename__ = "analysis_plan_locks"
+    __table_args__ = (
+        UniqueConstraint("plan_version_id"),
+        UniqueConstraint("dataset_version_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    plan_version_id: Mapped[str] = mapped_column(String(36))
+    plan_hash: Mapped[str] = mapped_column(String(80))
+    dataset_version_id: Mapped[str] = mapped_column(String(36))
+    dataset_hash: Mapped[str] = mapped_column(String(80))
+    approval_id: Mapped[str] = mapped_column(String(36))
+    locked_by: Mapped[str] = mapped_column(String(100))
+    locked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MethodologyFindingRecord(Base):
+    """Structured finding from the Methodology Critic."""
+
+    __tablename__ = "methodology_findings"
+    __table_args__ = (Index("ix_methodology_findings_severity", "severity"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    category: Mapped[str] = mapped_column(String(128))
+    severity: Mapped[str] = mapped_column(String(32))
+    rationale: Mapped[str] = mapped_column(Text)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="open")
+    analysis_plan_version_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True
+    )
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AnalysisRunRecord(Base):
+    """Reproducible execution record for a statistical analysis."""
+
+    __tablename__ = "analysis_runs"
+    __table_args__ = (
+        Index("ix_analysis_runs_status", "status"),
+        Index("ix_analysis_runs_plan_version_id", "plan_version_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    plan_version_id: Mapped[str] = mapped_column(String(36))
+    plan_hash: Mapped[str] = mapped_column(String(80))
+    dataset_version_id: Mapped[str] = mapped_column(String(36))
+    dataset_hash: Mapped[str] = mapped_column(String(80))
+    script_hash: Mapped[str] = mapped_column(String(80))
+    seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    package_versions: Mapped[dict[str, Any]] = mapped_column(JSON)
+    environment: Mapped[dict[str, Any]] = mapped_column(JSON)
+    stdout: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stderr: Mapped[str | None] = mapped_column(Text, nullable=True)
+    exit_code: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32), default="running")
+    is_exploratory: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class StatisticalResultRecord(Base):
+    """Typed statistical result linked to an analysis run."""
+
+    __tablename__ = "statistical_results"
+    __table_args__ = (Index("ix_statistical_results_analysis_class", "analysis_class"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    analysis_run_id: Mapped[str] = mapped_column(
+        ForeignKey("analysis_runs.id"), index=True
+    )
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    estimand: Mapped[str] = mapped_column(String(300))
+    estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    estimate_units: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    uncertainty_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    uncertainty_lower: Mapped[float | None] = mapped_column(Float, nullable=True)
+    uncertainty_upper: Mapped[float | None] = mapped_column(Float, nullable=True)
+    p_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    method: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    population: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    analysis_class: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="draft")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

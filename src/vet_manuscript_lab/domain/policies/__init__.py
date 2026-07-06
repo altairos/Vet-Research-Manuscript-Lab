@@ -1,5 +1,20 @@
-"""Deterministic approval, lock, immutability, and evidence policies."""
+"""Deterministic approval, lock, immutability, evidence, and analysis policies."""
 
+from vet_manuscript_lab.domain.policies.analysis import (
+    AnalysisPlanSnapshot,
+    AnalysisRunSnapshot,
+    AnalysisSpecSnapshot,
+    DatasetVersionSnapshot,
+    ExecutionContext,
+    ExecutionInput,
+    require_execution_immutability,
+    require_exploratory_marking,
+    require_hash_match,
+    require_locked_dataset,
+    require_locked_plan,
+    require_no_approved_result_on_failure,
+    require_plan_variables_in_dataset,
+)
 from vet_manuscript_lab.domain.policies.evidence import (
     EvidenceCandidate,
     ScreeningSummary,
@@ -18,14 +33,27 @@ from vet_manuscript_lab.domain.policies.foundation import (
 )
 
 __all__ = [
+    "AnalysisPlanSnapshot",
+    "AnalysisRunSnapshot",
+    "AnalysisSpecSnapshot",
     "ApprovalSnapshot",
+    "DatasetVersionSnapshot",
     "EvidenceCandidate",
+    "ExecutionContext",
+    "ExecutionInput",
     "LockSnapshot",
     "PolicyViolation",
     "ScreeningSummary",
     "SearchGateSnapshot",
     "require_approved_subject",
+    "require_execution_immutability",
+    "require_exploratory_marking",
+    "require_hash_match",
+    "require_locked_dataset",
+    "require_locked_plan",
+    "require_no_approved_result_on_failure",
     "require_non_duplicate_reference",
+    "require_plan_variables_in_dataset",
     "require_screening_complete",
     "require_search_approved",
     "require_source_span_for_evidence",

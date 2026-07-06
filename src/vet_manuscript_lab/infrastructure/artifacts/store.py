@@ -86,4 +86,3 @@ class LocalArtifactStore:
             uri=path.as_uri(),
             size_bytes=size,
         )
-

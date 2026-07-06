@@ -7,4 +7,3 @@ from vet_manuscript_lab.infrastructure.artifacts.store import (
 )
 
 __all__ = ["ArtifactIntegrityError", "LocalArtifactStore", "StoredPayload"]
-

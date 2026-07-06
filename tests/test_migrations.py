@@ -34,6 +34,14 @@ class MigrationTests(unittest.TestCase):
                     "evidence_items",
                     "screening_decisions",
                     "provenance_links",
+                    "datasets",
+                    "dataset_versions",
+                    "dataset_variables",
+                    "analysis_plan_versions",
+                    "analysis_plan_locks",
+                    "methodology_findings",
+                    "analysis_runs",
+                    "statistical_results",
                     "alembic_version",
                 }.issubset(tables)
             )

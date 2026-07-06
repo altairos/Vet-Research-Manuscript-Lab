@@ -142,6 +142,89 @@ class EvidenceSummary(TypedDict):
     evidence_ledger_version_id: NotRequired[str]
 
 
+class DatasetSummary(TypedDict):
+    """Compact dataset version summary kept in state."""
+
+    dataset_id: str
+    dataset_version_id: str
+    name: str
+    row_count: int
+    variable_count: int
+    content_hash: str
+    locked: bool
+
+
+class MethodologyFinding(TypedDict, total=False):
+    """Structured finding from the Methodology Critic."""
+
+    finding_id: Required[str]
+    category: str
+    severity: str  # "info", "warning", "critical"
+    rationale: str
+    recommendation: str
+    status: str  # "open", "addressed"
+
+
+class AnalysisPlanSummary(TypedDict):
+    """Compact analysis plan version summary kept in state."""
+
+    plan_version_id: str
+    content_hash: str
+    version: int
+    is_exploratory: bool
+    locked: bool
+    findings_count: int
+    analysis_count: int
+
+
+class AnalysisRunSummary(TypedDict):
+    """Compact analysis run summary kept in state."""
+
+    run_id: str
+    status: str
+    result_count: int
+    is_reproducible: bool
+    exit_code: int
+
+
+class VariableSpecDraft(TypedDict, total=False):
+    """Mock variable spec passed between graph nodes."""
+
+    name: Required[str]
+    var_type: str
+    role: str
+    unit: str | None
+    missing_code: str | None
+
+
+class AnalysisSpecDraft(TypedDict, total=False):
+    """Mock analysis spec passed between graph nodes."""
+
+    name: Required[str]
+    estimand: str
+    model_type: str
+    variable_names: list[str]
+    analysis_class: str
+    exclusion_criteria: list[str]
+    population: str | None
+
+
+class ResultDraft(TypedDict, total=False):
+    """Mock statistical result passed between graph nodes."""
+
+    result_id: Required[str]
+    estimand: str
+    estimate: float | None
+    estimate_units: str | None
+    uncertainty_type: str | None
+    uncertainty_lower: float | None
+    uncertainty_upper: float | None
+    p_value: float | None
+    method: str | None
+    population: str | None
+    analysis_class: str
+
+
 class LiteratureRecordDraft(TypedDict, total=False):
     """Mock literature record passed between graph nodes.
 
@@ -212,6 +295,13 @@ class WorkflowState(TypedDict, total=False):
     literature_record_drafts: NotRequired[list[LiteratureRecordDraft]]
     source_span_drafts: NotRequired[list[SourceSpanDraft]]
     evidence_drafts: NotRequired[list[EvidenceDraft]]
+    dataset_summary: NotRequired[DatasetSummary | None]
+    analysis_plan_summary: NotRequired[AnalysisPlanSummary | None]
+    analysis_run_summary: NotRequired[AnalysisRunSummary | None]
+    methodology_findings: NotRequired[list[MethodologyFinding]]
+    variable_spec_drafts: NotRequired[list[VariableSpecDraft]]
+    analysis_spec_drafts: NotRequired[list[AnalysisSpecDraft]]
+    result_drafts: NotRequired[list[ResultDraft]]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -314,6 +404,13 @@ def new_workflow_state(
         "locks": {},
         "literature_summary": None,
         "evidence_summary": None,
+        "dataset_summary": None,
+        "analysis_plan_summary": None,
+        "analysis_run_summary": None,
+        "methodology_findings": [],
+        "variable_spec_drafts": [],
+        "analysis_spec_drafts": [],
+        "result_drafts": [],
         "pending_interrupt": None,
         "resume_decision": None,
         "errors": [],
@@ -370,9 +467,13 @@ def validate_stage_preconditions(state: WorkflowState, target: str) -> None:
 __all__ = [
     "ALLOWED_TRANSITIONS",
     "REQUIRED_GATE_FOR_STAGE",
+    "AnalysisPlanSummary",
+    "AnalysisRunSummary",
+    "AnalysisSpecDraft",
     "ApprovalDecision",
     "ApprovalRef",
     "ArtifactRef",
+    "DatasetSummary",
     "EvidenceDraft",
     "EvidenceSummary",
     "GateType",
@@ -380,8 +481,11 @@ __all__ = [
     "LiteratureRecordDraft",
     "LiteratureSummary",
     "LockRef",
+    "MethodologyFinding",
+    "ResultDraft",
     "RunStatus",
     "SourceSpanDraft",
+    "VariableSpecDraft",
     "WorkflowStage",
     "WorkflowState",
     "assert_json_serializable",
