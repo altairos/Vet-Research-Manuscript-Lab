@@ -50,6 +50,8 @@ class MigrationTests(unittest.TestCase):
                     "citations",
                     "review_findings",
                     "revision_decisions",
+                    "compliance_findings",
+                    "export_packages",
                     "alembic_version",
                 }.issubset(tables)
             )

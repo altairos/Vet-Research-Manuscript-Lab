@@ -694,18 +694,17 @@ class WritingPipeline:
     reviser: Reviser | None = None
 
 
-def build_writing_pipeline_graph(
-    checkpointer: BaseCheckpointSaver[Any],
+def _make_writing_builder(
     *,
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     writing_pipeline: WritingPipeline | None = None,
-) -> Any:
-    """Compile the full pipeline from ``PROJECT_INIT`` through ``REVISION``.
+) -> StateGraph:
+    """Create the StateGraph builder with all writing-pipeline nodes and edges.
 
-    Extends the analysis pipeline graph with the writing, claim audit,
-    review, and revision stages.  The foundation, literature, evidence,
-    and methodology/statistics stages are reused unchanged.
+    Returns the **uncompiled** builder so downstream graph assemblers
+    (e.g. ``build_compliance_pipeline_graph``) can extend it before
+    compilation.
     """
 
     gateway = writing_pipeline.gateway if writing_pipeline else None
@@ -814,11 +813,34 @@ def build_writing_pipeline_graph(
     builder.add_conditional_edges("review_approval", route_review_decision)
     builder.add_conditional_edges("revision", route_revision_decision)
 
+    return builder
+
+
+def build_writing_pipeline_graph(
+    checkpointer: BaseCheckpointSaver[Any],
+    *,
+    synchroniser: Any = None,
+    evidence_pipeline: Any = None,
+    writing_pipeline: WritingPipeline | None = None,
+) -> Any:
+    """Compile the full pipeline from ``PROJECT_INIT`` through ``REVISION``.
+
+    Extends the analysis pipeline graph with the writing, claim audit,
+    review, and revision stages.  The foundation, literature, evidence,
+    and methodology/statistics stages are reused unchanged.
+    """
+
+    builder = _make_writing_builder(
+        synchroniser=synchroniser,
+        evidence_pipeline=evidence_pipeline,
+        writing_pipeline=writing_pipeline,
+    )
     return builder.compile(checkpointer=checkpointer)
 
 
 __all__ = [
     "WritingPipeline",
+    "_make_writing_builder",
     "build_writing_pipeline_graph",
     "claim_audit_node",
     "review_approval_node",

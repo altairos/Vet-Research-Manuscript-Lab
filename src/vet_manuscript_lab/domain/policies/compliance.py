@@ -78,11 +78,7 @@ def require_checklist_complete(
     Any 'fail' or 'needs_review' status means the checklist is incomplete.
     """
 
-    unresolved = [
-        f
-        for f in findings
-        if f.status in ("fail", "needs_review")
-    ]
+    unresolved = [f for f in findings if f.status in ("fail", "needs_review")]
     if unresolved:
         raise PolicyViolation(
             f"Checklist incomplete: {len(unresolved)} item(s) "
@@ -97,9 +93,7 @@ def require_signoff_preconditions(ctx: SignOffContext) -> SignOffContext:
     """
 
     if not ctx.all_required_gates_approved:
-        raise PolicyViolation(
-            "Sign-off requires all required gates to be approved"
-        )
+        raise PolicyViolation("Sign-off requires all required gates to be approved")
     if ctx.blocking_finding_count > 0:
         raise PolicyViolation(
             f"Sign-off blocked by {ctx.blocking_finding_count} "
@@ -153,8 +147,7 @@ def require_export_package_complete(
     missing = required - actual
     if missing:
         raise PolicyViolation(
-            f"Export package is missing required components: "
-            f"{sorted(missing)}"
+            f"Export package is missing required components: {sorted(missing)}"
         )
 
 

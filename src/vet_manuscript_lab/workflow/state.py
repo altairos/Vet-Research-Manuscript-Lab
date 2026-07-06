@@ -368,6 +368,47 @@ class RevisionSummary(TypedDict):
     section_diffs: list[dict[str, Any]]
 
 
+class ComplianceFindingEntry(TypedDict, total=False):
+    """Compliance finding produced by the Final Compliance Audit."""
+
+    finding_id: Required[str]
+    rule_id: str
+    category: str
+    severity: str
+    status: str
+    evidence: str
+    recommendation: str
+
+
+class ChecklistSummary(TypedDict):
+    """Aggregate summary of checklist pass/fail counts."""
+
+    total_items: int
+    passed: int
+    failed: int
+    not_applicable: int
+    needs_review: int
+
+
+class ExportPackageSummary(TypedDict, total=False):
+    """Summary of an immutable export package."""
+
+    package_id: Required[str]
+    manifest_hash: str
+    component_count: int
+    status: str
+    package_uri: str
+    sign_off_id: str
+
+
+class SignOffBinding(TypedDict):
+    """Artifact version hashes captured at final sign-off."""
+
+    approval_id: str
+    artifact_hashes: dict[str, str]
+    signed_at: str
+
+
 class WorkflowState(TypedDict, total=False):
     """LangGraph state containing references and compact decisions only."""
 
@@ -411,6 +452,11 @@ class WorkflowState(TypedDict, total=False):
     review_findings: NotRequired[list[ReviewFindingEntry]]
     revision_decisions: NotRequired[list[RevisionDecisionEntry]]
     revision_summary: NotRequired[RevisionSummary | None]
+    compliance_findings: NotRequired[list[ComplianceFindingEntry]]
+    checklist_summary: NotRequired[ChecklistSummary | None]
+    export_readiness: NotRequired[str]
+    sign_off_binding: NotRequired[SignOffBinding | None]
+    export_package: NotRequired[ExportPackageSummary | None]
     pending_interrupt: InterruptPayload | None
     resume_decision: ApprovalRef | None
     errors: Annotated[list[EventRecord], operator.add]
@@ -529,6 +575,11 @@ def new_workflow_state(
         "review_findings": [],
         "revision_decisions": [],
         "revision_summary": None,
+        "compliance_findings": [],
+        "checklist_summary": None,
+        "export_readiness": None,
+        "sign_off_binding": None,
+        "export_package": None,
         "pending_interrupt": None,
         "resume_decision": None,
         "errors": [],
@@ -592,9 +643,12 @@ __all__ = [
     "ApprovalDecision",
     "ApprovalRef",
     "ArtifactRef",
+    "ChecklistSummary",
+    "ComplianceFindingEntry",
     "DatasetSummary",
     "EvidenceDraft",
     "EvidenceSummary",
+    "ExportPackageSummary",
     "GateType",
     "InterruptPayload",
     "LiteratureRecordDraft",
@@ -611,6 +665,7 @@ __all__ = [
     "RevisionDecisionEntry",
     "RevisionSummary",
     "RunStatus",
+    "SignOffBinding",
     "SourceSpanDraft",
     "VariableSpecDraft",
     "WorkflowStage",
