@@ -228,6 +228,23 @@ class LiteratureRepository:
             )
         return version
 
+    def list_attachment_versions(
+        self, literature_record_id: str
+    ) -> list[AttachmentVersionRecord]:
+        """Return all attachment versions for a literature record, newest first."""
+
+        with self.sessions() as session:
+            return list(
+                session.scalars(
+                    select(AttachmentVersionRecord)
+                    .where(
+                        AttachmentVersionRecord.literature_record_id
+                        == literature_record_id
+                    )
+                    .order_by(AttachmentVersionRecord.version.desc())
+                )
+            )
+
     # -- source spans ------------------------------------------------------
 
     def create_source_span(self, *, data: SourceSpanInput) -> SourceSpanRecord:
