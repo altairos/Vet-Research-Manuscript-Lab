@@ -904,6 +904,92 @@ STRINGS.update(
 )
 
 
+STRINGS.update(
+    {
+        "button_rename_project": {
+            "en": "Rename",
+            "zh": "重命名",
+        },
+        "button_delete_project": {
+            "en": "Delete",
+            "zh": "删除",
+        },
+        "field_new_title": {
+            "en": "New project title",
+            "zh": "新项目标题",
+        },
+        "confirm_delete_project": {
+            "en": "Are you sure? This will permanently delete the project and all its data.",
+            "zh": "确定删除吗？此操作将永久删除该项目及其所有数据。",
+        },
+        "success_project_renamed": {
+            "en": "Project renamed.",
+            "zh": "项目已重命名。",
+        },
+        "success_project_deleted": {
+            "en": "Project deleted.",
+            "zh": "项目已删除。",
+        },
+        "sidebar_project_management": {
+            "en": "Manage project",
+            "zh": "项目管理",
+        },
+        "sidebar_new_project": {
+            "en": "New project",
+            "zh": "新建项目",
+        },
+        "sidebar_production_flow": {
+            "en": "Production flow",
+            "zh": "生产流程",
+        },
+        "flow_study_design": {
+            "en": "Study design",
+            "zh": "研究设计",
+        },
+        "flow_data_prep": {
+            "en": "Data preparation",
+            "zh": "数据准备",
+        },
+        "flow_protocol_approval": {
+            "en": "Protocol approval",
+            "zh": "方案审批",
+        },
+        "flow_evidence_extraction": {
+            "en": "Evidence extraction",
+            "zh": "证据提取",
+        },
+        "flow_statistical_analysis": {
+            "en": "Statistical analysis",
+            "zh": "统计分析",
+        },
+        "flow_manuscript_review": {
+            "en": "Manuscript review",
+            "zh": "论文审阅",
+        },
+        "flow_compliance_export": {
+            "en": "Compliance export",
+            "zh": "合规导出",
+        },
+        "tab_intake_question": {
+            "en": "Research question",
+            "zh": "研究问题",
+        },
+        "tab_intake_data": {
+            "en": "Literature & dataset",
+            "zh": "文献与数据",
+        },
+        "tab_pipeline_control": {
+            "en": "Pipeline & approval",
+            "zh": "流水线与审批",
+        },
+        "info_start_pipeline": {
+            "en": "Start the pipeline from the \u201cPipeline & approval\u201d tab to see results.",
+            "zh": "请先在\u201c流水线与审批\u201d标签页启动流水线，结果将显示在此。",
+        },
+    }
+)
+
+
 
 def _resolve_language(lang: str | None) -> str:
     if lang is not None:

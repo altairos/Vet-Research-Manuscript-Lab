@@ -86,7 +86,7 @@ def apply_theme() -> None:
           font-size:.86rem; line-height:1.45; margin:.36rem 0; color:#53645e;
         }
         .block-container {
-          max-width:1240px; padding-top:3.55rem; padding-bottom:2rem;
+          max-width:1240px; padding-top:3.55rem; padding-bottom:1.2rem;
         }
         [data-testid="stMainBlockContainer"] {
           font-size:15px; line-height:1.55;
@@ -99,12 +99,12 @@ def apply_theme() -> None:
         }
         h1 { font-size:2rem !important; }
         h2 {
-          font-size:1.45rem !important; margin-top:.8rem !important;
-          margin-bottom:.45rem !important;
+          font-size:1.4rem !important; margin-top:.5rem !important;
+          margin-bottom:.3rem !important;
         }
         h3 {
-          font-size:1.12rem !important; margin-top:.65rem !important;
-          margin-bottom:.35rem !important;
+          font-size:1.1rem !important; margin-top:.4rem !important;
+          margin-bottom:.25rem !important;
         }
         h4 { font-size:1rem !important; margin:.7rem 0 .4rem !important; }
         h5 { font-size:.9rem !important; margin:.6rem 0 .35rem !important; }
@@ -150,12 +150,21 @@ def apply_theme() -> None:
           background:#fff; color:var(--brand);
           box-shadow:0 1px 5px rgba(32,67,57,.1);
         }
+        .stTabs [data-baseweb="tab-highlight"] {
+          display:none !important;
+        }
+        .stTabs [data-baseweb="tab-border"] {
+          display:none !important;
+        }
+        .stTabs [role="tab"][aria-selected="true"]::after {
+          display:none !important;
+        }
         .stTabs [data-baseweb="tab-panel"] { padding-top:.18rem; }
         [data-testid="stForm"] {
           background:var(--surface); border:1px solid var(--line);
           border-radius:12px; padding:.78rem .85rem .68rem;
         }
-        [data-testid="stForm"] [data-testid="stVerticalBlock"] { gap:.45rem; }
+        [data-testid="stForm"] [data-testid="stVerticalBlock"] { gap:.3rem; }
         [data-testid="stForm"] label p,
         [data-testid="stWidgetLabel"] p {
           font-size:.86rem; line-height:1.4; font-weight:650;
@@ -163,13 +172,13 @@ def apply_theme() -> None:
         }
         [data-baseweb="input"] > div,
         [data-baseweb="select"] > div { min-height:2.15rem; }
-        textarea { min-height:4rem !important; }
+        textarea { min-height:2.8rem !important; }
         .stButton > button,.stFormSubmitButton > button {
           border-radius:9px; font-weight:700; min-height:2.15rem;
         }
         div[data-testid="stMetric"] {
           background:#fff; border:1px solid var(--line);
-          padding:.55rem .7rem; border-radius:10px;
+          padding:.35rem .55rem; border-radius:9px;
         }
         [data-testid="stExpander"] {
           background:#fff; border-color:var(--line); border-radius:12px;

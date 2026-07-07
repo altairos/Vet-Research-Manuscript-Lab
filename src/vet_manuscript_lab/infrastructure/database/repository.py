@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from vet_manuscript_lab.domain.conventions import new_id
+from vet_manuscript_lab.infrastructure.database.base import Base
 from vet_manuscript_lab.infrastructure.database.models import (
     ApprovalRecord,
     ArtifactRecord,
@@ -73,6 +74,60 @@ class FoundationRepository:
                     select(ProjectRecord).order_by(ProjectRecord.created_at)
                 )
             )
+
+    def rename_project(self, project_id: str, new_title: str) -> ProjectRecord:
+        """Update the project title, raising on empty/duplicate conditions."""
+
+        title = new_title.strip()
+        if not title:
+            raise ValueError("Project title must not be empty")
+        with self.sessions.begin() as session:
+            project = session.scalar(
+                select(ProjectRecord).where(ProjectRecord.id == project_id)
+            )
+            if project is None:
+                raise ValueError(f"Project {project_id} not found")
+            project.title = title
+            project.updated_at = now_utc()
+            session.flush()
+            self._audit(
+                session,
+                project_id=project.id,
+                actor_type="human",
+                actor_id=project.owner_id,
+                action="project.renamed",
+                target_type="project",
+                target_id=project.id,
+                outcome="success",
+            )
+            return project
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project and all its dependent records.
+
+        Iterates every table that has a ``project_id`` foreign key and
+        removes matching rows, then deletes the project row itself.
+        For SQLite the PRAGMA is used to relax FK ordering; on other
+        backends the reversed topological order suffices.
+        """
+
+        with self.sessions.begin() as session:
+            bind = session.bind
+            dialect = bind.dialect.name if bind is not None else "sqlite"
+            if dialect == "sqlite":
+                session.execute(text("PRAGMA foreign_keys = OFF"))
+            for table in reversed(Base.metadata.sorted_tables):
+                if "project_id" in table.columns:
+                    session.execute(
+                        table.delete().where(table.c.project_id == project_id)
+                    )
+            session.execute(
+                ProjectRecord.__table__.delete().where(
+                    ProjectRecord.__table__.c.id == project_id
+                )
+            )
+            if dialect == "sqlite":
+                session.execute(text("PRAGMA foreign_keys = ON"))
 
     def create_run(self, project_id: str, thread_id: str) -> WorkflowRunRecord:
         timestamp = now_utc()
