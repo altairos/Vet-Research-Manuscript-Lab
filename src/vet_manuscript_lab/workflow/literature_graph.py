@@ -201,15 +201,18 @@ def literature_search_node(
         records = _sync_literature_records(state, synchroniser)
     else:
         records = _mock_literature_records(state)
+    strategy_input = state.get("search_strategy_input", {})
     search_strategy = _make_artifact(
         state,
         role="search_strategy",
         artifact_type="search_strategy",
         gate="search_strategy",
         payload={
-            "databases": ["PubMed", "CAB Abstracts"],
-            "query": "(canine OR feline) AND chronic kidney disease",
-            "date_range": "2018-01-01/2026-06-30",
+            "databases": strategy_input.get("databases", ["PubMed", "CAB Abstracts"]),
+            "query": strategy_input.get(
+                "query", "(canine OR feline) AND chronic kidney disease"
+            ),
+            "date_range": strategy_input.get("date_range", "2018-01-01/2026-06-30"),
             "species_scope": state.get("species_scope", []),
             "record_count": len(records),
         },

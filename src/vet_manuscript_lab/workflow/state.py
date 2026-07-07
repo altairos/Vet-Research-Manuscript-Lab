@@ -423,6 +423,8 @@ class WorkflowState(TypedDict, total=False):
 
     study_type: str
     species_scope: list[str]
+    research_question_input: NotRequired[dict[str, str]]
+    search_strategy_input: NotRequired[dict[str, Any]]
     next_stage: str
     active_agent: str
     retry_count: int

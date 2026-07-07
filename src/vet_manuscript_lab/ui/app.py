@@ -5,6 +5,8 @@ Run with: streamlit run src/vet_manuscript_lab/ui/app.py
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import uuid
 from dataclasses import dataclass
@@ -16,12 +18,23 @@ from langgraph.types import Command
 
 from vet_manuscript_lab.config import Settings
 from vet_manuscript_lab.domain.conventions import utc_now
+from vet_manuscript_lab.infrastructure.artifacts import LocalArtifactStore
 from vet_manuscript_lab.infrastructure.checkpoints import open_checkpointer
 from vet_manuscript_lab.infrastructure.database import create_database
 from vet_manuscript_lab.infrastructure.database.governance import GovernanceRepository
+from vet_manuscript_lab.infrastructure.database.literature import (
+    LiteratureInput,
+    LiteratureRepository,
+)
 from vet_manuscript_lab.infrastructure.database.repository import (
     FoundationRepository,
     ProjectInput,
+)
+from vet_manuscript_lab.services.documents import DocumentImporter
+from vet_manuscript_lab.services.zotero import (
+    ZoteroClient,
+    ZoteroConfig,
+    ZoteroSynchroniser,
 )
 from vet_manuscript_lab.ui.i18n import (
     DEFAULT_LANGUAGE,
@@ -31,6 +44,12 @@ from vet_manuscript_lab.ui.i18n import (
     stage_label,
     status_label,
     translate,
+)
+from vet_manuscript_lab.ui.theme import (
+    apply_theme,
+    render_hero,
+    render_phase_tracker,
+    render_run_metrics,
 )
 from vet_manuscript_lab.workflow.compliance_graph import build_compliance_pipeline_graph
 from vet_manuscript_lab.workflow.state import new_workflow_state
@@ -70,7 +89,10 @@ def _load_golden_fixture() -> dict[str, Any] | None:
 @dataclass(slots=True)
 class Application:
     repository: FoundationRepository
+    literature_repository: LiteratureRepository
+    document_importer: DocumentImporter
     governance: GovernanceRepository
+    settings: Settings
     graph: Any
     checkpoint_connection: Any
 
@@ -84,6 +106,10 @@ def get_application() -> Application:
     )
     database.create_schema()
     repository = FoundationRepository(database.sessions)
+    literature_repository = LiteratureRepository(database.sessions)
+    document_importer = DocumentImporter(
+        LocalArtifactStore(settings.artifact_root), literature_repository
+    )
     governance = GovernanceRepository(database.sessions)
     connection, checkpointer = open_checkpointer(
         database_url=settings.database_url,
@@ -92,7 +118,10 @@ def get_application() -> Application:
     graph = build_compliance_pipeline_graph(checkpointer)
     return Application(
         repository=repository,
+        literature_repository=literature_repository,
+        document_importer=document_importer,
         governance=governance,
+        settings=settings,
         graph=graph,
         checkpoint_connection=connection,
     )
@@ -105,6 +134,50 @@ def _interrupt_values(snapshot: Any) -> list[dict[str, Any]]:
             if isinstance(pending.value, dict):
                 values.append(pending.value)
     return values
+
+
+def _render_sidebar_header() -> None:
+    st.sidebar.markdown(
+        f"""<div class="sidebar-brand"><strong>{translate("app_title")}</strong>
+        <span>{translate("sidebar_tagline")}</span></div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_sidebar_context(app: Application, project_id: str | None) -> None:
+    st.sidebar.divider()
+    st.sidebar.markdown(f"#### {translate('sidebar_workspace')}")
+    projects = app.repository.list_projects()
+    project = next((item for item in projects if item.id == project_id), None)
+    if project is None:
+        st.sidebar.info(translate("sidebar_select_project"))
+        return
+    st.sidebar.markdown(
+        f"""<div class="sidebar-card"><strong>{project.title}</strong>
+        <span>{project.study_type.replace("_", " ")}<br>
+        ID {project.id[:8]} / {project.status}</span></div>""",
+        unsafe_allow_html=True,
+    )
+    intake = st.session_state.get(f"analysis_intake:{project.id}", {})
+    checks = (
+        (translate("tab_research_question"), "research_question_input"),
+        (translate("readiness_search"), "search_strategy_input"),
+        (translate("phase_evidence"), "literature_record_drafts"),
+        (translate("readiness_dataset"), "dataset_summary"),
+    )
+    st.sidebar.markdown(f"##### {translate('sidebar_readiness')}")
+    for label, key in checks:
+        marker = "[x]" if intake.get(key) else "[ ]"
+        st.sidebar.markdown(
+            f'<div class="side-step">{marker}&nbsp;&nbsp;{label}</div>',
+            unsafe_allow_html=True,
+        )
+    completed = sum(bool(intake.get(key)) for _, key in checks)
+    st.sidebar.progress(
+        completed / len(checks), text=translate("sidebar_ready_count", count=completed)
+    )
+    st.sidebar.markdown(f"##### {translate('sidebar_next_steps')}")
+    st.sidebar.caption(translate("sidebar_flow"))
 
 
 def _render_language_switch() -> None:
@@ -157,16 +230,21 @@ def _render_project_creation(app: Application) -> None:
     st.subheader(translate("create_project_header"))
     species_options = ["canine", "feline"]
     with st.form("create_project", clear_on_submit=True):
-        title = st.text_input(translate("field_project_title"))
-        owner_id = st.text_input(translate("field_owner_id"))
-        species = st.multiselect(
+        title_col, owner_col = st.columns(2)
+        title = title_col.text_input(translate("field_project_title"))
+        owner_id = owner_col.text_input(translate("field_owner_id"))
+        species_col, action_col = st.columns([2, 1], vertical_alignment="bottom")
+        species = species_col.multiselect(
             translate("field_species_scope"),
             species_options,
             format_func=lambda code: translate(f"species_{code}"),
             default=["canine"],
         )
-        submitted = st.form_submit_button(translate("button_create"))
+        submitted = action_col.form_submit_button(
+            translate("button_create"), type="primary", use_container_width=True
+        )
     if submitted:
+        st.session_state["default_reviewer_id"] = reviewer_id
         try:
             project = app.repository.create_project(
                 ProjectInput(
@@ -180,23 +258,318 @@ def _render_project_creation(app: Application) -> None:
             st.error(str(exc))
         else:
             st.session_state["project_id"] = project.id
-            st.success(translate("success_project_created", id=project.id))
+            st.session_state["project_created_notice"] = translate(
+                "success_project_created", id=project.id
+            )
             st.rerun()
 
 
 def _render_projects(app: Application) -> None:
     projects = app.repository.list_projects()
+    notice = st.session_state.pop("project_created_notice", None)
+    if isinstance(notice, str):
+        st.success(notice)
     if not projects:
         st.info(translate("info_no_projects"))
         return
     labels = {project.id: f"{project.title} ({project.id[:8]})" for project in projects}
+    project_ids = list(labels)
+    current_project_id = st.session_state.get("project_id")
+    selected_index = (
+        project_ids.index(current_project_id)
+        if current_project_id in project_ids
+        else 0
+    )
     selected = st.selectbox(
         translate("field_active_project"),
-        options=list(labels),
+        options=project_ids,
         format_func=lambda project_id: labels[project_id],
-        index=0,
+        index=selected_index,
     )
     st.session_state["project_id"] = selected
+
+
+def _literature_draft(record: Any) -> dict[str, Any]:
+    return {
+        "record_id": record.id,
+        "title": record.title,
+        "doi": record.doi,
+        "pmid": record.pmid,
+        "journal": record.journal,
+        "publication_year": record.publication_year,
+        "screening_decision": "pending",
+    }
+
+
+def _render_analysis_intake(app: Application, project_id: str) -> bool:
+    """Collect real pipeline inputs and persist imported source material."""
+
+    intake = st.session_state.setdefault(f"analysis_intake:{project_id}", {})
+    st.subheader(translate("intake_header"))
+    st.caption(translate("intake_caption"))
+    question_tab, literature_tab, dataset_tab = st.tabs(
+        [
+            translate("tab_research_question"),
+            translate("tab_zotero_literature"),
+            translate("tab_dataset_variables"),
+        ]
+    )
+
+    with question_tab:
+        question = dict(intake.get("research_question_input", {}))
+        with st.form("analysis-question"):
+            objective = st.text_area(
+                translate("field_objective"), value=question.get("objective", "")
+            )
+            left, right = st.columns(2)
+            population = left.text_input(
+                translate("field_population"), value=question.get("population", "")
+            )
+            exposure = right.text_input(
+                translate("field_exposure"), value=question.get("exposure", "")
+            )
+            comparator = left.text_input(
+                translate("field_comparator"), value=question.get("comparator", "")
+            )
+            outcome = right.text_input(
+                translate("field_outcome"), value=question.get("outcome", "")
+            )
+            hypothesis = st.text_area(
+                translate("field_hypothesis"), value=question.get("hypothesis", "")
+            )
+            if st.form_submit_button(translate("button_save_question"), type="primary"):
+                required = (objective, population, exposure, outcome)
+                if not all(value.strip() for value in required):
+                    st.error(translate("error_required_fields"))
+                else:
+                    intake["research_question_input"] = {
+                        "objective": objective.strip(),
+                        "population": population.strip(),
+                        "exposure": exposure.strip(),
+                        "comparator": comparator.strip(),
+                        "outcome": outcome.strip(),
+                        "hypothesis": hypothesis.strip(),
+                    }
+                    st.success(translate("success_question_saved"))
+
+    with literature_tab:
+        search = dict(intake.get("search_strategy_input", {}))
+        with st.form("search-strategy"):
+            query = st.text_area(
+                translate("field_search_query"), value=search.get("query", "")
+            )
+            databases = st.multiselect(
+                translate("field_databases"),
+                ["PubMed", "CAB Abstracts", "Web of Science", "Scopus"],
+                default=search.get("databases", ["PubMed", "CAB Abstracts"]),
+            )
+            date_range = st.text_input(
+                translate("field_date_range"),
+                value=search.get("date_range", "2018-01-01/2026-12-31"),
+            )
+            if st.form_submit_button(translate("button_save_search")):
+                if not query.strip():
+                    st.error(translate("error_search_required"))
+                else:
+                    intake["search_strategy_input"] = {
+                        "query": query.strip(),
+                        "databases": databases,
+                        "date_range": date_range.strip(),
+                    }
+                    st.success(translate("success_search_saved"))
+
+        col_zotero, col_manual = st.columns(2)
+        with col_zotero:
+            st.markdown("##### Zotero")
+            if app.settings.zotero_enabled:
+                if st.button(translate("button_sync_zotero"), type="primary"):
+                    try:
+                        client = ZoteroClient(
+                            ZoteroConfig(
+                                library_id=app.settings.zotero_library_id,
+                                api_key=app.settings.zotero_api_key,
+                                library_type=app.settings.zotero_library_type,
+                            )
+                        )
+                        result = ZoteroSynchroniser(
+                            client, app.literature_repository
+                        ).sync_library(project_id=project_id, fetch_attachments=True)
+                    except Exception as exc:
+                        st.error(translate("error_zotero_sync", error=exc))
+                    else:
+                        st.success(
+                            translate(
+                                "success_zotero_sync",
+                                fetched=result.fetched,
+                                created=result.created,
+                            )
+                        )
+            else:
+                st.info(translate("info_zotero_config"))
+        with col_manual:
+            st.markdown(f"##### {translate('manual_entry_header')}")
+            with st.form("manual-literature", clear_on_submit=True):
+                lit_title = st.text_input(translate("field_literature_title"))
+                lit_doi = st.text_input("DOI")
+                if st.form_submit_button(translate("button_add_literature")):
+                    try:
+                        app.literature_repository.create_literature_record(
+                            project_id=project_id,
+                            data=LiteratureInput(
+                                title=lit_title, doi=lit_doi.strip() or None
+                            ),
+                        )
+                    except (ValueError, PermissionError) as exc:
+                        st.error(str(exc))
+                    else:
+                        st.success(translate("success_literature_added"))
+
+        records = app.literature_repository.list_literature_records(project_id)
+        if records:
+            intake["literature_record_drafts"] = [
+                _literature_draft(record) for record in records
+            ]
+            st.dataframe(
+                [
+                    {
+                        translate("col_title"): r.title,
+                        "DOI": r.doi or "",
+                        translate("col_year"): r.publication_year or "",
+                    }
+                    for r in records
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+            record_labels = {r.id: r.title for r in records}
+            target_id = st.selectbox(
+                translate("field_pdf_record"),
+                list(record_labels),
+                format_func=lambda value: record_labels[value],
+            )
+            pdf = st.file_uploader(translate("field_import_pdf"), type=["pdf"])
+            if pdf is not None and st.button(translate("button_archive_pdf")):
+                result = app.document_importer.import_bytes(
+                    project_id=project_id,
+                    literature_record_id=target_id,
+                    attachment_key=pdf.name,
+                    pdf_bytes=pdf.getvalue(),
+                )
+                st.success(
+                    translate("success_pdf_archived", hash=result.content_hash[:20])
+                )
+        else:
+            st.warning(translate("warning_no_literature"))
+
+    with dataset_tab:
+        uploaded = st.file_uploader(
+            translate("field_upload_csv"), type=["csv"], key="analysis-dataset"
+        )
+        if uploaded is not None:
+            content = uploaded.getvalue()
+            rows = list(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
+            if not rows or not rows[0]:
+                st.error(translate("error_empty_csv"))
+            else:
+                columns = rows[0]
+                st.caption(
+                    translate(
+                        "dataset_dimensions",
+                        rows=len(rows) - 1,
+                        columns=len(columns),
+                        names=", ".join(columns),
+                    )
+                )
+                outcome_var = st.selectbox(translate("field_outcome_variable"), columns)
+                exposure_var = st.selectbox(
+                    translate("field_exposure_variable"), columns
+                )
+                id_var = st.selectbox(
+                    translate("field_id_variable"), [translate("option_none"), *columns]
+                )
+                if st.button(translate("button_save_dataset"), type="primary"):
+                    from vet_manuscript_lab.domain.conventions import sha256_bytes
+
+                    dataset_id = str(uuid.uuid4())
+                    intake["dataset_summary"] = {
+                        "dataset_id": dataset_id,
+                        "dataset_version_id": str(uuid.uuid4()),
+                        "name": uploaded.name,
+                        "row_count": len(rows) - 1,
+                        "variable_count": len(columns),
+                        "content_hash": sha256_bytes(content),
+                        "locked": False,
+                    }
+                    intake["variable_spec_drafts"] = [
+                        {
+                            "name": name,
+                            "var_type": "continuous",
+                            "role": (
+                                "outcome"
+                                if name == outcome_var
+                                else "exposure"
+                                if name == exposure_var
+                                else "id"
+                                if name == id_var
+                                else "covariate"
+                            ),
+                            "unit": None,
+                            "missing_code": None,
+                        }
+                        for name in columns
+                    ]
+                    st.success(translate("success_dataset_saved"))
+        elif intake.get("dataset_summary"):
+            dataset = intake["dataset_summary"]
+            st.success(
+                translate(
+                    "success_dataset_ready",
+                    name=dataset["name"],
+                    rows=dataset["row_count"],
+                )
+            )
+
+    requirements = {
+        translate("tab_research_question"): bool(intake.get("research_question_input")),
+        translate("readiness_search"): bool(intake.get("search_strategy_input")),
+        translate("readiness_literature"): bool(intake.get("literature_record_drafts")),
+        translate("readiness_dataset"): bool(intake.get("dataset_summary")),
+    }
+    ready = all(requirements.values())
+    status_cols = st.columns(4)
+    for col, (label, complete) in zip(status_cols, requirements.items(), strict=True):
+        col.metric(
+            label,
+            translate("label_ready") if complete else translate("label_incomplete"),
+        )
+    return ready
+
+
+def _thread_session_key(project_id: str) -> str:
+    return f"thread_id:{project_id}"
+
+
+def _set_active_thread(project_id: str, thread_id: str) -> None:
+    st.session_state[_thread_session_key(project_id)] = thread_id
+    st.session_state["thread_id"] = thread_id
+
+
+def _get_active_thread(project_id: str) -> str | None:
+    thread_id = st.session_state.get(_thread_session_key(project_id))
+    return thread_id if isinstance(thread_id, str) else None
+
+
+def _drive_pipeline_to_completion(
+    app: Application, state: dict[str, Any], thread_id: str
+) -> None:
+    config = {"configurable": {"thread_id": thread_id}}
+    app.graph.invoke(state, config)
+    for _ in range(50):
+        snapshot = app.graph.get_state(config)
+        pending = _interrupt_values(snapshot)
+        if not pending:
+            break
+        app.graph.invoke(Command(resume=_auto_resume_payload(pending[0])), config)
 
 
 def _start_workflow(app: Application, project_id: str) -> None:
@@ -208,10 +581,13 @@ def _start_workflow(app: Application, project_id: str) -> None:
         thread_id=thread_id,
         now=utc_now(),
     )
+    intake = st.session_state.get(f"analysis_intake:{project_id}", {})
+    if isinstance(intake, dict):
+        state.update(intake)
     config = {"configurable": {"thread_id": thread_id}}
     app.graph.invoke(state, config)
     app.governance.sync_state(app.graph.get_state(config).values)
-    st.session_state["thread_id"] = thread_id
+    _set_active_thread(project_id, thread_id)
 
 
 # ---------------------------------------------------------------------------
@@ -797,6 +1173,152 @@ def _fixture_to_methodology_findings(fixture: dict[str, Any]) -> list[dict[str, 
     return list(fixture.get("methodology", {}).get("findings", []))
 
 
+def _golden_research_question(fixture: dict[str, Any]) -> dict[str, str]:
+    rq = fixture.get("project", {}).get("research_question", {})
+    return {
+        "objective": (
+            "Assess the association between synthetic treatment A and overall "
+            "survival in a retrospective canine/feline referral cohort."
+        ),
+        "population": rq.get("population", ""),
+        "exposure": rq.get("exposure", ""),
+        "comparator": rq.get("comparator", ""),
+        "outcome": rq.get("outcome", ""),
+        "hypothesis": (
+            "Synthetic treatment A is associated with improved overall survival "
+            "after adjusting for age and species."
+        ),
+    }
+
+
+def _golden_search_strategy() -> dict[str, Any]:
+    return {
+        "query": (
+            "(veterinary OR canine OR feline) AND (survival OR \"time-to-event\") "
+            "AND (retrospective OR observational) AND (treatment OR exposure)"
+        ),
+        "databases": ["PubMed", "CAB Abstracts", "Web of Science"],
+        "date_range": "2021-01-01/2026-12-31",
+    }
+
+
+def _golden_dataset_summary(fixture: dict[str, Any]) -> dict[str, Any]:
+    from vet_manuscript_lab.domain.conventions import sha256_bytes
+
+    dictionary = fixture.get("dictionary", {})
+    dataset = dictionary.get("dataset", {})
+    csv_bytes = (GOLDEN_FIXTURE_ROOT / "data" / "cases_synthetic.csv").read_bytes()
+    return {
+        "dataset_id": "golden-dataset",
+        "dataset_version_id": "golden-dataset-v1",
+        "name": dataset.get("name", "Golden Project dataset"),
+        "row_count": dataset.get("row_count", 0),
+        "variable_count": dataset.get("column_count", 0),
+        "content_hash": sha256_bytes(csv_bytes),
+        "locked": False,
+    }
+
+
+def _build_golden_workspace_intake(fixture: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "research_question_input": _golden_research_question(fixture),
+        "search_strategy_input": _golden_search_strategy(),
+        "literature_record_drafts": _fixture_to_literature_drafts(fixture),
+        "dataset_summary": _golden_dataset_summary(fixture),
+        "variable_spec_drafts": _fixture_to_variable_drafts(fixture),
+        "analysis_spec_drafts": _fixture_to_analysis_drafts(fixture),
+        "methodology_findings": _fixture_to_methodology_findings(fixture),
+    }
+
+
+def _ensure_golden_workspace_project(app: Application, fixture: dict[str, Any]) -> str:
+    project_meta = fixture.get("project", {}).get("project", {})
+    title = str(project_meta.get("title", "Golden Project")).strip()
+    for project in app.repository.list_projects():
+        if project.title == title:
+            return project.id
+
+    project = app.repository.create_project(
+        ProjectInput(
+            title=title,
+            study_type=str(
+                project_meta.get(
+                    "study_type", "retrospective_observational_clinical_study"
+                )
+            ),
+            species_scope=list(project_meta.get("species_scope", ["canine", "feline"])),
+            owner_id="golden-demo",
+        )
+    )
+    return project.id
+
+
+def _seed_golden_literature_records(
+    app: Application, project_id: str, fixture: dict[str, Any]
+) -> None:
+    for record in fixture.get("literature", {}).get("records", []):
+        doi = record.get("doi")
+        if isinstance(doi, str) and doi and app.literature_repository.find_by_doi(project_id, doi):
+            continue
+        app.literature_repository.create_literature_record(
+            project_id=project_id,
+            data=LiteratureInput(
+                title=str(record.get("title", "")),
+                doi=doi if isinstance(doi, str) and doi else None,
+                publication_year=record.get("year"),
+                journal=record.get("journal"),
+                creators=[{"name": author} for author in record.get("authors", [])],
+                metadata_json={
+                    "tags": record.get("tags", []),
+                    "abstract": record.get("abstract", ""),
+                    "fixture": "golden_project",
+                },
+            ),
+        )
+
+
+def _prepare_golden_workspace(app: Application) -> str:
+    fixture = _load_golden_fixture()
+    if fixture is None:
+        raise ValueError("golden fixture not found")
+
+    project_id = _ensure_golden_workspace_project(app, fixture)
+    _seed_golden_literature_records(app, project_id, fixture)
+    st.session_state[f"analysis_intake:{project_id}"] = _build_golden_workspace_intake(fixture)
+    st.session_state["project_id"] = project_id
+    st.session_state.pop(_thread_session_key(project_id), None)
+    st.session_state.pop("thread_id", None)
+    return project_id
+
+
+def _run_golden_workspace_pipeline(app: Application) -> tuple[str, str]:
+    fixture = _load_golden_fixture()
+    if fixture is None:
+        raise ValueError("golden fixture not found")
+
+    project_id = _ensure_golden_workspace_project(app, fixture)
+    _seed_golden_literature_records(app, project_id, fixture)
+    intake = _build_golden_workspace_intake(fixture)
+    st.session_state[f"analysis_intake:{project_id}"] = intake
+    st.session_state["project_id"] = project_id
+
+    thread_id = f"golden-workspace-{uuid.uuid4().hex[:8]}"
+    run = app.repository.create_run(project_id, thread_id)
+    state = new_workflow_state(
+        project_id=project_id,
+        workflow_run_id=run.id,
+        thread_id=thread_id,
+        now=utc_now(),
+        species_scope=list(
+            fixture.get("project", {}).get("project", {}).get("species_scope", ["canine", "feline"])
+        ),
+    )
+    state.update(intake)
+    _drive_pipeline_to_completion(app, state, thread_id)
+    _set_active_thread(project_id, thread_id)
+    return project_id, thread_id
+
+
 def _run_golden_demo_pipeline(app: Application) -> str:
     """Run the full end-to-end pipeline with golden project fixture data.
 
@@ -817,30 +1339,11 @@ def _run_golden_demo_pipeline(app: Application) -> str:
         species_scope=["canine", "feline"],
     )
 
-    # Inject golden fixture data so pipeline output matches the static
-    # fixture display.  These pre-populated fields are respected by
-    # literature_search_node, methodology_critic_node, and analysis_plan_node.
     fixture = _load_golden_fixture()
     if fixture:
-        state["literature_record_drafts"] = _fixture_to_literature_drafts(fixture)  # type: ignore[typeddict-item]
-        state["variable_spec_drafts"] = _fixture_to_variable_drafts(fixture)  # type: ignore[typeddict-item]
-        state["analysis_spec_drafts"] = _fixture_to_analysis_drafts(fixture)  # type: ignore[typeddict-item]
-        state["methodology_findings"] = _fixture_to_methodology_findings(fixture)  # type: ignore[typeddict-item]
+        state.update(_build_golden_workspace_intake(fixture))
 
-    config = {"configurable": {"thread_id": thread_id}}
-
-    # Run to the first interrupt, then auto-approve every gate until the
-    # pipeline reaches a terminal stage or no more interrupts are pending.
-    app.graph.invoke(state, config)
-    for _ in range(50):  # safety bound on revision loops
-        snapshot = app.graph.get_state(config)
-        pending = _interrupt_values(snapshot)
-        if not pending:
-            break
-        app.graph.invoke(
-            Command(resume=_auto_resume_payload(pending[0])),
-            config,
-        )
+    _drive_pipeline_to_completion(app, state, thread_id)
     return thread_id
 
 
@@ -1335,67 +1838,77 @@ def _render_golden_demo(app: Application) -> None:
         st.info(translate("golden_run_no_thread"))
 
 
-def _render_workflow(app: Application, project_id: str) -> None:
-    st.subheader(translate("workflow_header_full"))
-    if st.button(translate("button_start_full_run")):
-        _start_workflow(app, project_id)
-        st.rerun()
+def _render_workspace_actions(app: Application) -> None:
+    notice = st.session_state.pop("golden_workspace_notice", None)
+    if isinstance(notice, str):
+        st.success(notice)
 
-    thread_id = st.session_state.get("thread_id")
-    if not isinstance(thread_id, str):
-        return
-    config = {"configurable": {"thread_id": thread_id}}
-    snapshot = app.graph.get_state(config)
-    state = snapshot.values
-    st.write(
-        {
-            translate("label_thread_id"): thread_id,
-            translate("label_stage"): stage_label(state.get("current_stage")),
-            translate("label_status"): status_label(state.get("run_status")),
-            translate("label_next"): snapshot.next,
-        }
+    st.subheader(translate("workspace_actions_header"))
+    st.caption(translate("workspace_actions_caption"))
+    col_load, col_run = st.columns(2)
+    load_clicked = col_load.button(
+        translate("golden_workspace_load"), use_container_width=True
+    )
+    run_clicked = col_run.button(
+        translate("golden_workspace_run"),
+        type="primary",
+        use_container_width=True,
     )
 
-    _render_search_strategy_detail(state)
+    if load_clicked:
+        try:
+            with st.spinner(translate("golden_workspace_loading")):
+                project_id = _prepare_golden_workspace(app)
+        except (OSError, ValueError) as exc:
+            st.error(translate("golden_demo_load_error", error=str(exc)))
+        else:
+            st.session_state["golden_workspace_notice"] = translate(
+                "golden_workspace_loaded", id=project_id[:8]
+            )
+            st.rerun()
 
-    with st.expander(translate("expander_artifact_refs"), expanded=False):
-        st.json(state.get("artifacts", {}))
-    with st.expander(translate("expander_approvals_locks"), expanded=False):
-        st.json(
-            {
-                "approvals": state.get("approvals", {}),
-                "locks": state.get("locks", {}),
-            }
-        )
+    if run_clicked:
+        try:
+            with st.spinner(translate("golden_workspace_running")):
+                project_id, _thread_id = _run_golden_workspace_pipeline(app)
+        except (OSError, ValueError) as exc:
+            st.error(translate("golden_demo_load_error", error=str(exc)))
+        else:
+            st.session_state["golden_workspace_notice"] = translate(
+                "golden_workspace_finished", id=project_id[:8]
+            )
+            st.rerun()
 
-    # Literature + evidence views (appear after screening / extraction stages)
-    _render_literature_records(state)
-    _render_evidence_items(state)
 
-    # Methodology + analysis views (appear after methodology critic stage)
-    _render_methodology_findings(state)
-    _render_analysis_plan(state)
-    _render_statistical_results(state)
-
-    # AI usage / cost views (appear after any gateway call)
-    _render_usage_summary(state)
-
-    pending = _interrupt_values(snapshot)
-    if not pending:
-        if state.get("run_status") == "complete":
-            st.success(translate("success_pipeline_complete"))
-        return
-
-    gate = pending[0]
+def _render_pending_approval(
+    app: Application,
+    config: dict[str, Any],
+    gate: dict[str, Any],
+) -> None:
     gate_name = gate["gate"]
-    st.warning(gate_field(gate_name, "title"))
+    st.markdown('<div class="approval-card">', unsafe_allow_html=True)
+    st.subheader(translate("pending_action_header"))
+    st.caption(translate("pending_action_caption", stage=stage_label(gate_name)))
+    st.write(
+        {
+            translate("pending_action_gate"): gate_field(gate_name, "title"),
+            translate("pending_action_next"): stage_label(gate.get("proposed_next_stage")),
+        }
+    )
     st.caption(gate_field(gate_name, "summary"))
+
     role_options = ["investigator", "statistician"]
-    with st.form(f"approval_{gate['gate']}"):
-        reviewer_id = st.text_input(translate("field_reviewer_id"))
+    required_role = gate.get("required_reviewer_role", "investigator")
+    default_index = role_options.index(required_role) if required_role in role_options else 0
+    with st.form(f"approval_{gate_name}"):
+        reviewer_id = st.text_input(
+            translate("field_reviewer_id"),
+            value=st.session_state.get("default_reviewer_id", "Mona"),
+        )
         reviewer_role = st.selectbox(
             translate("field_reviewer_role"),
             role_options,
+            index=default_index,
             format_func=lambda role: translate(f"role_{role}"),
         )
         decision = st.selectbox(
@@ -1404,8 +1917,15 @@ def _render_workflow(app: Application, project_id: str) -> None:
             format_func=lambda value: translate(f"decision.{value}"),
         )
         comment = st.text_area(translate("field_comment"))
-        submitted = st.form_submit_button(translate("button_submit_decision"))
+        submitted = st.form_submit_button(
+            translate("button_submit_decision"),
+            type="primary",
+            use_container_width=True,
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
     if submitted:
+        st.session_state["default_reviewer_id"] = reviewer_id
         try:
             app.graph.invoke(
                 Command(
@@ -1425,8 +1945,67 @@ def _render_workflow(app: Application, project_id: str) -> None:
             st.rerun()
 
 
+def _render_workflow(app: Application, project_id: str) -> None:
+    st.subheader(translate("workflow_header_full"))
+    ready = _render_analysis_intake(app, project_id)
+    st.divider()
+    st.subheader(translate("start_approval_header"))
+    if st.button(
+        translate("button_start_full_run"),
+        type="primary",
+        disabled=not ready,
+        help=None if ready else translate("start_disabled_help"),
+    ):
+        _start_workflow(app, project_id)
+        st.rerun()
+
+    thread_id = _get_active_thread(project_id)
+    if thread_id is None:
+        return
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = app.graph.get_state(config)
+    state = snapshot.values
+    render_phase_tracker(state.get("current_stage"))
+    render_run_metrics(state, thread_id)
+    st.caption(
+        f"{translate('label_next')}: {', '.join(snapshot.next) if snapshot.next else '-'}"
+    )
+
+    pending = _interrupt_values(snapshot)
+    if pending:
+        _render_pending_approval(app, config, pending[0])
+
+    _render_search_strategy_detail(state)
+
+    with st.expander(translate("expander_artifact_refs"), expanded=False):
+        st.json(state.get("artifacts", {}))
+    with st.expander(translate("expander_approvals_locks"), expanded=False):
+        st.json(
+            {
+                "approvals": state.get("approvals", {}),
+                "locks": state.get("locks", {}),
+            }
+        )
+
+    _render_literature_records(state)
+    _render_evidence_items(state)
+    _render_methodology_findings(state)
+    _render_analysis_plan(state)
+    _render_statistical_results(state)
+    _render_usage_summary(state)
+
+    if not pending:
+        if state.get("run_status") == "complete":
+            st.success(translate("success_pipeline_complete"))
+        return
+
+
 def main() -> None:
-    st.set_page_config(page_title=translate("page_title"), layout="wide")
+    st.set_page_config(
+        page_title=translate("page_title"), page_icon=":microscope:", layout="wide"
+    )
+    apply_theme()
+    _render_sidebar_header()
     _render_language_switch()
     view_mode = _render_view_mode_switch()
     app = get_application()
@@ -1435,14 +2014,18 @@ def main() -> None:
         _render_golden_demo(app)
         return
 
-    st.title(translate("app_title"))
-    st.caption(translate("app_caption_full"))
-    _render_project_creation(app)
-    st.divider()
+    render_hero()
     _render_projects(app)
+    _render_workspace_actions(app)
     project_id = st.session_state.get("project_id")
-    if isinstance(project_id, str):
-        _render_workflow(app, project_id)
+    active_project_id = project_id if isinstance(project_id, str) else None
+    _render_sidebar_context(app, active_project_id)
+    with st.expander(
+        translate("new_project_expander"), expanded=not app.repository.list_projects()
+    ):
+        _render_project_creation(app)
+    if active_project_id is not None:
+        _render_workflow(app, active_project_id)
 
 
 if __name__ == "__main__":

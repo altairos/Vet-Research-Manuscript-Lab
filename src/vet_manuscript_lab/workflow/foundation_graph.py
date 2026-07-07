@@ -116,6 +116,7 @@ def project_init_node(state: WorkflowState) -> dict[str, Any]:
 
 
 def research_question_node(state: WorkflowState) -> dict[str, Any]:
+    question_input = state.get("research_question_input", {})
     artifact = _mock_artifact(
         state,
         role="research_question",
@@ -123,10 +124,20 @@ def research_question_node(state: WorkflowState) -> dict[str, Any]:
         payload={
             "study_type": state.get("study_type"),
             "species_scope": state.get("species_scope", []),
-            "population": "Synthetic canine/feline clinical population",
-            "exposure": "Exposure to be confirmed by investigator",
-            "comparator": "Comparator to be confirmed by investigator",
-            "outcome": "Primary outcome to be confirmed by investigator",
+            "population": question_input.get(
+                "population", "Population to be confirmed by investigator"
+            ),
+            "exposure": question_input.get(
+                "exposure", "Exposure to be confirmed by investigator"
+            ),
+            "comparator": question_input.get(
+                "comparator", "Comparator to be confirmed by investigator"
+            ),
+            "outcome": question_input.get(
+                "outcome", "Primary outcome to be confirmed by investigator"
+            ),
+            "objective": question_input.get("objective", ""),
+            "hypothesis": question_input.get("hypothesis", ""),
         },
     )
     artifacts = dict(state.get("artifacts", {}))

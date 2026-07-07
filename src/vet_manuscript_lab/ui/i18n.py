@@ -674,6 +674,237 @@ STRINGS: dict[str, dict[str, str]] = {
 }
 
 
+# Workbench and theme strings
+STRINGS.update(
+    {
+        "sidebar_tagline": {
+            "en": "Research design / evidence / statistics / writing",
+            "zh": "研究设计 / 证据 / 统计 / 写作",
+        },
+        "sidebar_workspace": {"en": "Current workspace", "zh": "当前工作区"},
+        "sidebar_select_project": {
+            "en": "Create or select a project to begin.",
+            "zh": "新建或选择项目后开始研究。",
+        },
+        "sidebar_readiness": {"en": "Preparation", "zh": "准备进度"},
+        "sidebar_ready_count": {"en": "{count}/4 ready", "zh": "{count}/4 已就绪"},
+        "sidebar_next_steps": {"en": "Next steps", "zh": "后续流程"},
+        "sidebar_flow": {
+            "en": (
+                "Protocol approval -> evidence extraction -> statistics -> "
+                "review -> export"
+            ),
+            "zh": "方案审批 -> 证据提取 -> 统计分析 -> 论文审阅 -> 合规导出",
+        },
+        "intake_header": {
+            "en": "1. Study design and data preparation",
+            "zh": "1. 研究设计与数据准备",
+        },
+        "intake_caption": {
+            "en": (
+                "Complete the PECO question, literature, and dataset before "
+                "starting the approval workflow."
+            ),
+            "zh": "先完成 PECO 问题、文献和数据集设置，再启动可审批的分析流水线。",
+        },
+        "tab_research_question": {"en": "Research question", "zh": "研究问题"},
+        "tab_zotero_literature": {"en": "Zotero / literature", "zh": "Zotero / 文献"},
+        "tab_dataset_variables": {"en": "Dataset & variables", "zh": "数据集与变量"},
+        "field_objective": {"en": "Study objective *", "zh": "研究目的 *"},
+        "field_population": {"en": "P - Population *", "zh": "P - 研究对象 / 总体 *"},
+        "field_exposure": {
+            "en": "E - Exposure / intervention *",
+            "zh": "E - 暴露 / 干预 *",
+        },
+        "field_comparator": {"en": "C - Comparator", "zh": "C - 对照"},
+        "field_outcome": {"en": "O - Primary outcome *", "zh": "O - 主要结局 *"},
+        "field_hypothesis": {"en": "Prespecified hypothesis", "zh": "预设假设"},
+        "button_save_question": {"en": "Save research question", "zh": "保存研究问题"},
+        "error_required_fields": {
+            "en": "Complete all fields marked *.",
+            "zh": "请完整填写标记 * 的字段。",
+        },
+        "success_question_saved": {
+            "en": "Research question saved for approval.",
+            "zh": "研究问题已保存，将用于问题审批。",
+        },
+        "field_search_query": {"en": "Search query *", "zh": "检索式 *"},
+        "field_databases": {"en": "Databases", "zh": "数据库"},
+        "field_date_range": {"en": "Date range", "zh": "日期范围"},
+        "button_save_search": {"en": "Save search strategy", "zh": "保存检索策略"},
+        "error_search_required": {
+            "en": "Enter a search query.",
+            "zh": "请输入检索式。",
+        },
+        "success_search_saved": {
+            "en": "Search strategy saved.",
+            "zh": "检索策略已保存。",
+        },
+        "button_sync_zotero": {"en": "Sync from Zotero", "zh": "从 Zotero 同步文献"},
+        "error_zotero_sync": {
+            "en": "Zotero sync failed: {error}",
+            "zh": "Zotero 同步失败：{error}",
+        },
+        "success_zotero_sync": {
+            "en": "Fetched {fetched}; created {created}.",
+            "zh": "已获取 {fetched} 条，新建 {created} 条。",
+        },
+        "info_zotero_config": {
+            "en": "Configure ZOTERO_API_KEY and ZOTERO_LIBRARY_ID in .env first.",
+            "zh": "请先在 .env 配置 ZOTERO_API_KEY 和 ZOTERO_LIBRARY_ID。",
+        },
+        "manual_entry_header": {"en": "Manual entry", "zh": "手动录入"},
+        "field_literature_title": {"en": "Literature title *", "zh": "文献标题 *"},
+        "button_add_literature": {"en": "Add literature", "zh": "添加文献"},
+        "success_literature_added": {"en": "Literature added.", "zh": "文献已添加。"},
+        "col_year": {"en": "Year", "zh": "年份"},
+        "field_pdf_record": {"en": "PDF literature record", "zh": "PDF 对应文献"},
+        "field_import_pdf": {"en": "Import full-text PDF", "zh": "导入全文 PDF"},
+        "button_archive_pdf": {"en": "Archive PDF", "zh": "归档 PDF"},
+        "success_pdf_archived": {
+            "en": "PDF archived, SHA-256: {hash}...",
+            "zh": "PDF 已归档，SHA-256：{hash}...",
+        },
+        "warning_no_literature": {
+            "en": "No literature imported. Sync Zotero or enter a record manually.",
+            "zh": "尚未导入文献。可同步 Zotero 或手动录入。",
+        },
+        "field_upload_csv": {
+            "en": "Upload clinical CSV dataset *",
+            "zh": "上传 CSV 临床数据集 *",
+        },
+        "error_empty_csv": {
+            "en": "CSV is empty or has no header.",
+            "zh": "CSV 为空或缺少表头。",
+        },
+        "dataset_dimensions": {
+            "en": "{rows} rows x {columns} columns: {names}",
+            "zh": "{rows} 行 x {columns} 列：{names}",
+        },
+        "field_outcome_variable": {"en": "Outcome variable *", "zh": "结局变量 *"},
+        "field_exposure_variable": {"en": "Exposure variable *", "zh": "暴露变量 *"},
+        "field_id_variable": {"en": "ID variable", "zh": "ID 变量"},
+        "option_none": {"en": "None", "zh": "无"},
+        "button_save_dataset": {"en": "Save dataset settings", "zh": "保存数据集设置"},
+        "success_dataset_saved": {
+            "en": "Dataset summary and variable roles saved.",
+            "zh": "数据集摘要与变量角色已保存。",
+        },
+        "success_dataset_ready": {
+            "en": "Dataset {name} ready with {rows} rows.",
+            "zh": "已准备数据集 {name}，{rows} 行。",
+        },
+        "readiness_search": {"en": "Search strategy", "zh": "检索策略"},
+        "readiness_literature": {"en": "Literature", "zh": "文献"},
+        "readiness_dataset": {"en": "Dataset", "zh": "数据集"},
+        "label_ready": {"en": "Ready", "zh": "已就绪"},
+        "label_incomplete": {"en": "Incomplete", "zh": "待完成"},
+        "start_approval_header": {"en": "2. Start and approve", "zh": "2. 启动与审批"},
+        "start_disabled_help": {
+            "en": "Complete the four inputs above first.",
+            "zh": "请先完成上方四项输入。",
+        },
+        "new_project_expander": {
+            "en": "+ New research project",
+            "zh": "+ 新建研究项目",
+        },
+        "hero_eyebrow": {
+            "en": "Evidence to manuscript - auditable research workspace",
+            "zh": "Evidence to manuscript - 可审计科研工作台",
+        },
+        "hero_description": {
+            "en": (
+                "A human-approved, traceable workflow for research questions, "
+                "evidence, statistics, writing, and STROBE-Vet compliance."
+            ),
+            "zh": (
+                "将研究问题、文献证据、统计分析、论文写作和 STROBE-Vet "
+                "合规审查组织为一条可暂停、可追溯、需人工批准的工作流。"
+            ),
+        },
+        "hero_safety": {
+            "en": (
+                "Research assistance only - scientific judgment, statistics, "
+                "ethics, and final sign-off remain the team's responsibility."
+            ),
+            "zh": "研究辅助工具 - 科学判断、统计解释、伦理与最终签署始终由研究团队负责",
+        },
+        "phase_design": {"en": "Study design", "zh": "研究设计"},
+        "phase_evidence": {"en": "Literature evidence", "zh": "文献证据"},
+        "phase_statistics": {"en": "Statistical analysis", "zh": "统计分析"},
+        "phase_writing": {"en": "Manuscript writing", "zh": "论文写作"},
+        "phase_export": {"en": "Compliance & export", "zh": "合规导出"},
+        "phase_done": {"en": "Complete", "zh": "已完成"},
+        "phase_active": {"en": "In progress", "zh": "进行中"},
+        "phase_pending": {"en": "Pending", "zh": "待开始"},
+        "metric_current_stage": {"en": "Current stage", "zh": "当前阶段"},
+        "metric_run_status": {"en": "Run status", "zh": "运行状态"},
+        "metric_audit_events": {"en": "Audit events", "zh": "审计事件"},
+        "metric_run_id": {"en": "Run ID", "zh": "运行 ID"},
+    }
+)
+
+STRINGS.update(
+    {
+        "workspace_actions_header": {
+            "en": "Golden Project workspace",
+            "zh": "Golden Project 工作台",
+        },
+        "workspace_actions_caption": {
+            "en": "Load the golden fixture into the main intake forms, or run it end-to-end in the standard workflow view.",
+            "zh": "将 Golden fixture 装入主页面表单，或直接在标准工作流视图中端到端运行。",
+        },
+        "golden_workspace_load": {
+            "en": "Load Golden inputs",
+            "zh": "载入 Golden 输入",
+        },
+        "golden_workspace_run": {
+            "en": "Run Golden in workspace",
+            "zh": "在工作台运行 Golden",
+        },
+        "golden_workspace_loading": {
+            "en": "Loading Golden Project inputs...",
+            "zh": "正在载入 Golden Project 输入...",
+        },
+        "golden_workspace_running": {
+            "en": "Running Golden Project in the main workflow...",
+            "zh": "正在主工作流中运行 Golden Project...",
+        },
+        "golden_workspace_loaded": {
+            "en": "Golden inputs loaded into workspace project {id}.",
+            "zh": "Golden 输入已载入工作台项目 {id}。",
+        },
+        "golden_workspace_finished": {
+            "en": "Golden workflow finished in workspace project {id}.",
+            "zh": "Golden 工作流已在工作台项目 {id} 中运行完成。",
+        },
+    }
+)
+
+
+STRINGS.update(
+    {
+        "pending_action_header": {
+            "en": "Action required now",
+            "zh": "当前就要处理",
+        },
+        "pending_action_caption": {
+            "en": "The pipeline is paused at {stage}. Complete the approval form below to continue.",
+            "zh": "当前流水线停在 {stage}。直接填写下方审批表单并提交即可继续。",
+        },
+        "pending_action_gate": {
+            "en": "Pending approval",
+            "zh": "待审批事项",
+        },
+        "pending_action_next": {
+            "en": "Submit to continue toward",
+            "zh": "提交后进入",
+        },
+    }
+)
+
+
+
 def _resolve_language(lang: str | None) -> str:
     if lang is not None:
         if lang not in SUPPORTED_LANGUAGES:
