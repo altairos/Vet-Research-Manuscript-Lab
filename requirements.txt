@@ -1,0 +1,9 @@
+# Runtime dependencies for Streamlit Cloud deployment.
+# Streamlit Cloud reads this file automatically.
+alembic>=1.14,<2
+langgraph>=1.0,<2
+langgraph-checkpoint-sqlite>=2,<4
+pymupdf>=1.24,<2
+pyzotero>=1.5,<2
+sqlalchemy>=2.0,<3
+streamlit>=1.45,<2

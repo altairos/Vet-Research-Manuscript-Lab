@@ -28,9 +28,6 @@ dev = [
   "ruff>=0.6,<1",
 ]
 
-[tool.poetry]
-packages = [{include = "vet_manuscript_lab", from = "src"}]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
