@@ -51,11 +51,21 @@ WORKFLOW_PHASES = (
 def apply_theme() -> None:
     st.markdown(
         """<style>
+        @import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css');
         :root {
           --ink:#1d2a26; --muted:#66736e; --line:#dce5e1;
           --brand:#176b57; --brand-soft:#e8f3ee; --surface:#ffffff;
         }
-        .stApp { background:#f6f8f7; color:var(--ink); }
+        .stApp {
+          background:#f6f8f7; color:var(--ink);
+          font-family:'LXGW WenKai','LXGW WenKai Screen',system-ui,sans-serif !important;
+        }
+        body, p, span, li, label, h1, h2, h3, h4, h5, h6,
+        [data-testid="stMainBlockContainer"],
+        [data-testid="stSidebar"],
+        .stMarkdown, .stButton, .stMetric, .stCaptionContainer {
+          font-family:'LXGW WenKai','LXGW WenKai Screen',system-ui,sans-serif !important;
+        }
         [data-testid="stSidebar"] {
           background:#edf3f0; border-right:1px solid #d6e1dc;
         }
@@ -69,7 +79,6 @@ def apply_theme() -> None:
         }
         .sidebar-brand {
           padding:.3rem 0 .9rem; margin-bottom:.4rem;
-          border-bottom:1px solid #d6e1dc;
         }
         .sidebar-brand strong {
           display:block; color:#155b4b; font-size:1rem; line-height:1.35;
@@ -164,6 +173,25 @@ def apply_theme() -> None:
           font-size:1rem; color:var(--brand);
         }
         .pipeline-bar-header strong { font-size:1.05rem; }
+        /* Pipeline bar: increase vertical spacing between elements */
+        [data-testid="stVerticalBlockBorderContainer"]
+          [data-testid="stVerticalBlock"] {
+          gap:1.1rem;
+        }
+        [data-testid="stVerticalBlockBorderContainer"] p {
+          line-height:1.85 !important;
+        }
+        [data-testid="stVerticalBlockBorderContainer"]
+          [data-testid="stMetric"] {
+          margin-bottom:.5rem;
+        }
+        [data-testid="stVerticalBlockBorderContainer"] .phase-row {
+          margin:.7rem 0 .9rem;
+        }
+        [data-testid="stVerticalBlockBorderContainer"]
+          [data-testid="stExpander"] {
+          margin-top:.6rem;
+        }
         .hero {
           padding:1rem 1.15rem; border:1px solid var(--line);
           border-radius:14px; background:linear-gradient(120deg,#fff,#eef6f2);
