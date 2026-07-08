@@ -183,9 +183,7 @@ def _render_sidebar_context(app: Application, project_id: str | None) -> None:
     run_complete = False
     thread_id = _get_active_thread(project_id)
     if thread_id is not None:
-        snapshot = app.graph.get_state(
-            {"configurable": {"thread_id": thread_id}}
-        )
+        snapshot = app.graph.get_state({"configurable": {"thread_id": thread_id}})
         current = snapshot.values.get("current_stage", "project_init")
         run_complete = snapshot.values.get("run_status") == "complete"
         if current in _STAGE_ORDER:
@@ -267,9 +265,7 @@ def _render_language_switch() -> None:
     """Persist the active UI language (English / Chinese) in session state."""
 
     st.sidebar.divider()
-    st.sidebar.markdown(
-        f"#### {translate('sidebar_language_header')}"
-    )
+    st.sidebar.markdown(f"#### {translate('sidebar_language_header')}")
     options = list(SUPPORTED_LANGUAGES)
     current = st.session_state.get("language", DEFAULT_LANGUAGE)
     if current not in options:
@@ -285,9 +281,7 @@ def _render_language_switch() -> None:
 
 
 def _render_project_creation(app: Application) -> None:
-    with st.sidebar.expander(
-        translate("sidebar_new_project"), expanded=False
-    ):
+    with st.sidebar.expander(translate("sidebar_new_project"), expanded=False):
         species_options = ["canine", "feline"]
         with st.form("create_project", clear_on_submit=True):
             title = st.text_input(translate("field_project_title"))
@@ -479,9 +473,7 @@ def _render_sidebar_project_management(app: Application) -> None:
     """Render clickable project list with right-click rename/delete."""
 
     st.sidebar.divider()
-    st.sidebar.markdown(
-        f"#### {translate('sidebar_project_management')}"
-    )
+    st.sidebar.markdown(f"#### {translate('sidebar_project_management')}")
 
     projects = app.repository.list_projects()
     if not projects:
@@ -505,8 +497,8 @@ def _render_sidebar_project_management(app: Application) -> None:
             data-project-clickable="true"
             data-project-id="{project.id}">
             <strong>{active_badge}{project.title}</strong>
-            <span>{translate('project_item_owner')}: {project.owner_id or '-'} | 
-            {translate('project_item_species')}: {species_str or '-'}</span>
+            <span>{translate("project_item_owner")}: {project.owner_id or "-"} | 
+            {translate("project_item_species")}: {species_str or "-"}</span>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -552,8 +544,8 @@ def _render_sidebar_project_management(app: Application) -> None:
                         st.error(str(exc))
                     else:
                         st.session_state.pop("rename_target", None)
-                        st.session_state["project_renamed_notice"] = (
-                            translate("success_project_renamed")
+                        st.session_state["project_renamed_notice"] = translate(
+                            "success_project_renamed"
                         )
                         st.rerun()
                 if col_cancel.form_submit_button(
@@ -580,8 +572,8 @@ def _render_sidebar_project_management(app: Application) -> None:
                     st.session_state.pop("confirm_delete", None)
                     if current_pid == project.id:
                         st.session_state.pop("project_id", None)
-                    st.session_state["project_deleted_notice"] = (
-                        translate("success_project_deleted")
+                    st.session_state["project_deleted_notice"] = translate(
+                        "success_project_deleted"
                     )
                     st.rerun()
             if c_cancel.button(
@@ -643,7 +635,8 @@ def _render_intake_question(intake: dict[str, Any]) -> None:
     question = dict(intake.get("research_question_input", {}))
     with st.form("analysis-question"):
         objective = st.text_area(
-            translate("field_objective"), value=question.get("objective", ""),
+            translate("field_objective"),
+            value=question.get("objective", ""),
             height=68,
         )
         peco_cols = st.columns(4)
@@ -687,7 +680,8 @@ def _render_intake_materials(
     search = dict(intake.get("search_strategy_input", {}))
     with st.form("search-strategy"):
         query = st.text_area(
-            translate("field_search_query"), value=search.get("query", ""),
+            translate("field_search_query"),
+            value=search.get("query", ""),
             height=68,
         )
         date_col, db_col = st.columns([1, 2])
@@ -788,9 +782,7 @@ def _render_intake_materials(
                 attachment_key=pdf.name,
                 pdf_bytes=pdf.getvalue(),
             )
-            st.success(
-                translate("success_pdf_archived", hash=result.content_hash[:20])
-            )
+            st.success(translate("success_pdf_archived", hash=result.content_hash[:20]))
     else:
         st.warning(translate("warning_no_literature"))
 
@@ -815,9 +807,7 @@ def _render_intake_materials(
                 )
             )
             outcome_var = st.selectbox(translate("field_outcome_variable"), columns)
-            exposure_var = st.selectbox(
-                translate("field_exposure_variable"), columns
-            )
+            exposure_var = st.selectbox(translate("field_exposure_variable"), columns)
             id_var = st.selectbox(
                 translate("field_id_variable"), [translate("option_none"), *columns]
             )
@@ -862,6 +852,77 @@ def _render_intake_materials(
                 rows=dataset["row_count"],
             )
         )
+
+    # ---- Variable spec editor (editable) --------------------------------
+    var_specs = intake.get("variable_spec_drafts", [])
+    if var_specs:
+        import pandas as pd  # type: ignore[import-untyped]
+
+        st.markdown(f"###### {translate('tab_dataset_variables')}")
+        var_types = [
+            translate("label_var_continuous"),
+            translate("label_var_categorical"),
+            translate("label_var_binary"),
+            translate("label_var_ordinal"),
+        ]
+        _type_map = {
+            "continuous": translate("label_var_continuous"),
+            "categorical": translate("label_var_categorical"),
+            "binary": translate("label_var_binary"),
+            "ordinal": translate("label_var_ordinal"),
+        }
+        _type_rmap = {v: k for k, v in _type_map.items()}
+
+        var_rows: list[dict[str, Any]] = []
+        for vs in var_specs:
+            var_rows.append(
+                {
+                    "name": vs.get("name", ""),
+                    "var_type": _type_map.get(
+                        vs.get("var_type", "continuous"),
+                        translate("label_var_continuous"),
+                    ),
+                    "role": vs.get("role", "covariate"),
+                    "unit": vs.get("unit") or "",
+                    "missing_code": vs.get("missing_code") or "",
+                }
+            )
+        edited = st.data_editor(
+            pd.DataFrame(var_rows),
+            num_rows="dynamic",
+            column_config={
+                "var_type": st.column_config.SelectboxColumn(
+                    options=var_types,
+                    required=True,
+                ),
+                "role": st.column_config.SelectboxColumn(
+                    options=[
+                        "outcome",
+                        "exposure",
+                        "id",
+                        "covariate",
+                    ],
+                    required=True,
+                ),
+            },
+            use_container_width=True,
+            hide_index=True,
+            key=f"var_editor_{project_id}",
+        )
+        if st.button(translate("button_save_variables"), type="primary"):
+            updated_specs = []
+            for _, r in edited.iterrows():
+                updated_specs.append(
+                    {
+                        "name": str(r["name"]),
+                        "var_type": _type_rmap.get(r["var_type"], "continuous"),
+                        "role": str(r["role"]),
+                        "unit": str(r["unit"]) or None,
+                        "missing_code": str(r["missing_code"]) or None,
+                    }
+                )
+            intake["variable_spec_drafts"] = updated_specs
+            st.success(translate("success_question_saved"))
 
 
 def _compute_intake_ready(intake: dict[str, Any]) -> bool:
@@ -928,7 +989,7 @@ def _start_workflow(app: Application, project_id: str) -> None:
 
 
 def _render_literature_records(state: dict[str, Any]) -> None:
-    """Display the literature record drafts in a table."""
+    """Display the literature record drafts in a table with screening status."""
 
     records = state.get("literature_record_drafts", [])
     if not records:
@@ -949,14 +1010,23 @@ def _render_literature_records(state: dict[str, Any]) -> None:
             summary.get("excluded_count", 0),
         )
 
+    st.caption(translate("info_screening_hint"))
+
     rows = []
     for rec in records:
+        decision = rec.get("screening_decision", "pending")
+        if decision == "included":
+            icon = "\u2705"
+        elif decision == "excluded":
+            icon = "\u274c"
+        else:
+            icon = "\u23f3"
         rows.append(
             {
                 translate("col_record_id"): rec.get("record_id", "")[:12],
                 translate("col_title"): rec.get("title", ""),
                 translate("col_doi"): rec.get("doi", ""),
-                translate("col_decision"): rec.get("screening_decision", ""),
+                translate("label_screening_auto"): f"{icon} {decision}",
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -1046,6 +1116,47 @@ def _render_search_strategy_detail(state: dict[str, Any]) -> None:
                 "content_hash": strategy.get("content_hash"),
             }
         )
+
+
+def _render_guideline_mapping(state: dict[str, Any]) -> None:
+    """Display the reporting guideline mapping and protocol scope."""
+
+    artifacts = state.get("artifacts", {})
+    guideline = artifacts.get("guideline_mapping")
+    protocol = artifacts.get("protocol")
+    if guideline is None and protocol is None:
+        return
+
+    st.subheader(translate("section_guideline"))
+
+    if guideline:
+        guideline_type = guideline.get("guideline", "STROBE-Vet")
+        st.metric(translate("label_guideline_type"), guideline_type)
+
+    if protocol:
+        col1, col2 = st.columns(2)
+        endpoint = protocol.get("primary_endpoint", "-")
+        eligibility = protocol.get("eligibility", "-")
+        col1.metric(translate("label_primary_endpoint"), endpoint)
+        col2.metric(translate("label_eligibility"), eligibility)
+        status = protocol.get("status", "")
+        if status:
+            st.caption(f"{translate('label_manuscript_status')}: {status}")
+
+    with st.expander(translate("expander_artifact_refs"), expanded=False):
+        detail = {}
+        if guideline:
+            detail["guideline_mapping"] = {
+                "version_id": guideline.get("version_id", ""),
+                "content_hash": guideline.get("content_hash", ""),
+            }
+        if protocol:
+            detail["protocol"] = {
+                "version_id": protocol.get("version_id", ""),
+                "content_hash": protocol.get("content_hash", ""),
+            }
+        if detail:
+            st.json(detail)
 
 
 def _render_methodology_findings(state: dict[str, Any]) -> None:
@@ -1166,6 +1277,104 @@ def _render_statistical_results(state: dict[str, Any]) -> None:
                 }
             )
         st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_effect_plots(state: dict[str, Any]) -> None:
+    """Render simple bar-chart visualisations of numeric estimates."""
+
+    drafts = state.get("result_drafts", [])
+    plot_data: list[dict[str, Any]] = []
+    for d in drafts:
+        try:
+            estimate = float(d.get("estimate", ""))
+        except (TypeError, ValueError):
+            continue
+        lower = d.get("uncertainty_lower")
+        upper = d.get("uncertainty_upper")
+        ci_str = ""
+        if lower is not None and upper is not None:
+            try:
+                ci_str = f"{float(lower):.3g} to {float(upper):.3g}"
+            except (TypeError, ValueError):
+                ci_str = f"{lower} to {upper}"
+        plot_data.append(
+            {
+                translate("col_analysis_name"): d.get("estimand", ""),
+                translate("col_estimate"): estimate,
+                "CI": ci_str,
+                translate("col_method"): d.get("method", ""),
+            }
+        )
+    if not plot_data:
+        st.info(translate("info_no_plot_data"))
+        return
+
+    st.subheader(translate("section_figures"))
+    import pandas as pd
+
+    df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
+    st.bar_chart(df[translate("col_estimate")])
+    st.dataframe(
+        df.drop(columns=[translate("col_estimate")]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def _render_analysis_provenance(state: dict[str, Any]) -> None:
+    """Display reproducibility provenance from the analysis run artifact."""
+
+    artifacts = state.get("artifacts", {})
+    results_artifact = artifacts.get("analysis_results")
+    if results_artifact is None:
+        return
+
+    payload = results_artifact.get("payload", results_artifact)
+    if not isinstance(payload, dict):
+        return
+
+    st.subheader(translate("section_provenance"))
+
+    col1, col2 = st.columns(2)
+    col1.metric(
+        translate("label_script_hash"),
+        str(payload.get("script_hash", ""))[:20] + "...",
+    )
+    col2.metric(translate("label_seed"), payload.get("seed", ""))
+
+    col3, col4 = st.columns(2)
+    plan_ver = str(payload.get("plan_version_id", ""))[:20]
+    col3.metric(translate("label_plan_ref"), plan_ver + "..." if plan_ver else "-")
+    ds_ver = str(payload.get("dataset_version_id", ""))[:20]
+    col4.metric(translate("label_dataset_ref"), ds_ver + "..." if ds_ver else "-")
+
+    col5, col6 = st.columns(2)
+    col5.metric(
+        translate("label_exit_code"),
+        payload.get("exit_code", "-"),
+    )
+    env = payload.get("environment", "-")
+    col6.metric(translate("label_environment"), str(env)[:40])
+
+    package_versions = payload.get("package_versions", {})
+    if package_versions:
+        with st.expander(translate("label_package_versions"), expanded=False):
+            if isinstance(package_versions, dict):
+                pv_rows = [
+                    {"Package": k, "Version": v} for k, v in package_versions.items()
+                ]
+                st.dataframe(pv_rows, use_container_width=True, hide_index=True)
+            else:
+                st.write(package_versions)
+
+    stdout = payload.get("stdout", "")
+    stderr = payload.get("stderr", "")
+    if stdout or stderr:
+        with st.expander(translate("label_stdout"), expanded=False):
+            st.code(stdout, language="text")
+        if stderr:
+            with st.expander(translate("label_stderr"), expanded=False):
+                st.code(stderr, language="text")
 
 
 def _render_usage_summary(state: dict[str, Any]) -> None:
@@ -1318,7 +1527,7 @@ def _golden_research_question(fixture: dict[str, Any]) -> dict[str, str]:
 def _golden_search_strategy() -> dict[str, Any]:
     return {
         "query": (
-            "(veterinary OR canine OR feline) AND (survival OR \"time-to-event\") "
+            '(veterinary OR canine OR feline) AND (survival OR "time-to-event") '
             "AND (retrospective OR observational) AND (treatment OR exposure)"
         ),
         "databases": ["PubMed", "CAB Abstracts", "Web of Science"],
@@ -1382,8 +1591,10 @@ def _seed_golden_literature_records(
 ) -> None:
     for record in fixture.get("literature", {}).get("records", []):
         doi = record.get("doi")
-        if isinstance(doi, str) and doi and app.literature_repository.find_by_doi(
-            project_id, doi
+        if (
+            isinstance(doi, str)
+            and doi
+            and app.literature_repository.find_by_doi(project_id, doi)
         ):
             continue
         app.literature_repository.create_literature_record(
@@ -1410,8 +1621,8 @@ def _prepare_golden_workspace(app: Application) -> str:
 
     project_id = _ensure_golden_workspace_project(app, fixture)
     _seed_golden_literature_records(app, project_id, fixture)
-    st.session_state[f"analysis_intake:{project_id}"] = (
-        _build_golden_workspace_intake(fixture)
+    st.session_state[f"analysis_intake:{project_id}"] = _build_golden_workspace_intake(
+        fixture
     )
     st.session_state["project_id"] = project_id
     st.session_state.pop(_thread_session_key(project_id), None)
@@ -1475,11 +1686,49 @@ def _render_manuscript(state: dict[str, Any]) -> None:
     if total_words:
         st.caption(f"{translate('label_word_count')}: {total_words}")
 
+    # Build a section → claims lookup for evidence highlighting
+    claims = state.get("claim_drafts", [])
+    supports = state.get("support_drafts", [])
+    support_by_claim: dict[str, int] = {}
+    for sp in supports:
+        cid = sp.get("claim_id", "")
+        support_by_claim[cid] = support_by_claim.get(cid, 0) + 1
+
+    claims_by_section: dict[str, list[dict[str, Any]]] = {}
+    for c in claims:
+        sid = c.get("section_id", "")
+        claims_by_section.setdefault(sid, []).append(c)
+
     for section in sorted(sections, key=lambda s: s.get("order", 0)):
         stype = section.get("section_type", "section")
         content = section.get("content", "")
-        with st.expander(stype.title(), expanded=False):
+        sid = section.get("section_id", "")
+        section_claims = claims_by_section.get(sid, [])
+        header = stype.title()
+        if section_claims:
+            header += f" ({len(section_claims)} {translate('label_claim_bound')})"
+        with st.expander(header, expanded=False):
             st.write(content)
+            if section_claims:
+                st.markdown(f"**{translate('label_claim_bound')}:**")
+                badges = []
+                for c in section_claims:
+                    cid = c.get("claim_id", "")
+                    ctype = c.get("claim_type", "")
+                    count = support_by_claim.get(cid, 0)
+                    if ctype == "hypothesis":
+                        status_label = translate("label_claim_status_hypothesis")
+                        icon = "\U0001f914"
+                    elif count > 0:
+                        status_label = translate("label_claim_status_supported")
+                        icon = "\u2705"
+                    else:
+                        status_label = translate("label_claim_status_unsupported")
+                        icon = "\u26a0\ufe0f"
+                    text_preview = c.get("text", "")[:80]
+                    badges.append(f"{icon} {status_label}: {text_preview}")
+                for badge in badges:
+                    st.markdown(f"- {badge}")
 
 
 def _render_claims(state: dict[str, Any]) -> None:
@@ -1612,6 +1861,227 @@ def _render_review(state: dict[str, Any]) -> None:
                 translate("label_deferred"),
                 revision_summary.get("deferred_count", 0),
             )
+
+
+def _render_revision_diff(state: dict[str, Any]) -> None:
+    """Display section-level before/after diff from the latest revision round."""
+
+    import difflib
+
+    revision_summary = state.get("revision_summary")
+    if revision_summary is None:
+        return
+
+    diffs = revision_summary.get("section_diffs", [])
+    if not diffs:
+        return
+
+    st.subheader(translate("section_revision_diff"))
+
+    for d in diffs:
+        section_id = d.get("section_id", "")
+        before = d.get("before_content", "")
+        after = d.get("after_content", "")
+        resolved = d.get("resolved_finding_ids", [])
+
+        if before == after:
+            continue
+
+        with st.expander(section_id, expanded=False):
+            if resolved:
+                st.caption(
+                    f"{translate('label_resolved_findings')}: {', '.join(resolved)}"
+                )
+
+            col_before, col_after = st.columns(2)
+            with col_before:
+                st.markdown(f"**{translate('col_before')}**")
+                if before:
+                    before_lines = before.splitlines(keepends=False)
+                    after_lines = after.splitlines(keepends=False)
+                    diff = difflib.unified_diff(
+                        before_lines,
+                        after_lines,
+                        lineterm="",
+                        n=1,
+                    )
+                    diff_text = "\n".join(diff)
+                    if diff_text.strip():
+                        st.code(diff_text, language="diff")
+                    else:
+                        st.write(before)
+                else:
+                    st.caption(translate("label_no_changes"))
+
+            with col_after:
+                st.markdown(f"**{translate('col_after')}**")
+                st.write(after)
+
+
+def _render_claim_traceability(state: dict[str, Any]) -> None:
+    """Display interactive claim → evidence / result / citation traceability chain."""
+
+    claims = state.get("claim_drafts", [])
+    if not claims:
+        return
+
+    supports = state.get("support_drafts", [])
+    evidence = state.get("evidence_drafts", [])
+    results = state.get("result_drafts", [])
+    spans = state.get("source_span_drafts", [])
+    records = state.get("literature_record_drafts", [])
+    citations = state.get("citation_drafts", [])
+
+    # Build lookup indexes
+    support_by_claim: dict[str, list[dict[str, Any]]] = {}
+    for s in supports:
+        cid = s.get("claim_id", "")
+        support_by_claim.setdefault(cid, []).append(s)
+
+    evidence_by_id: dict[str, dict[str, Any]] = {
+        e.get("evidence_id", ""): e for e in evidence
+    }
+    result_by_id: dict[str, dict[str, Any]] = {
+        r.get("result_id", ""): r for r in results
+    }
+    span_by_id: dict[str, dict[str, Any]] = {s.get("span_id", ""): s for s in spans}
+    record_by_id: dict[str, dict[str, Any]] = {
+        r.get("record_id", ""): r for r in records
+    }
+    citation_by_claim: dict[str, list[dict[str, Any]]] = {}
+    for c in citations:
+        cid = c.get("claim_id", "")
+        if cid:
+            citation_by_claim.setdefault(cid, []).append(c)
+
+    st.subheader(translate("section_traceability"))
+
+    for c in claims:
+        cid = c.get("claim_id", "")
+        ctype = c.get("claim_type", "")
+        text = c.get("text", "")
+        certainty = c.get("certainty", "")
+        section_id = c.get("section_id", "")
+
+        claim_supports = support_by_claim.get(cid, [])
+        has_support = len(claim_supports) > 0
+        is_factual = ctype in ("factual", "result", "statistical")
+
+        header = f"`{cid}` [{ctype}]"
+        if not has_support and is_factual:
+            header += " \u26a0\ufe0f"
+
+        with st.expander(header, expanded=False):
+            st.write(text)
+            st.caption(
+                f"{translate('col_certainty')}: {certainty} "
+                f"| {translate('col_section_type')}: {section_id}"
+            )
+
+            if not has_support and is_factual:
+                st.warning(translate("label_claim_unsupported_warning"))
+
+            # --- Supports ---
+            if claim_supports:
+                for _idx, s in enumerate(claim_supports, 1):
+                    stype = s.get("support_type", "")
+                    source_id = s.get("source_id", "")
+                    relation = s.get("relation", "")
+                    audit_status = s.get("audit_status", "")
+
+                    st.markdown(
+                        f"**{translate('label_support_type')}:** {stype} "
+                        f"| **{translate('label_relation')}:** {relation} "
+                        f"| **{translate('label_audit_status')}:** "
+                        f"{audit_status}"
+                    )
+
+                    if stype == "evidence_item":
+                        ev = evidence_by_id.get(source_id, {})
+                        if ev:
+                            concept = ev.get("concept", "")
+                            value = ev.get("value", "")
+                            st.markdown(
+                                f"  - **{translate('col_concept')}:** {concept}"
+                            )
+                            st.markdown(f"  - **{translate('col_value')}:** {value}")
+                            if ev.get("units"):
+                                units = ev.get("units")
+                                st.markdown(f"  - {translate('col_unit')}: {units}")
+                            if ev.get("population"):
+                                pop = ev.get("population")
+                                st.markdown(f"  - {translate('col_population')}: {pop}")
+                            # Source spans
+                            span_ids = ev.get("source_span_ids", [])
+                            for sid in span_ids:
+                                span = span_by_id.get(sid, {})
+                                if span:
+                                    rec_id = span.get("literature_record_id", "")
+                                    rec = record_by_id.get(rec_id, {})
+                                    st.markdown(
+                                        f"  - {translate('label_span_page')}: "
+                                        f"{span.get('page', '')} "
+                                        f"| {translate('label_span_section')}: "
+                                        f"{span.get('section_label', '')}"
+                                    )
+                                    if rec:
+                                        st.markdown(
+                                            f"  - {translate('col_title')}: "
+                                            f"{rec.get('title', '')} "
+                                            f"| DOI: {rec.get('doi', '') or '-'}"
+                                        )
+                                    if span.get("quote_hash"):
+                                        st.caption(
+                                            f"{translate('label_quote_hash')}: "
+                                            f"{str(span.get('quote_hash', ''))[:24]}..."
+                                        )
+
+                    elif stype == "statistical_result":
+                        res = result_by_id.get(source_id, {})
+                        if res:
+                            lower = res.get("uncertainty_lower")
+                            upper = res.get("uncertainty_upper")
+                            ci_str = (
+                                f"{lower} - {upper}"
+                                if lower is not None and upper is not None
+                                else ""
+                            )
+                            st.markdown(
+                                f"  - **{translate('col_estimate')}:** "
+                                f"{res.get('estimate', '')}"
+                            )
+                            if ci_str:
+                                st.markdown(f"  - **{translate('col_ci')}:** {ci_str}")
+                            st.markdown(
+                                f"  - **{translate('col_p_value')}:** "
+                                f"{res.get('p_value', '')}"
+                            )
+                            st.markdown(
+                                f"  - **{translate('col_method')}:** "
+                                f"{res.get('method', '')}"
+                            )
+                    st.markdown("---")
+
+            # --- Citations ---
+            claim_citations = citation_by_claim.get(cid, [])
+            if claim_citations:
+                for cit in claim_citations:
+                    rec_id = cit.get("literature_record_id", "")
+                    rec = record_by_id.get(rec_id, {})
+                    locator = cit.get("locator", "")
+                    st.markdown(
+                        f"**{translate('col_citation_key')}:** "
+                        f"{cit.get('citation_key', '')}"
+                    )
+                    if rec:
+                        st.markdown(
+                            f"  - {translate('col_title')}: {rec.get('title', '')}"
+                        )
+                        st.markdown(f"  - DOI: {rec.get('doi', '') or '-'}")
+                    if locator:
+                        st.markdown(
+                            f"  - {translate('label_citation_locator')}: {locator}"
+                        )
 
 
 def _render_compliance(state: dict[str, Any]) -> None:
@@ -1782,6 +2252,88 @@ def _render_export(state: dict[str, Any]) -> None:
         st.dataframe(comp_rows, use_container_width=True, hide_index=True)
 
 
+def _render_ai_disclosure(state: dict[str, Any]) -> None:
+    """Render a formatted AI-usage disclosure block suitable for inclusion
+    in the supplementary materials of the manuscript."""
+
+    usage = state.get("ai_usage")
+    if not usage:
+        st.info(translate("info_no_ai_usage"))
+        return
+
+    st.subheader(translate("section_ai_disclosure"))
+
+    total_invocations = usage.get("total_invocations", 0)
+    total_cost = usage.get("total_cost_cents", 0)
+    total_input_tokens = usage.get("total_input_tokens", 0)
+    total_output_tokens = usage.get("total_output_tokens", 0)
+    fallback = usage.get("fallback_count", 0)
+    failure = usage.get("failure_count", 0)
+
+    # Summary metrics
+    col1, col2 = st.columns(2)
+    col1.metric(translate("label_total_invocations"), total_invocations)
+    col2.metric(
+        translate("label_total_cost"),
+        f"${total_cost / 100:.2f}",
+    )
+
+    # Formatted disclosure text (preview)
+    lines = [
+        "# AI Usage Disclosure",
+        "",
+        (
+            "This manuscript was prepared with assistance from "
+            "AI-based language models during the drafting, review, and "
+            "revision phases."
+        ),
+        "",
+        "## Summary of Model Usage",
+        f"- Total model invocations: {total_invocations}",
+        f"- Total estimated cost: ${total_cost / 100:.2f} USD",
+        f"- Input tokens consumed: {total_input_tokens:,}",
+        f"- Output tokens consumed: {total_output_tokens:,}",
+    ]
+    if fallback or failure:
+        lines.append("")
+        lines.append("## Fallbacks and Failures")
+        lines.append(f"- Fallback invocations: {fallback}")
+        lines.append(f"- Failed invocations: {failure}")
+
+    cost_by_stage = usage.get("cost_by_stage", {})
+    if cost_by_stage:
+        lines.append("")
+        lines.append("## Breakdown by Task")
+        lines.append(
+            f"| {translate('col_task_kind')} | "
+            f"{translate('col_invocations')} | "
+            f"{translate('label_total_cost')} |"
+        )
+        lines.append("|---|---|---|")
+        for task_kind, data in cost_by_stage.items():
+            if task_kind == "__total__":
+                continue
+            invocations = data.get("invocations", 0)
+            cost_cents = data.get("cost_cents", 0)
+            lines.append(f"| {task_kind} | {invocations} | ${cost_cents / 100:.2f} |")
+
+    lines.append("")
+    lines.append(
+        "All AI-assisted content was reviewed and validated by the "
+        "authors prior to publication."
+    )
+
+    disclosure_text = "\n".join(lines)
+    with st.expander(translate("section_ai_disclosure"), expanded=False):
+        st.code(disclosure_text, language="markdown")
+    st.download_button(
+        translate("label_download_manifest"),
+        data=disclosure_text.encode("utf-8"),
+        file_name="ai_usage_disclosure.md",
+        mime="text/markdown",
+    )
+
+
 def _render_workspace_actions(app: Application) -> None:
     notice = st.session_state.pop("golden_workspace_notice", None)
     if isinstance(notice, str):
@@ -1824,12 +2376,194 @@ def _render_workspace_actions(app: Application) -> None:
             st.rerun()
 
 
+def _render_review_disposition(
+    app: Application,
+    config: dict[str, Any],
+    gate: dict[str, Any],
+) -> None:
+    """Render the per-finding review disposition form.
+
+    Each review finding gets its own accept / reject / defer control.
+    Accepted findings trigger a revision cycle; all-rejected proceeds
+    to the final compliance audit.
+    """
+
+    findings = gate.get("findings", [])
+    if not findings:
+        st.info(translate("review_no_findings"))
+        return
+
+    st.subheader(translate("review_disposition_header"))
+    st.caption(translate("review_disposition_caption"))
+
+    role_options = ["reviewer", "investigator"]
+    required_role = gate.get("required_reviewer_role", "reviewer")
+    default_index = (
+        role_options.index(required_role) if required_role in role_options else 0
+    )
+
+    decision_options = ["accept", "reject", "defer"]
+    decision_labels = {d: translate(f"decision_{d}") for d in decision_options}
+
+    decisions: list[dict[str, str]] = []
+
+    with st.form("review_disposition_form"):
+        col_id, col_role = st.columns(2)
+        reviewer_id = col_id.text_input(
+            translate("field_reviewer_id"),
+            value=st.session_state.get("default_reviewer_id", "Mona"),
+        )
+        reviewer_role = col_role.selectbox(
+            translate("field_reviewer_role"),
+            role_options,
+            index=default_index,
+            format_func=lambda role: translate(f"role_{role}"),
+        )
+
+        st.divider()
+        for f in findings:
+            fid = f.get("finding_id", "")
+            with st.container(border=True):
+                sev = f.get("severity", "")
+                cat = f.get("category", "")
+                loc = f.get("location", "")
+                st.markdown(
+                    f"**{translate('label_finding_id')}:** `{fid}` "
+                    f"| **{translate('col_severity')}:** {sev} "
+                    f"| **{translate('col_category')}:** {cat}"
+                )
+                if loc:
+                    st.caption(f"{translate('col_location')}: {loc}")
+                st.write(f.get("rationale", ""))
+                rec = f.get("recommendation", "")
+                if rec:
+                    st.info(rec)
+
+                choice = st.radio(
+                    translate("field_decision"),
+                    decision_options,
+                    format_func=lambda d: decision_labels[d],
+                    horizontal=True,
+                    key=f"rev_decision_{fid}",
+                )
+                reason = st.text_input(
+                    translate("field_finding_reason"),
+                    key=f"rev_reason_{fid}",
+                )
+                decisions.append(
+                    {
+                        "finding_id": fid,
+                        "decision": choice,
+                        "reason": reason,
+                    }
+                )
+
+        submitted = st.form_submit_button(
+            translate("button_submit_review"),
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        st.session_state["default_reviewer_id"] = reviewer_id
+        try:
+            app.graph.invoke(
+                Command(
+                    resume={
+                        "reviewer_id": reviewer_id,
+                        "reviewer_role": reviewer_role,
+                        "decisions": decisions,
+                    }
+                ),
+                config,
+            )
+            app.governance.sync_state(app.graph.get_state(config).values)
+        except (LookupError, PermissionError, ValueError) as exc:
+            st.error(str(exc))
+        else:
+            st.rerun()
+
+
+def _render_sign_off_approval(
+    app: Application,
+    config: dict[str, Any],
+    gate: dict[str, Any],
+) -> None:
+    """Render the final sign-off form with authoriser identity."""
+
+    st.markdown('<div class="approval-card">', unsafe_allow_html=True)
+    st.subheader(translate("pending_action_header"))
+    st.caption(
+        translate(
+            "pending_action_caption",
+            stage=stage_label("final_sign_off"),
+        )
+    )
+    st.caption(gate.get("summary", ""))
+
+    role_options = ["principal_investigator", "corresponding_author"]
+    with st.form("approval_final_sign_off"):
+        col_id, col_role = st.columns(2)
+        authoriser_id = col_id.text_input(
+            translate("field_reviewer_id"),
+            value=st.session_state.get("default_reviewer_id", "PI"),
+        )
+        authoriser_role = col_role.selectbox(
+            translate("field_reviewer_role"),
+            role_options,
+            format_func=lambda r: translate(f"role_{r}"),
+        )
+        decision = st.selectbox(
+            translate("field_decision"),
+            ["approved", "rejected"],
+            format_func=lambda v: translate(f"decision.{v}"),
+        )
+        reason = st.text_area(translate("field_comment"))
+        submitted = st.form_submit_button(
+            translate("button_submit_decision"),
+            type="primary",
+            use_container_width=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if submitted:
+        st.session_state["default_reviewer_id"] = authoriser_id
+        try:
+            app.graph.invoke(
+                Command(
+                    resume={
+                        "decision": decision,
+                        "authoriser_id": authoriser_id,
+                        "authoriser_role": authoriser_role,
+                        "reason": reason,
+                    }
+                ),
+                config,
+            )
+            app.governance.sync_state(app.graph.get_state(config).values)
+        except (LookupError, PermissionError, ValueError) as exc:
+            st.error(str(exc))
+        else:
+            st.rerun()
+
+
 def _render_pending_approval(
     app: Application,
     config: dict[str, Any],
     gate: dict[str, Any],
 ) -> None:
-    gate_name = gate["gate"]
+    gate_name = gate.get("gate", "")
+
+    # Dispatch based on gate type
+    if gate_name == "review":
+        _render_review_disposition(app, config, gate)
+        return
+    if gate_name == "final_sign_off":
+        _render_sign_off_approval(app, config, gate)
+        return
+
+    # Standard approval gates (question / protocol / search_strategy /
+    # analysis_plan / results_interpretation)
     st.markdown('<div class="approval-card">', unsafe_allow_html=True)
     st.subheader(translate("pending_action_header"))
     st.caption(translate("pending_action_caption", stage=stage_label(gate_name)))
@@ -1846,9 +2580,7 @@ def _render_pending_approval(
     role_options = ["investigator", "statistician"]
     required_role = gate.get("required_reviewer_role", "investigator")
     default_index = (
-        role_options.index(required_role)
-        if required_role in role_options
-        else 0
+        role_options.index(required_role) if required_role in role_options else 0
     )
     with st.form(f"approval_{gate_name}"):
         reviewer_id = st.text_input(
@@ -1872,7 +2604,7 @@ def _render_pending_approval(
             type="primary",
             use_container_width=True,
         )
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submitted:
         st.session_state["default_reviewer_id"] = reviewer_id
@@ -1893,6 +2625,60 @@ def _render_pending_approval(
             st.error(str(exc))
         else:
             st.rerun()
+
+
+def _render_approval_timeline(state: dict[str, Any]) -> None:
+    """Render a chronological timeline of approvals and locks."""
+
+    approvals = state.get("approvals", {})
+    locks = state.get("locks", {})
+    if not approvals and not locks:
+        return
+
+    st.subheader(translate("section_timeline"))
+
+    events: list[dict[str, Any]] = []
+
+    for gate_key, ap in approvals.items():
+        events.append(
+            {
+                "sort_key": ap.get("decided_at", ""),
+                translate("col_event_type"): translate("col_decision"),
+                translate("col_gate"): stage_label(gate_key),
+                translate("col_decision"): ap.get("decision", ""),
+                translate("col_reviewer"): (
+                    f"{ap.get('reviewer_id', '')} ({ap.get('reviewer_role', '')})"
+                ),
+                translate("col_decided_at"): ap.get("decided_at", ""),
+                translate("col_message"): ap.get("comment", ""),
+            }
+        )
+
+    for lock_key, lk in locks.items():
+        events.append(
+            {
+                "sort_key": lk.get("locked_at", ""),
+                translate("col_event_type"): translate("col_lock_type"),
+                translate("col_gate"): lk.get("lock_type", lock_key),
+                translate("col_decision"): "locked",
+                translate("col_reviewer"): lk.get("locked_by", ""),
+                translate("col_decided_at"): lk.get("locked_at", ""),
+                translate("col_message"): (
+                    f"version: {str(lk.get('subject_version_id', ''))[:16]}"
+                ),
+            }
+        )
+
+    events.sort(key=lambda e: e["sort_key"])
+    for e in events:
+        del e["sort_key"]
+
+    if events:
+        st.dataframe(
+            events,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def _render_pipeline_bar(
@@ -1925,9 +2711,7 @@ def _render_pipeline_bar(
             translate("tab_research_question"): bool(
                 intake.get("research_question_input")
             ),
-            translate("readiness_search"): bool(
-                intake.get("search_strategy_input")
-            ),
+            translate("readiness_search"): bool(intake.get("search_strategy_input")),
             translate("readiness_literature"): bool(
                 intake.get("literature_record_drafts")
             ),
@@ -1939,9 +2723,7 @@ def _render_pipeline_bar(
         ):
             col.metric(
                 label,
-                translate("label_ready")
-                if complete
-                else translate("label_incomplete"),
+                translate("label_ready") if complete else translate("label_incomplete"),
             )
 
         if st.button(
@@ -1963,15 +2745,14 @@ def _render_pipeline_bar(
             _render_search_strategy_detail(state)
             with st.expander(translate("expander_artifact_refs"), expanded=False):
                 st.json(state.get("artifacts", {}))
-            with st.expander(
-                translate("expander_approvals_locks"), expanded=False
-            ):
+            with st.expander(translate("expander_approvals_locks"), expanded=False):
                 st.json(
                     {
                         "approvals": state.get("approvals", {}),
                         "locks": state.get("locks", {}),
                     }
                 )
+            _render_approval_timeline(state)
             if not pending and state.get("run_status") == "complete":
                 st.success(translate("success_pipeline_complete"))
 
@@ -2033,15 +2814,18 @@ def _render_workflow(app: Application, project_id: str) -> None:
             st.info(translate("info_start_pipeline"))
     with tab_method:
         if state:
+            _render_guideline_mapping(state)
             _render_methodology_findings(state)
             _render_analysis_plan(state)
             _render_statistical_results(state)
+            _render_effect_plots(state)
+            _render_analysis_provenance(state)
         else:
             st.info(translate("info_start_pipeline"))
     with tab_manuscript:
         if state:
             _render_manuscript(state)
-            _render_claims(state)
+            _render_claim_traceability(state)
             _render_citations(state)
             _render_claim_audit(state)
         else:
@@ -2049,6 +2833,7 @@ def _render_workflow(app: Application, project_id: str) -> None:
     with tab_review:
         if state:
             _render_review(state)
+            _render_revision_diff(state)
             _render_compliance(state)
         else:
             st.info(translate("info_start_pipeline"))
@@ -2056,6 +2841,7 @@ def _render_workflow(app: Application, project_id: str) -> None:
         if state:
             _render_export(state)
             _render_usage_summary(state)
+            _render_ai_disclosure(state)
         else:
             st.info(translate("info_start_pipeline"))
 

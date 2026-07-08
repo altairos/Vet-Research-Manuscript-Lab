@@ -630,6 +630,8 @@ def revision_node(
                 "section_id": d.section_id,
                 "before_hash": d.before_hash,
                 "after_hash": d.after_hash,
+                "before_content": d.before_content,
+                "after_content": d.after_content,
                 "resolved_finding_ids": list(d.resolved_finding_ids),
             }
             for d in revision_output.diffs

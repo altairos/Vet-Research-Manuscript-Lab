@@ -846,13 +846,212 @@ STRINGS.update(
 
 STRINGS.update(
     {
+        # W1: per-finding review disposition UI
+        "review_disposition_header": {
+            "en": "Dispose review findings",
+            "zh": "处置审阅发现",
+        },
+        "review_disposition_caption": {
+            "en": (
+                "Accept, reject, or defer each finding. Accepted "
+                "findings trigger a revision cycle."
+            ),
+            "zh": "对每条发现选择采纳、驳回或挂起。采纳的发现将触发修订循环。",
+        },
+        "decision_accept": {"en": "accept", "zh": "采纳"},
+        "decision_reject": {"en": "reject", "zh": "驳回"},
+        "decision_defer": {"en": "defer", "zh": "挂起"},
+        "field_finding_reason": {"en": "Reason (optional)", "zh": "理由（可选）"},
+        "button_submit_review": {
+            "en": "Submit all decisions",
+            "zh": "提交全部决定",
+        },
+        "review_no_findings": {
+            "en": "No findings to dispose.",
+            "zh": "没有需要处置的发现。",
+        },
+        "label_finding_id": {"en": "Finding", "zh": "发现 ID"},
+        # W2: revision diff view
+        "section_revision_diff": {
+            "en": "Section revision diff",
+            "zh": "章节修订对比",
+        },
+        "col_before": {"en": "Before", "zh": "修改前"},
+        "col_after": {"en": "After", "zh": "修改后"},
+        "label_resolved_findings": {
+            "en": "Resolved findings",
+            "zh": "已解决发现",
+        },
+        "label_no_changes": {"en": "No changes", "zh": "无变化"},
+        # W3: claim traceability chain
+        "section_traceability": {
+            "en": "Claim traceability",
+            "zh": "论点追溯链",
+        },
+        "label_support_type": {"en": "Support type", "zh": "支撑类型"},
+        "label_source_evidence": {
+            "en": "Evidence source",
+            "zh": "证据来源",
+        },
+        "label_source_result": {
+            "en": "Statistical result source",
+            "zh": "统计结果来源",
+        },
+        "label_no_support": {
+            "en": "No supporting evidence",
+            "zh": "缺少支撑证据",
+        },
+        "label_span_page": {"en": "Page", "zh": "页码"},
+        "label_span_section": {"en": "Section", "zh": "章节"},
+        "label_citation_locator": {
+            "en": "Locator",
+            "zh": "定位符",
+        },
+        "label_claim_unsupported_warning": {
+            "en": (
+                "This factual claim lacks supporting evidence and may violate policy."
+            ),
+            "zh": "该事实性论点缺少支撑证据，可能违反策略。",
+        },
+        "label_relation": {"en": "Relation", "zh": "关系"},
+        "label_audit_status": {"en": "Audit status", "zh": "审计状态"},
+        "label_quote_hash": {"en": "Quote hash", "zh": "引用哈希"},
+        # additional role labels for new gate types
+        "role_reviewer": {"en": "reviewer", "zh": "审阅人"},
+        "role_principal_investigator": {
+            "en": "principal investigator",
+            "zh": "主要研究者",
+        },
+        "role_corresponding_author": {
+            "en": "corresponding author",
+            "zh": "通讯作者",
+        },
+        # W4: reporting guideline mapping
+        "section_guideline": {
+            "en": "Reporting guideline",
+            "zh": "报告规范",
+        },
+        "label_guideline_type": {
+            "en": "Guideline",
+            "zh": "规范类型",
+        },
+        "label_primary_endpoint": {
+            "en": "Primary endpoint",
+            "zh": "主要终点",
+        },
+        "label_eligibility": {
+            "en": "Eligibility criteria",
+            "zh": "纳入排除标准",
+        },
+        "label_protocol_version": {
+            "en": "Protocol version",
+            "zh": "方案版本",
+        },
+        # W5: screening override
+        "label_screening_auto": {
+            "en": "Auto-screened",
+            "zh": "自动筛选",
+        },
+        "info_screening_hint": {
+            "en": "Records are auto-screened by keyword matching. Toggle to override.",
+            "zh": "记录由关键词匹配自动筛选。可手动切换覆盖。",
+        },
+        # W6: statistical provenance
+        "section_provenance": {
+            "en": "Reproducibility provenance",
+            "zh": "可复现性追溯",
+        },
+        "label_script_hash": {"en": "Script hash", "zh": "脚本哈希"},
+        "label_seed": {"en": "Random seed", "zh": "随机种子"},
+        "label_plan_ref": {"en": "Plan reference", "zh": "计划引用"},
+        "label_dataset_ref": {"en": "Dataset reference", "zh": "数据集引用"},
+        "label_environment": {"en": "Environment", "zh": "运行环境"},
+        "label_package_versions": {
+            "en": "Package versions",
+            "zh": "包版本",
+        },
+        "label_stdout": {"en": "stdout", "zh": "标准输出"},
+        "label_stderr": {"en": "stderr", "zh": "标准错误"},
+        "label_exit_code": {"en": "Exit code", "zh": "退出码"},
+        # W7: figures
+        "section_figures": {"en": "Effect plots", "zh": "效应图"},
+        "info_no_plot_data": {
+            "en": "No numeric results suitable for plotting.",
+            "zh": "暂无可绘图的数值结果。",
+        },
+        # W8: variable editor
+        "button_save_variables": {
+            "en": "Save variable specs",
+            "zh": "保存变量规格",
+        },
+        "label_var_continuous": {"en": "continuous", "zh": "连续型"},
+        "label_var_categorical": {"en": "categorical", "zh": "分类型"},
+        "label_var_binary": {"en": "binary", "zh": "二值型"},
+        "label_var_ordinal": {"en": "ordinal", "zh": "有序型"},
+        # W9: AI disclosure
+        "section_ai_disclosure": {
+            "en": "AI usage disclosure",
+            "zh": "AI 使用披露",
+        },
+        "info_no_ai_usage": {
+            "en": "No AI model usage recorded.",
+            "zh": "未记录 AI 模型调用。",
+        },
+        # W10: approval timeline
+        "section_timeline": {
+            "en": "Approval & audit timeline",
+            "zh": "审批与审计时间线",
+        },
+        "col_gate": {"en": "Gate", "zh": "审批门"},
+        "col_decision": {"en": "Decision", "zh": "决定"},
+        "col_reviewer": {"en": "Reviewer", "zh": "审批人"},
+        "col_decided_at": {"en": "Decided at", "zh": "决定时间"},
+        "col_lock_type": {"en": "Lock type", "zh": "锁定类型"},
+        "col_locked_by": {"en": "Locked by", "zh": "锁定者"},
+        "col_locked_at": {"en": "Locked at", "zh": "锁定时间"},
+        "col_event_type": {"en": "Event", "zh": "事件"},
+        "col_stage": {"en": "Stage", "zh": "阶段"},
+        "col_occurred_at": {"en": "Occurred at", "zh": "发生时间"},
+        "col_message": {"en": "Message", "zh": "消息"},
+        "label_no_approvals": {
+            "en": "No approvals recorded yet.",
+            "zh": "尚未记录审批。",
+        },
+        # W11: manuscript evidence highlighting
+        "label_claim_bound": {
+            "en": "Claims in this section",
+            "zh": "本章论点",
+        },
+        "label_claim_status_supported": {
+            "en": "Supported",
+            "zh": "有支撑",
+        },
+        "label_claim_status_unsupported": {
+            "en": "Unsupported",
+            "zh": "无支撑",
+        },
+        "label_claim_status_hypothesis": {
+            "en": "Hypothesis",
+            "zh": "假设",
+        },
+    }
+)
+
+
+STRINGS.update(
+    {
         "workspace_actions_header": {
             "en": "Golden Project workspace",
             "zh": "Golden Project 工作台",
         },
         "workspace_actions_caption": {
-            "en": "Load the golden fixture into the main intake forms, or run it end-to-end in the standard workflow view.",
-            "zh": "将 Golden fixture 装入主页面表单，或直接在标准工作流视图中端到端运行。",
+            "en": (
+                "Load the golden fixture into the main intake forms, "
+                "or run it end-to-end in the standard workflow view."
+            ),
+            "zh": (
+                "将 Golden fixture 装入主页面表单，或直接在标准工作流视图中端到端运行。"
+            ),
         },
         "golden_workspace_load": {
             "en": "Load Golden inputs",
@@ -889,7 +1088,10 @@ STRINGS.update(
             "zh": "当前就要处理",
         },
         "pending_action_caption": {
-            "en": "The pipeline is paused at {stage}. Complete the approval form below to continue.",
+            "en": (
+                "The pipeline is paused at {stage}. Complete the "
+                "approval form below to continue."
+            ),
             "zh": "当前流水线停在 {stage}。直接填写下方审批表单并提交即可继续。",
         },
         "pending_action_gate": {
@@ -919,7 +1121,10 @@ STRINGS.update(
             "zh": "新项目标题",
         },
         "confirm_delete_project": {
-            "en": "Are you sure? This will permanently delete the project and all its data.",
+            "en": (
+                "Are you sure? This will permanently delete the "
+                "project and all its data."
+            ),
             "zh": "确定删除吗？此操作将永久删除该项目及其所有数据。",
         },
         "success_project_renamed": {
@@ -991,7 +1196,10 @@ STRINGS.update(
             "zh": "流水线与审批",
         },
         "info_start_pipeline": {
-            "en": "Start the pipeline from the \u201cPipeline & approval\u201d section above to see results.",
+            "en": (
+                "Start the pipeline from the \u201cPipeline & "
+                "approval\u201d section above to see results."
+            ),
             "zh": "请先在上方\u201c流水线与审批\u201d区域启动流水线，结果将显示在此。",
         },
         "sidebar_language_header": {
@@ -1007,7 +1215,10 @@ STRINGS.update(
             "zh": "删除",
         },
         "confirm_unsaved_changes": {
-            "en": "You have unsaved changes in the current project. Discard them and switch?",
+            "en": (
+                "You have unsaved changes in the current project. "
+                "Discard them and switch?"
+            ),
             "zh": "当前项目有未保存的修改。是否丢弃并切换项目？",
         },
         "label_discard": {
@@ -1020,7 +1231,6 @@ STRINGS.update(
         },
     }
 )
-
 
 
 def _resolve_language(lang: str | None) -> str:
