@@ -5,8 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
-from vet_manuscript_lab.ui.i18n import translate
+from vet_manuscript_lab.ui.i18n import (
+    stage_label,
+    status_label,
+    translate,
+)
 
 WORKFLOW_PHASES = (
     (
@@ -281,6 +286,29 @@ def apply_theme() -> None:
           border-left:4px solid #d79346; background:#fff8ef;
           padding:.72rem .88rem; border-radius:10px; margin:.35rem 0 .75rem;
         }
+        /* Right pipeline sidebar: pin the marked column and make it scrollable */
+        [data-testid="stHorizontalBlock"]:has(.pipeline-sidebar-marker) {
+          align-items: flex-start;
+        }
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker) {
+          position: sticky;
+          top: 5.2rem;
+          max-height: calc(100vh - 6rem);
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding-right: .3rem;
+        }
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker)::-webkit-scrollbar {
+          width: 6px;
+        }
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker
+        )::-webkit-scrollbar-thumb {
+          background:#c2d1cc; border-radius:4px;
+        }
+        /* In the narrow right sidebar, stack phase tracker into 2 columns */
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker) .phase-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
         @media(max-width:800px) {
           .phase-row { grid-template-columns:1fr 1fr; }
           .block-container { padding:2.6rem .9rem .9rem; }
@@ -331,11 +359,50 @@ def render_run_metrics(state: dict[str, Any], thread_id: str) -> None:
     cols = st.columns(4)
     cols[0].metric(
         translate("metric_current_stage"),
-        str(state.get("current_stage", "-")).replace("_", " "),
+        stage_label(state.get("current_stage")) or "-",
     )
     cols[1].metric(
         translate("metric_run_status"),
-        str(state.get("run_status", "-")).replace("_", " "),
+        status_label(state.get("run_status")) or "-",
     )
     cols[2].metric(translate("metric_audit_events"), len(state.get("audit_events", [])))
     cols[3].metric(translate("metric_run_id"), thread_id[:8])
+
+
+def inject_auto_grow_textareas() -> None:
+    """Inject JS so every textarea grows to fit its content automatically.
+
+    Streamlit ``text_area`` widgets use a fixed pixel height by default, which
+    clips long text. This observes the DOM and resizes each ``<textarea>`` to
+    its ``scrollHeight`` on render and on every keystroke.
+    """
+
+    components.html(
+        """
+<script>
+(function() {
+  var doc = window.parent.document;
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+  function setup() {
+    doc.querySelectorAll('textarea').forEach(function(ta) {
+      if (ta.getAttribute('data-autogrow')) return;
+      ta.setAttribute('data-autogrow', '1');
+      ta.style.overflowY = 'hidden';
+      ta.style.resize = 'none';
+      autoGrow(ta);
+      ta.addEventListener('input', function() { autoGrow(ta); });
+    });
+  }
+  setup();
+  if (!window._stAutoGrowObs) {
+    window._stAutoGrowObs = new MutationObserver(function() { setup(); });
+    window._stAutoGrowObs.observe(doc.body, {childList: true, subtree: true});
+  }
+})();
+</script>
+""",
+        height=0,
+    )

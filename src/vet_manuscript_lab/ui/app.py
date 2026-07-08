@@ -65,7 +65,11 @@ from vet_manuscript_lab.ui.tabs.writing import (
     render_review,
     render_revision_diff,
 )
-from vet_manuscript_lab.ui.theme import apply_theme, render_hero
+from vet_manuscript_lab.ui.theme import (
+    apply_theme,
+    inject_auto_grow_textareas,
+    render_hero,
+)
 
 
 def render_workflow(app: Application, project_id: str) -> None:
@@ -78,14 +82,9 @@ def render_workflow(app: Application, project_id: str) -> None:
     # Auto-populate intake data when the Golden Project is selected
     # but hasn't been loaded yet (fixture data not in session state).
     golden_pid = st.session_state.get("_golden_project_id")
-    if (
-        golden_pid == project_id
-        and not compute_intake_ready(intake)
-    ):
+    if golden_pid == project_id and not compute_intake_ready(intake):
         prepare_golden_workspace(app, bump_search_form_version)
-        intake = st.session_state.setdefault(
-            f"analysis_intake:{project_id}", {}
-        )
+        intake = st.session_state.setdefault(f"analysis_intake:{project_id}", {})
         snapshot_intake(project_id)
 
     ready = compute_intake_ready(intake)
@@ -101,91 +100,102 @@ def render_workflow(app: Application, project_id: str) -> None:
         state = snapshot.values
         pending = interrupt_values(snapshot)
 
-    # Pipeline bar (always visible, outside tabs)
-    render_pipeline_bar(
-        app,
-        project_id,
-        intake,
-        ready,
-        state,
-        pending,
-        config,
-        snapshot,
-        thread_id,
-    )
+    # Two-column layout: main content (tabs) on the left, pipeline control
+    # panel docked as a sticky sidebar on the far right.
+    main_col, pipeline_col = st.columns([0.66, 0.34], gap="large")
 
-    # Golden workspace actions (only for Golden Project)
-    if golden_pid == project_id:
-        render_workspace_actions(app)
+    with pipeline_col:
+        # Hidden marker so the CSS ``:has()`` rule can pin this column.
+        st.markdown(
+            '<div class="pipeline-sidebar-marker"></div>',
+            unsafe_allow_html=True,
+        )
+        # Pipeline bar (now lives in the right sidebar)
+        render_pipeline_bar(
+            app,
+            project_id,
+            intake,
+            ready,
+            state,
+            pending,
+            config,
+            snapshot,
+            thread_id,
+        )
 
-    (
-        tab_design,
-        tab_data,
-        tab_lit,
-        tab_method,
-        tab_manuscript,
-        tab_review,
-        tab_export,
-    ) = st.tabs(
-        [
-            translate("tab_intake_question"),
-            translate("tab_intake_data"),
-            translate("tab_lit_evidence"),
-            translate("tab_method_stats"),
-            translate("tab_manuscript"),
-            translate("tab_review_compliance"),
-            translate("tab_export"),
-        ]
-    )
+        # Golden workspace actions (only for Golden Project)
+        if golden_pid == project_id:
+            render_workspace_actions(app)
 
-    with tab_design:
-        render_intake_question(intake)
+    with main_col:
+        (
+            tab_design,
+            tab_data,
+            tab_lit,
+            tab_method,
+            tab_manuscript,
+            tab_review,
+            tab_export,
+        ) = st.tabs(
+            [
+                translate("tab_intake_question"),
+                translate("tab_intake_data"),
+                translate("tab_lit_evidence"),
+                translate("tab_method_stats"),
+                translate("tab_manuscript"),
+                translate("tab_review_compliance"),
+                translate("tab_export"),
+            ]
+        )
 
-    with tab_data:
-        render_intake_materials(app, project_id, intake)
+        with tab_design:
+            render_intake_question(intake)
 
-    with tab_lit:
-        if state:
-            render_literature_records(state)
-            render_evidence_items(state)
-        else:
-            st.info(translate("info_start_pipeline"))
+        with tab_data:
+            render_intake_materials(app, project_id, intake)
 
-    with tab_method:
-        if state:
-            render_guideline_mapping(state)
-            render_methodology_findings(state)
-            render_analysis_plan(state)
-            render_statistical_results(state)
-            render_effect_plots(state)
-            render_analysis_provenance(state)
-        else:
-            st.info(translate("info_start_pipeline"))
+        with tab_lit:
+            if state:
+                render_literature_records(state)
+                render_evidence_items(state)
+            else:
+                st.info(translate("info_start_pipeline"))
 
-    with tab_manuscript:
-        if state:
-            render_manuscript(state)
-            render_claim_traceability(state)
-            render_citations(state)
-            render_claim_audit(state)
-        else:
-            st.info(translate("info_start_pipeline"))
+        with tab_method:
+            if state:
+                render_guideline_mapping(state)
+                render_methodology_findings(state)
+                render_analysis_plan(state)
+                render_statistical_results(state)
+                render_effect_plots(state)
+                render_analysis_provenance(state)
+            else:
+                st.info(translate("info_start_pipeline"))
 
-    with tab_review:
-        if state:
-            render_review(state)
-            render_revision_diff(state)
-            render_compliance_findings(state)
-        else:
-            st.info(translate("info_start_pipeline"))
+        with tab_manuscript:
+            if state:
+                render_manuscript(state)
+                render_claim_traceability(state)
+                render_citations(state)
+                render_claim_audit(state)
+            else:
+                st.info(translate("info_start_pipeline"))
 
-    with tab_export:
-        if state:
-            render_export(state)
-            render_usage_summary(state)
-            render_ai_disclosure(state)
-        else:
-            st.info(translate("info_start_pipeline"))
+        with tab_review:
+            if state:
+                render_review(state)
+                render_revision_diff(state)
+                render_compliance_findings(state)
+            else:
+                st.info(translate("info_start_pipeline"))
+
+        with tab_export:
+            if state:
+                render_export(state)
+                render_usage_summary(state)
+                render_ai_disclosure(state)
+            else:
+                st.info(translate("info_start_pipeline"))
 
 
 def main() -> None:
@@ -203,9 +213,7 @@ def main() -> None:
     render_projects(app)
 
     project_id = st.session_state.get("project_id")
-    active_project_id = (
-        project_id if isinstance(project_id, str) else None
-    )
+    active_project_id = project_id if isinstance(project_id, str) else None
 
     if active_project_id is None:
         all_projects = app.repository.list_projects()
@@ -213,9 +221,7 @@ def main() -> None:
             active_project_id = all_projects[0].id
             st.session_state["project_id"] = active_project_id
             snapshot_intake(active_project_id)
-    elif not st.session_state.get(
-        f"intake_baseline:{active_project_id}"
-    ):
+    elif not st.session_state.get(f"intake_baseline:{active_project_id}"):
         snapshot_intake(active_project_id)
 
     render_sidebar_project_management(app)
@@ -227,6 +233,9 @@ def main() -> None:
     render_hero()
     if active_project_id is not None:
         render_workflow(app, active_project_id)
+
+    # Auto-grow every textarea so long text is always fully visible.
+    inject_auto_grow_textareas()
 
 
 if __name__ == "__main__":
