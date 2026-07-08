@@ -58,13 +58,19 @@ def apply_theme() -> None:
         }
         .stApp {
           background:#f6f8f7; color:var(--ink);
-          font-family:'LXGW WenKai','LXGW WenKai Screen',system-ui,sans-serif !important;
         }
-        body, p, span, li, label, h1, h2, h3, h4, h5, h6,
-        [data-testid="stMainBlockContainer"],
-        [data-testid="stSidebar"],
-        .stMarkdown, .stButton, .stMetric, .stCaptionContainer {
-          font-family:'LXGW WenKai','LXGW WenKai Screen',system-ui,sans-serif !important;
+        /* Apply LXGW WenKai to every element so all Chinese text uses the
+           intended typeface (tabs, select values, hero, brand, data tables...). */
+        * {
+          font-family:'LXGW WenKai','LXGW WenKai Screen',
+          system-ui,sans-serif !important;
+        }
+        /* Restore Streamlit's Material Symbols icon font (collapsible arrows,
+           upload, select chevrons, clear buttons...) so icon ligatures do not
+           render as literal text. This rule has higher specificity than the
+           universal selector above. */
+        [data-testid="stIconMaterial"] {
+          font-family:'Material Symbols Rounded' !important;
         }
         [data-testid="stSidebar"] {
           background:#edf3f0; border-right:1px solid #d6e1dc;

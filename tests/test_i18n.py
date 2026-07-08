@@ -43,12 +43,12 @@ class I18nTests(unittest.TestCase):
 
     def test_translate_applies_format_kwargs(self) -> None:
         self.assertEqual(
-            translate("success_project_created", lang="en", id="abc"),
-            "Created project abc",
+            translate("success_project_created", lang="en", name="abc"),
+            "Created project \u201cabc\u201d",
         )
         self.assertEqual(
-            translate("success_project_created", lang="zh", id="abc"),
-            "已创建项目 abc",
+            translate("success_project_created", lang="zh", name="abc"),
+            "已创建项目\u201cabc\u201d",
         )
 
     def test_default_language_is_chinese(self) -> None:

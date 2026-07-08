@@ -732,6 +732,25 @@ STRINGS.update(
         "field_databases": {"en": "Databases", "zh": "数据库"},
         "field_date_range": {"en": "Date range", "zh": "日期范围"},
         "button_save_search": {"en": "Save search strategy", "zh": "保存检索策略"},
+        "button_reset_search": {
+            "en": "Reset to saved",
+            "zh": "重置为已保存值",
+        },
+        "saved_strategy_header": {
+            "en": "Saved search strategy",
+            "zh": "已保存的检索策略",
+        },
+        "saved_strategy_empty": {
+            "en": "No search strategy saved yet. Fill in the form below and save.",
+            "zh": "尚未保存检索策略。请在下方填写并保存。",
+        },
+        "saved_strategy_databases": {"en": "Databases", "zh": "数据库"},
+        "saved_strategy_query": {"en": "Search query", "zh": "检索式"},
+        "saved_strategy_date_range": {"en": "Date range", "zh": "日期范围"},
+        "edit_strategy_header": {
+            "en": "Edit search strategy",
+            "zh": "编辑检索策略",
+        },
         "error_search_required": {
             "en": "Enter a search query.",
             "zh": "请输入检索式。",

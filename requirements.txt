@@ -1,5 +1,7 @@
 # Runtime dependencies for Streamlit Cloud deployment.
 # Streamlit Cloud reads this file automatically.
+# Install the project itself (src/ layout) so `vet_manuscript_lab` is importable.
+-e .
 alembic>=1.14,<2
 langgraph>=1.0,<2
 langgraph-checkpoint-sqlite>=2,<4

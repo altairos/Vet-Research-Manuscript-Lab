@@ -11,7 +11,7 @@ import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -136,84 +136,12 @@ def _interrupt_values(snapshot: Any) -> list[dict[str, Any]]:
     return values
 
 
-# Ordered workflow stages for sidebar progress tracking.
-_STAGE_ORDER = [
-    "project_init",
-    "research_question",
-    "question_approval",
-    "guideline_mapping",
-    "protocol_approval",
-    "protocol_lock",
-    "literature_search",
-    "search_approval",
-    "screening",
-    "evidence_extraction",
-    "evidence_audit",
-    "methodology_critic",
-    "analysis_plan_approval",
-    "analysis_plan_lock",
-    "statistics_execution",
-    "results_approval",
-    "writing",
-    "claim_audit",
-    "review",
-    "revision",
-    "final_compliance_audit",
-    "final_sign_off",
-    "export",
-    "complete",
-]
-
-
 def _render_sidebar_header() -> None:
     st.sidebar.markdown(
         f"""<div class="sidebar-brand"><strong>{translate("app_title")}</strong>
         <span>{translate("sidebar_tagline")}</span></div>""",
         unsafe_allow_html=True,
     )
-
-
-def _render_sidebar_context(app: Application, project_id: str | None) -> None:
-    """Render the *Production flow* checklist in the sidebar."""
-    if project_id is None:
-        return
-
-    intake = st.session_state.get(f"analysis_intake:{project_id}", {})
-    stage_idx = -1
-    run_complete = False
-    thread_id = _get_active_thread(project_id)
-    if thread_id is not None:
-        snapshot = app.graph.get_state({"configurable": {"thread_id": thread_id}})
-        current = snapshot.values.get("current_stage", "project_init")
-        run_complete = snapshot.values.get("run_status") == "complete"
-        if current in _STAGE_ORDER:
-            stage_idx = _STAGE_ORDER.index(current)
-
-    def _past(stage_name: str) -> bool:
-        return stage_idx >= _STAGE_ORDER.index(stage_name)
-
-    steps = [
-        (translate("flow_study_design"), bool(intake.get("research_question_input"))),
-        (
-            translate("flow_data_prep"),
-            bool(intake.get("dataset_summary"))
-            and bool(intake.get("literature_record_drafts")),
-        ),
-        (translate("flow_protocol_approval"), _past("protocol_lock")),
-        (translate("flow_evidence_extraction"), _past("evidence_audit")),
-        (translate("flow_statistical_analysis"), _past("results_approval")),
-        (translate("flow_manuscript_review"), _past("review")),
-        (translate("flow_compliance_export"), _past("export") or run_complete),
-    ]
-
-    st.sidebar.divider()
-    st.sidebar.markdown(f"#### {translate('sidebar_production_flow')}")
-    for label, done in steps:
-        marker = "[x]" if done else "[ ]"
-        st.sidebar.markdown(
-            f'<div class="side-step">{marker}&nbsp;&nbsp;{label}</div>',
-            unsafe_allow_html=True,
-        )
 
 
 def _intake_snapshot(intake: dict[str, Any]) -> str:
@@ -237,7 +165,7 @@ def _is_intake_dirty(project_id: str | None) -> bool:
     baseline = st.session_state.get(f"intake_baseline:{project_id}")
     if baseline is None:
         return False
-    return _intake_snapshot(intake) != baseline
+    return bool(_intake_snapshot(intake) != baseline)
 
 
 def _inject_beforeunload(is_dirty: bool) -> None:
@@ -671,6 +599,18 @@ def _render_intake_question(intake: dict[str, Any]) -> None:
                 st.success(translate("success_question_saved"))
 
 
+def _bump_search_form_version(project_id: str) -> None:
+    """Increment the search-strategy form version.
+
+    The search form widgets are keyed by this version so that bumping it
+    forces them to reinitialize from the currently saved strategy, defeating
+    Streamlit's widget-state stickiness.
+    """
+
+    current = st.session_state.get(f"search_form_version:{project_id}", 0)
+    st.session_state[f"search_form_version:{project_id}"] = current + 1
+
+
 def _render_intake_materials(
     app: Application, project_id: str, intake: dict[str, Any]
 ) -> None:
@@ -678,23 +618,54 @@ def _render_intake_materials(
 
     # ---- Literature / search strategy ----------------------------------
     search = dict(intake.get("search_strategy_input", {}))
+
+    st.markdown(f"##### {translate('edit_strategy_header')}")
+
+    # Version the form widgets so they reinitialize from the saved strategy
+    # whenever it changes externally (e.g. loading Golden inputs) or when the
+    # user requests a reset. This avoids Streamlit's widget-state stickiness,
+    # which otherwise prevents saved databases from appearing prefilled.
+    search_version = st.session_state.get(
+        f"search_form_version:{project_id}", 0
+    )
+    ss_query_key = f"ss_query:{project_id}:{search_version}"
+    ss_dbs_key = f"ss_databases:{project_id}:{search_version}"
+    ss_date_key = f"ss_date:{project_id}:{search_version}"
+    for key, value in (
+        (ss_query_key, search.get("query", "")),
+        (
+            ss_dbs_key,
+            search.get("databases", ["PubMed", "CAB Abstracts"]),
+        ),
+        (ss_date_key, search.get("date_range", "2018-01-01/2026-12-31")),
+    ):
+        if key not in st.session_state:
+            st.session_state[key] = value
+
     with st.form("search-strategy"):
         query = st.text_area(
             translate("field_search_query"),
-            value=search.get("query", ""),
+            key=ss_query_key,
             height=68,
         )
         date_col, db_col = st.columns([1, 2])
         date_range = date_col.text_input(
             translate("field_date_range"),
-            value=search.get("date_range", "2018-01-01/2026-12-31"),
+            key=ss_date_key,
         )
         databases = db_col.multiselect(
             translate("field_databases"),
             ["PubMed", "CAB Abstracts", "Web of Science", "Scopus"],
-            default=search.get("databases", ["PubMed", "CAB Abstracts"]),
+            key=ss_dbs_key,
         )
-        if st.form_submit_button(translate("button_save_search")):
+        save_col, reset_col = st.columns(2)
+        submitted = save_col.form_submit_button(
+            translate("button_save_search"), type="primary"
+        )
+        reset_clicked = reset_col.form_submit_button(
+            translate("button_reset_search")
+        )
+        if submitted:
             if not query.strip():
                 st.error(translate("error_search_required"))
             else:
@@ -704,6 +675,31 @@ def _render_intake_materials(
                     "date_range": date_range.strip(),
                 }
                 st.success(translate("success_search_saved"))
+        if reset_clicked:
+            # Bump the widget version so the form reinitializes from the
+            # currently saved strategy on the next render.
+            _bump_search_form_version(project_id)
+            st.rerun()
+
+    # View the currently saved strategy *after* the form so it reflects the
+    # latest intake (including a save performed in the same script run).
+    saved = intake.get("search_strategy_input", {})
+    with st.expander(translate("saved_strategy_header"), expanded=False):
+        if saved and saved.get("query"):
+            st.markdown(
+                f"**{translate('saved_strategy_query')}**: "
+                f"{saved.get('query', '')}"
+            )
+            st.markdown(
+                f"**{translate('saved_strategy_databases')}**: "
+                f"{', '.join(saved.get('databases', [])) or '-'}"
+            )
+            st.markdown(
+                f"**{translate('saved_strategy_date_range')}**: "
+                f"{saved.get('date_range', '-')}"
+            )
+        else:
+            st.info(translate("saved_strategy_empty"))
 
     col_zotero, col_manual = st.columns(2)
     with col_zotero:
@@ -776,13 +772,18 @@ def _render_intake_materials(
         )
         pdf = st.file_uploader(translate("field_import_pdf"), type=["pdf"])
         if pdf is not None and st.button(translate("button_archive_pdf")):
-            result = app.document_importer.import_bytes(
+            import_result = app.document_importer.import_bytes(
                 project_id=project_id,
                 literature_record_id=target_id,
                 attachment_key=pdf.name,
                 pdf_bytes=pdf.getvalue(),
             )
-            st.success(translate("success_pdf_archived", hash=result.content_hash[:20]))
+            st.success(
+                translate(
+                    "success_pdf_archived",
+                    hash=import_result.content_hash[:20],
+                )
+            )
     else:
         st.warning(translate("warning_no_literature"))
 
@@ -856,7 +857,7 @@ def _render_intake_materials(
     # ---- Variable spec editor (editable) --------------------------------
     var_specs = intake.get("variable_spec_drafts", [])
     if var_specs:
-        import pandas as pd  # type: ignore[import-untyped]
+        import pandas as pd
 
         st.markdown(f"###### {translate('tab_dataset_variables')}")
         var_types = [
@@ -976,7 +977,7 @@ def _start_workflow(app: Application, project_id: str) -> None:
     )
     intake = st.session_state.get(f"analysis_intake:{project_id}", {})
     if isinstance(intake, dict):
-        state.update(intake)
+        cast(dict[str, Any], state).update(intake)
     config = {"configurable": {"thread_id": thread_id}}
     app.graph.invoke(state, config)
     app.governance.sync_state(app.graph.get_state(config).values)
@@ -1627,6 +1628,9 @@ def _prepare_golden_workspace(app: Application) -> str:
     st.session_state["project_id"] = project_id
     st.session_state.pop(_thread_session_key(project_id), None)
     st.session_state.pop("thread_id", None)
+    # Force the search-strategy form to reinitialize from the freshly loaded
+    # Golden inputs (otherwise Streamlit widget stickiness keeps old values).
+    _bump_search_form_version(project_id)
     return project_id
 
 
@@ -1654,8 +1658,10 @@ def _run_golden_workspace_pipeline(app: Application) -> tuple[str, str]:
             .get("species_scope", ["canine", "feline"])
         ),
     )
-    state.update(intake)
-    _drive_pipeline_to_completion(app, state, thread_id)
+    cast(dict[str, Any], state).update(intake)
+    _drive_pipeline_to_completion(
+        app, cast(dict[str, Any], state), thread_id
+    )
     _set_active_thread(project_id, thread_id)
     return project_id, thread_id
 
@@ -2890,9 +2896,6 @@ def main() -> None:
 
     # Sidebar: new project creation
     _render_project_creation(app)
-
-    # Sidebar: workspace context (readiness + progress)
-    _render_sidebar_context(app, active_project_id)
 
     # Sidebar: language switch (at bottom)
     _render_language_switch()
