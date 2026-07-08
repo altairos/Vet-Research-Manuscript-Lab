@@ -59,8 +59,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "暂无项目。",
     },
     "success_project_created": {
-        "en": "Created project {id}",
-        "zh": "已创建项目 {id}",
+        "en": "Created project \u201c{name}\u201d",
+        "zh": "已创建项目\u201c{name}\u201d",
     },
     "field_active_project": {
         "en": "Active project",
@@ -931,8 +931,16 @@ STRINGS.update(
             "zh": "项目已删除。",
         },
         "sidebar_project_management": {
-            "en": "Manage project",
-            "zh": "项目管理",
+            "en": "Projects",
+            "zh": "项目列表",
+        },
+        "project_item_owner": {
+            "en": "Owner",
+            "zh": "负责人",
+        },
+        "project_item_species": {
+            "en": "Species",
+            "zh": "物种",
         },
         "sidebar_new_project": {
             "en": "New project",
@@ -983,8 +991,32 @@ STRINGS.update(
             "zh": "流水线与审批",
         },
         "info_start_pipeline": {
-            "en": "Start the pipeline from the \u201cPipeline & approval\u201d tab to see results.",
-            "zh": "请先在\u201c流水线与审批\u201d标签页启动流水线，结果将显示在此。",
+            "en": "Start the pipeline from the \u201cPipeline & approval\u201d section above to see results.",
+            "zh": "请先在上方\u201c流水线与审批\u201d区域启动流水线，结果将显示在此。",
+        },
+        "sidebar_language_header": {
+            "en": "Language",
+            "zh": "语言",
+        },
+        "ctx_rename": {
+            "en": "Rename",
+            "zh": "重命名",
+        },
+        "ctx_delete": {
+            "en": "Delete",
+            "zh": "删除",
+        },
+        "confirm_unsaved_changes": {
+            "en": "You have unsaved changes in the current project. Discard them and switch?",
+            "zh": "当前项目有未保存的修改。是否丢弃并切换项目？",
+        },
+        "label_discard": {
+            "en": "Discard & switch",
+            "zh": "丢弃并切换",
+        },
+        "label_stay": {
+            "en": "Stay",
+            "zh": "留在此处",
         },
     }
 )

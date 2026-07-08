@@ -108,15 +108,62 @@ def apply_theme() -> None:
         }
         h4 { font-size:1rem !important; margin:.7rem 0 .4rem !important; }
         h5 { font-size:.9rem !important; margin:.6rem 0 .35rem !important; }
-        [data-testid="stSidebar"] h4 { font-size:1rem !important; }
-        [data-testid="stSidebar"] h5 { font-size:.88rem !important; }
+        [data-testid="stSidebar"] h4 {
+          font-size:.95rem !important; margin:.6rem 0 .35rem !important;
+        }
+        [data-testid="stSidebar"] h5 {
+          font-size:.85rem !important; margin:.5rem 0 .3rem !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+          font-size:.84rem; margin-bottom:.12rem;
+        }
+        [data-testid="stSidebar"] [data-baseweb="input"],
+        [data-testid="stSidebar"] [data-baseweb="input"] > div,
+        [data-testid="stSidebar"] [data-baseweb="select"],
+        [data-testid="stSidebar"] [data-baseweb="select"] > div {
+          border:1px solid #b8c8c2 !important; border-radius:8px !important;
+          background:#fff !important;
+        }
+        [data-testid="stSidebar"] textarea {
+          border:1px solid #b8c8c2 !important; border-radius:8px !important;
+        }
+        .project-list-item {
+          border:1px solid var(--line); border-radius:10px;
+          padding:.55rem .7rem; margin-bottom:.4rem; background:#fff;
+        }
+        .project-list-item.active {
+          border-color:var(--brand); background:#eef6f2;
+        }
+        .project-list-item strong { display:block; font-size:.88rem; }
+        .project-list-item span { font-size:.78rem; color:var(--muted); }
+        .ctx-menu-item {
+          padding:8px 18px; cursor:pointer; font-size:.86rem;
+          color:#333; transition:background .12s;
+        }
+        .ctx-menu-item:hover { background:#eef6f2; }
+        .ctx-menu-item.danger { color:#c0392b; }
+        .ctx-menu-item.danger:hover { background:#fdf0ee; }
+        .ctx-sep {
+          height:1px; background:#e0e5e2; margin:2px 0;
+        }
         [data-testid="stSidebar"] p,
         [data-testid="stSidebar"] label p {
           font-size:.86rem; line-height:1.48;
         }
+        [data-testid="stSidebar"] [data-testid="stSidebarNav"] h4,
+        [data-testid="stSidebar"] .sidebar-section-header {
+          font-size:.95rem; font-weight:700;
+          margin:.6rem 0 .35rem;
+        }
         [data-testid="stCaptionContainer"] p {
           font-size:.82rem !important; line-height:1.5 !important;
         }
+        .pipeline-bar-header {
+          margin-bottom:.5rem; padding-bottom:.35rem;
+          border-bottom:1px solid var(--line);
+          font-size:1rem; color:var(--brand);
+        }
+        .pipeline-bar-header strong { font-size:1.05rem; }
         .hero {
           padding:1rem 1.15rem; border:1px solid var(--line);
           border-radius:14px; background:linear-gradient(120deg,#fff,#eef6f2);
@@ -140,7 +187,7 @@ def apply_theme() -> None:
           border-radius:10px; margin:.55rem 0 .7rem;
         }
         .stTabs [data-baseweb="tab"] {
-          min-height:2.25rem; padding:.42rem .8rem; border-radius:8px;
+          min-height:2.25rem; padding:.42rem 1.2rem; border-radius:8px;
         }
         .stTabs [data-baseweb="tab"] p {
           margin:0 !important; font-size:.88rem !important;

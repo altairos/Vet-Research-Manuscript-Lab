@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 from langgraph.types import Command
 
 from vet_manuscript_lab.config import Settings
@@ -217,9 +218,58 @@ def _render_sidebar_context(app: Application, project_id: str | None) -> None:
         )
 
 
+def _intake_snapshot(intake: dict[str, Any]) -> str:
+    """Return a stable hash of the current intake data for dirty tracking."""
+
+    import hashlib
+
+    payload = json.dumps(intake, sort_keys=True, default=str)
+    return hashlib.md5(payload.encode()).hexdigest()
+
+
+def _snapshot_intake(project_id: str) -> None:
+    intake = st.session_state.get(f"analysis_intake:{project_id}", {})
+    st.session_state[f"intake_baseline:{project_id}"] = _intake_snapshot(intake)
+
+
+def _is_intake_dirty(project_id: str | None) -> bool:
+    if project_id is None:
+        return False
+    intake = st.session_state.get(f"analysis_intake:{project_id}", {})
+    baseline = st.session_state.get(f"intake_baseline:{project_id}")
+    if baseline is None:
+        return False
+    return _intake_snapshot(intake) != baseline
+
+
+def _inject_beforeunload(is_dirty: bool) -> None:
+    """Inject JS to warn on page leave when there are unsaved changes."""
+
+    flag = "true" if is_dirty else "false"
+    components.html(
+        f"""
+<script>
+(function() {{
+  window.onbeforeunload = function(e) {{
+    if ({flag}) {{
+      e.preventDefault();
+      return '';
+    }}
+  }};
+}})();
+</script>
+""",
+        height=0,
+    )
+
+
 def _render_language_switch() -> None:
     """Persist the active UI language (English / Chinese) in session state."""
 
+    st.sidebar.divider()
+    st.sidebar.markdown(
+        f"#### {translate('sidebar_language_header')}"
+    )
     options = list(SUPPORTED_LANGUAGES)
     current = st.session_state.get("language", DEFAULT_LANGUAGE)
     if current not in options:
@@ -229,6 +279,7 @@ def _render_language_switch() -> None:
         options=options,
         format_func=lambda code: LANGUAGE_LABELS[code],
         index=options.index(current),
+        label_visibility="collapsed",
     )
     st.session_state["language"] = selected
 
@@ -265,93 +316,302 @@ def _render_project_creation(app: Application) -> None:
             else:
                 st.session_state["project_id"] = project.id
                 st.session_state["project_created_notice"] = translate(
-                    "success_project_created", id=project.id
+                    "success_project_created", name=project.title
                 )
                 st.rerun()
 
 
 def _render_projects(app: Application) -> None:
-    """Render project selector in the sidebar (without showing IDs)."""
+    """Show project creation/deletion notices."""
 
-    projects = app.repository.list_projects()
     notice = st.session_state.pop("project_created_notice", None)
     if isinstance(notice, str):
         st.sidebar.success(notice)
+
+
+def _inject_context_menu_js() -> None:
+    """Inject JS that adds right-click context menus to project list items.
+
+    The menu element and MutationObserver are created once on the parent
+    window, but ``attachListeners`` runs on **every** component re-render so
+    that newly rendered project items always receive context-menu bindings
+    and stale hidden action buttons are always cleaned up.
+    """
+
+    rename_label = translate("ctx_rename")
+    delete_label = translate("ctx_delete")
+    components.html(
+        f"""
+<script>
+(function() {{
+  const parent = window.parent.document;
+  const w = window.parent;
+
+  /* --- Create menu element (once) --- */
+  let menu = parent.getElementById('st-ctx-menu');
+  if (!menu) {{
+    menu = parent.createElement('div');
+    menu.id = 'st-ctx-menu';
+    menu.style.cssText =
+      'position:fixed;display:none;background:#fff;'
+      + 'border:1px solid #d0d5d2;border-radius:10px;'
+      + 'box-shadow:0 8px 28px rgba(0,0,0,.18);'
+      + 'z-index:2147483647;min-width:160px;padding:4px 0;'
+      + 'font-size:14px;overflow:visible;';
+    parent.body.appendChild(menu);
+    w.addEventListener('click', function() {{
+      menu.style.display = 'none';
+    }});
+    w.addEventListener('scroll', function() {{
+      menu.style.display = 'none';
+    }}, true);
+  }}
+
+  function showMenu(x, y, projectId) {{
+    menu.innerHTML = '';
+    var renameItem = parent.createElement('div');
+    renameItem.className = 'ctx-menu-item';
+    renameItem.textContent = '\\u2702  {rename_label}';
+    renameItem.onclick = function(e) {{
+      e.stopPropagation();
+      menu.style.display = 'none';
+      triggerCtxAction('rename', projectId);
+    }};
+    menu.appendChild(renameItem);
+
+    var sep = parent.createElement('div');
+    sep.className = 'ctx-sep';
+    menu.appendChild(sep);
+
+    var deleteItem = parent.createElement('div');
+    deleteItem.className = 'ctx-menu-item danger';
+    deleteItem.textContent = '\\u2717  {delete_label}';
+    deleteItem.onclick = function(e) {{
+      e.stopPropagation();
+      menu.style.display = 'none';
+      triggerCtxAction('delete', projectId);
+    }};
+    menu.appendChild(deleteItem);
+
+    menu.style.display = 'block';
+    /* Viewport boundary detection so the menu is never clipped */
+    var rect = menu.getBoundingClientRect();
+    var vw = w.innerWidth || parent.documentElement.clientWidth;
+    var vh = w.innerHeight || parent.documentElement.clientHeight;
+    if (x + rect.width > vw - 8) x = vw - rect.width - 8;
+    if (y + rect.height > vh - 8) y = vh - rect.height - 8;
+    if (x < 4) x = 4;
+    if (y < 4) y = 4;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+  }}
+
+  function triggerCtxAction(action, projectId) {{
+    /* Verify the project still exists as a visible list item */
+    if (!parent.querySelector(
+      '[data-project-id="' + projectId + '"]'
+    )) return;
+    var marker = (action === 'rename' ? 'rn:' : 'dl:') + projectId;
+    var buttons = parent.querySelectorAll(
+      '[data-testid="stSidebar"] button'
+    );
+    for (var i = 0; i < buttons.length; i++) {{
+      if (buttons[i].textContent.indexOf(marker) !== -1) {{
+        buttons[i].click();
+        return;
+      }}
+    }}
+  }}
+
+  function attachListeners() {{
+    /* Hide all context-menu action buttons thoroughly */
+    parent.querySelectorAll(
+      '[data-testid="stSidebar"] button'
+    ).forEach(function(btn) {{
+      var t = btn.textContent || '';
+      if (t.indexOf('rn:') !== -1 || t.indexOf('dl:') !== -1) {{
+        var c = btn.closest('[data-testid="stElementContainer"]')
+              || btn.closest('.stButton');
+        if (c) {{
+          c.style.setProperty('display', 'none', 'important');
+          c.style.height = '0';
+          c.style.overflow = 'hidden';
+          c.style.padding = '0';
+          c.style.margin = '0';
+        }} else {{
+          btn.style.setProperty('display', 'none', 'important');
+        }}
+      }}
+    }});
+    /* Attach context-menu listeners to clickable project items */
+    parent.querySelectorAll('[data-project-clickable="true"]').forEach(
+      function(el) {{
+        if (el.getAttribute('data-ctx-bound')) return;
+        el.setAttribute('data-ctx-bound', '1');
+        el.addEventListener('contextmenu', function(e) {{
+          e.preventDefault();
+          e.stopPropagation();
+          var pid = el.getAttribute('data-project-id');
+          showMenu(e.clientX, e.clientY, pid);
+        }});
+      }}
+    );
+  }}
+
+  /* Always run on every component re-render */
+  attachListeners();
+
+  /* Set up MutationObserver only once on the parent window */
+  if (!w._stCtxObserver) {{
+    w._stCtxObserver = new w.MutationObserver(function() {{
+      attachListeners();
+    }});
+    w._stCtxObserver.observe(parent.body, {{childList: true, subtree: true}});
+  }}
+}})();
+</script>
+""",
+        height=0,
+    )
+
+
+def _render_sidebar_project_management(app: Application) -> None:
+    """Render clickable project list with right-click rename/delete."""
+
+    st.sidebar.divider()
+    st.sidebar.markdown(
+        f"#### {translate('sidebar_project_management')}"
+    )
+
+    projects = app.repository.list_projects()
     if not projects:
-        st.sidebar.info(translate("info_no_projects"))
         return
-    labels = {project.id: project.title for project in projects}
-    project_ids = list(labels)
-    current_project_id = st.session_state.get("project_id")
-    selected_index = (
-        project_ids.index(current_project_id)
-        if current_project_id in project_ids
-        else 0
-    )
-    selected = st.sidebar.selectbox(
-        translate("field_active_project"),
-        options=project_ids,
-        format_func=lambda project_id: labels[project_id],
-        index=selected_index,
-    )
-    st.session_state["project_id"] = selected
 
+    current_pid = st.session_state.get("project_id")
+    confirm_id = st.session_state.get("confirm_delete")
+    rename_target = st.session_state.get("rename_target")
+    pending_switch = st.session_state.get("pending_project_switch")
 
-def _render_sidebar_project_management(
-    app: Application, project_id: str
-) -> None:
-    """Render rename / delete buttons for the active project in the sidebar."""
+    for project in projects:
+        species_str = ", ".join(
+            translate(f"species_{s}") for s in (project.species_scope or [])
+        )
+        is_active = current_pid == project.id
+        active_cls = " active" if is_active else ""
+        active_badge = "\u25b8 " if is_active else ""
 
-    with st.sidebar.expander(
-        translate("sidebar_project_management"), expanded=False
-    ):
-        with st.form("rename_project"):
-            new_title = st.text_input(
-                translate("field_new_title"),
-            )
-            rename_clicked = st.form_submit_button(
-                translate("button_rename_project"), use_container_width=True
-            )
-        if rename_clicked:
-            try:
-                app.repository.rename_project(project_id, new_title)
-            except ValueError as exc:
-                st.error(str(exc))
-            else:
-                st.session_state["project_renamed_notice"] = translate(
-                    "success_project_renamed"
-                )
-                st.rerun()
+        st.sidebar.markdown(
+            f"""<div class="project-list-item{active_cls}"
+            data-project-clickable="true"
+            data-project-id="{project.id}">
+            <strong>{active_badge}{project.title}</strong>
+            <span>{translate('project_item_owner')}: {project.owner_id or '-'} | 
+            {translate('project_item_species')}: {species_str or '-'}</span>
+            </div>""",
+            unsafe_allow_html=True,
+        )
 
-        if st.button(
-            translate("button_delete_project"),
+        if st.sidebar.button(
+            "\u2192",
+            key=f"select_{project.id}",
             use_container_width=True,
-            type="secondary",
+            disabled=is_active,
         ):
-            st.session_state["confirm_delete"] = project_id
-
-    confirm = st.session_state.get("confirm_delete")
-    if confirm == project_id:
-        st.sidebar.warning(translate("confirm_delete_project"))
-        c_del, c_cancel = st.sidebar.columns(2)
-        if c_del.button(
-            "OK", type="primary", use_container_width=True, key="confirm_del"
-        ):
-            try:
-                app.repository.delete_project(project_id)
-            except (ValueError, OSError) as exc:
-                st.error(str(exc))
+            if _is_intake_dirty(current_pid) and project.id != current_pid:
+                st.session_state["pending_project_switch"] = project.id
             else:
-                st.session_state.pop("confirm_delete", None)
-                st.session_state.pop("project_id", None)
-                st.session_state["project_deleted_notice"] = translate(
-                    "success_project_deleted"
+                st.session_state["project_id"] = project.id
+                _snapshot_intake(project.id)
+            st.rerun()
+
+        # Hidden action buttons — JS right-click menu clicks these
+        if st.sidebar.button(f"rn:{project.id}", key=f"_rn_{project.id}"):
+            st.session_state["rename_target"] = project.id
+            st.rerun()
+        if st.sidebar.button(f"dl:{project.id}", key=f"_dl_{project.id}"):
+            st.session_state["confirm_delete"] = project.id
+            st.rerun()
+
+        # ---- Rename inline form ----
+        if rename_target == project.id:
+            with st.sidebar.form(f"rename_form_{project.id}"):
+                new_title = st.text_input(
+                    translate("field_new_title"),
+                    value=project.title,
+                    key=f"rename_input_{project.id}",
                 )
+                col_save, col_cancel = st.columns(2)
+                if col_save.form_submit_button(
+                    translate("button_rename_project"),
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    try:
+                        app.repository.rename_project(project.id, new_title)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                    else:
+                        st.session_state.pop("rename_target", None)
+                        st.session_state["project_renamed_notice"] = (
+                            translate("success_project_renamed")
+                        )
+                        st.rerun()
+                if col_cancel.form_submit_button(
+                    translate("label_no"), use_container_width=True
+                ):
+                    st.session_state.pop("rename_target", None)
+                    st.rerun()
+
+        # ---- Delete confirmation ----
+        if confirm_id == project.id:
+            st.sidebar.warning(translate("confirm_delete_project"))
+            c_del, c_cancel = st.sidebar.columns(2)
+            if c_del.button(
+                "OK",
+                type="primary",
+                use_container_width=True,
+                key=f"confirm_del_{project.id}",
+            ):
+                try:
+                    app.repository.delete_project(project.id)
+                except (ValueError, OSError) as exc:
+                    st.error(str(exc))
+                else:
+                    st.session_state.pop("confirm_delete", None)
+                    if current_pid == project.id:
+                        st.session_state.pop("project_id", None)
+                    st.session_state["project_deleted_notice"] = (
+                        translate("success_project_deleted")
+                    )
+                    st.rerun()
+            if c_cancel.button(
+                translate("label_no"),
+                use_container_width=True,
+                key=f"cancel_del_{project.id}",
+            ):
+                st.session_state.pop("confirm_delete", None)
                 st.rerun()
-        if c_cancel.button(
-            translate("label_no"), use_container_width=True, key="cancel_del"
+
+    # ---- Unsaved-changes confirmation on project switch ----
+    if pending_switch is not None:
+        st.sidebar.warning(translate("confirm_unsaved_changes"))
+        c_yes, c_no = st.sidebar.columns(2)
+        if c_yes.button(
+            translate("label_discard"),
+            type="primary",
+            use_container_width=True,
+            key="discard_yes",
         ):
-            st.session_state.pop("confirm_delete", None)
+            st.session_state["project_id"] = pending_switch
+            st.session_state.pop("pending_project_switch", None)
+            _snapshot_intake(pending_switch)
+            st.rerun()
+        if c_no.button(
+            translate("label_stay"),
+            use_container_width=True,
+            key="discard_no",
+        ):
+            st.session_state.pop("pending_project_switch", None)
             st.rerun()
 
     deleted_notice = st.session_state.pop("project_deleted_notice", None)
@@ -360,6 +620,9 @@ def _render_sidebar_project_management(
         st.sidebar.success(deleted_notice)
     if isinstance(renamed_notice, str):
         st.sidebar.success(renamed_notice)
+
+    # Inject the right-click context menu after all items are rendered
+    _inject_context_menu_js()
 
 
 def _literature_draft(record: Any) -> dict[str, Any]:
@@ -1632,52 +1895,32 @@ def _render_pending_approval(
             st.rerun()
 
 
-def _render_workflow(app: Application, project_id: str) -> None:
-    intake = st.session_state.setdefault(f"analysis_intake:{project_id}", {})
-    ready = _compute_intake_ready(intake)
+def _render_pipeline_bar(
+    app: Application,
+    project_id: str,
+    intake: dict[str, Any],
+    ready: bool,
+    state: dict[str, Any],
+    pending: list[dict[str, Any]],
+    config: dict[str, Any] | None,
+    snapshot: Any,
+    thread_id: str | None,
+) -> None:
+    """Render the pipeline-control section as a standalone bar.
 
-    thread_id = _get_active_thread(project_id)
-    state: dict[str, Any] = {}
-    pending: list[dict[str, Any]] = []
-    config: dict[str, Any] | None = None
-    if thread_id is not None:
-        config = {"configurable": {"thread_id": thread_id}}
-        snapshot = app.graph.get_state(config)
-        state = snapshot.values
-        pending = _interrupt_values(snapshot)
+    Previously embedded inside ``st.tabs``; now extracted to sit directly
+    beneath the hero / title area so the run button and approval gates are
+    always visible regardless of which content tab is active.
+    """
 
-    (
-        tab_design,
-        tab_data,
-        tab_control,
-        tab_lit,
-        tab_method,
-        tab_manuscript,
-        tab_review,
-        tab_export,
-    ) = st.tabs(
-        [
-            translate("tab_intake_question"),
-            translate("tab_intake_data"),
-            translate("tab_pipeline_control"),
-            translate("tab_lit_evidence"),
-            translate("tab_method_stats"),
-            translate("tab_manuscript"),
-            translate("tab_review_compliance"),
-            translate("tab_export"),
-        ]
-    )
+    with st.container(border=True):
+        st.markdown(
+            f"""<div class="pipeline-bar-header">
+            <strong>{translate("tab_pipeline_control")}</strong>
+            </div>""",
+            unsafe_allow_html=True,
+        )
 
-    # ---- Tab: Study design --------------------------------------------
-    with tab_design:
-        _render_intake_question(intake)
-
-    # ---- Tab: Data preparation ----------------------------------------
-    with tab_data:
-        _render_intake_materials(app, project_id, intake)
-
-    # ---- Tab: Pipeline & approval -------------------------------------
-    with tab_control:
         requirements = {
             translate("tab_research_question"): bool(
                 intake.get("research_question_input")
@@ -1732,6 +1975,55 @@ def _render_workflow(app: Application, project_id: str) -> None:
             if not pending and state.get("run_status") == "complete":
                 st.success(translate("success_pipeline_complete"))
 
+
+def _render_workflow(app: Application, project_id: str) -> None:
+    intake = st.session_state.setdefault(f"analysis_intake:{project_id}", {})
+    ready = _compute_intake_ready(intake)
+
+    thread_id = _get_active_thread(project_id)
+    state: dict[str, Any] = {}
+    pending: list[dict[str, Any]] = []
+    config: dict[str, Any] | None = None
+    snapshot: Any = None
+    if thread_id is not None:
+        config = {"configurable": {"thread_id": thread_id}}
+        snapshot = app.graph.get_state(config)
+        state = snapshot.values
+        pending = _interrupt_values(snapshot)
+
+    # ---- Pipeline & approval bar (always visible, not inside tabs) ----
+    _render_pipeline_bar(
+        app, project_id, intake, ready, state, pending, config, snapshot, thread_id
+    )
+
+    (
+        tab_design,
+        tab_data,
+        tab_lit,
+        tab_method,
+        tab_manuscript,
+        tab_review,
+        tab_export,
+    ) = st.tabs(
+        [
+            translate("tab_intake_question"),
+            translate("tab_intake_data"),
+            translate("tab_lit_evidence"),
+            translate("tab_method_stats"),
+            translate("tab_manuscript"),
+            translate("tab_review_compliance"),
+            translate("tab_export"),
+        ]
+    )
+
+    # ---- Tab: Study design --------------------------------------------
+    with tab_design:
+        _render_intake_question(intake)
+
+    # ---- Tab: Data preparation ----------------------------------------
+    with tab_data:
+        _render_intake_materials(app, project_id, intake)
+
     # ---- Result tabs (guarded by state availability) ------------------
     with tab_lit:
         if state:
@@ -1768,6 +2060,18 @@ def _render_workflow(app: Application, project_id: str) -> None:
             st.info(translate("info_start_pipeline"))
 
 
+def _ensure_golden_project_exists(app: Application) -> None:
+    """Ensure the Golden Project fixture is present in the project list."""
+
+    if st.session_state.get("_golden_seeded"):
+        return
+    fixture = _load_golden_fixture()
+    if fixture is None:
+        return
+    _ensure_golden_workspace_project(app, fixture)
+    st.session_state["_golden_seeded"] = True
+
+
 def main() -> None:
     st.set_page_config(
         page_title=translate("page_title"), page_icon=":microscope:", layout="wide"
@@ -1776,15 +2080,27 @@ def main() -> None:
     _render_sidebar_header()
     app = get_application()
 
-    # Sidebar: project selector
+    # Ensure Golden Project is available in the project list
+    _ensure_golden_project_exists(app)
+
+    # Sidebar: project notices
     _render_projects(app)
 
     project_id = st.session_state.get("project_id")
     active_project_id = project_id if isinstance(project_id, str) else None
 
-    # Sidebar: project management (rename / delete)
-    if active_project_id is not None:
-        _render_sidebar_project_management(app, active_project_id)
+    # Auto-select first project if none selected
+    if active_project_id is None:
+        all_projects = app.repository.list_projects()
+        if all_projects:
+            active_project_id = all_projects[0].id
+            st.session_state["project_id"] = active_project_id
+            _snapshot_intake(active_project_id)
+    elif not st.session_state.get(f"intake_baseline:{active_project_id}"):
+        _snapshot_intake(active_project_id)
+
+    # Sidebar: clickable project list + right-click menu
+    _render_sidebar_project_management(app)
 
     # Sidebar: new project creation
     _render_project_creation(app)
@@ -1794,6 +2110,9 @@ def main() -> None:
 
     # Sidebar: language switch (at bottom)
     _render_language_switch()
+
+    # Inject beforeunload warning if data is dirty
+    _inject_beforeunload(_is_intake_dirty(active_project_id))
 
     # Main area
     render_hero()
