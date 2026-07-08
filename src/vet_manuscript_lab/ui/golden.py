@@ -231,5 +231,6 @@ def ensure_golden_project_exists(app: Application) -> None:
     fixture = load_golden_fixture()
     if fixture is None:
         return
-    ensure_golden_workspace_project(app, fixture)
+    project_id = ensure_golden_workspace_project(app, fixture)
+    st.session_state["_golden_project_id"] = project_id
     st.session_state["_golden_seeded"] = True
