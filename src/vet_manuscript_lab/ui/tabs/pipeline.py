@@ -8,16 +8,15 @@ import streamlit as st
 from langgraph.types import Command
 
 from vet_manuscript_lab.ui.application import Application
-from vet_manuscript_lab.ui.golden import (
-    prepare_golden_workspace,
-    run_golden_workspace_pipeline,
+from vet_manuscript_lab.ui.i18n import (
+    gate_field,
+    gate_stage_label,
+    stage_label,
+    translate,
 )
-from vet_manuscript_lab.ui.i18n import gate_field, stage_label, translate
 from vet_manuscript_lab.ui.state import (
     start_workflow,
 )
-from vet_manuscript_lab.ui.tabs.intake import bump_search_form_version
-from vet_manuscript_lab.ui.tabs.literature import render_search_strategy_detail
 from vet_manuscript_lab.ui.theme import render_phase_tracker, render_run_metrics
 
 
@@ -73,20 +72,16 @@ def render_pipeline_bar(
         if thread_id is not None and config is not None:
             render_phase_tracker(state.get("current_stage"))
             render_run_metrics(state, thread_id)
-            next_nodes = ", ".join(snapshot.next) if snapshot.next else "-"
-            st.caption(f"{translate('label_next')}: {next_nodes}")
+            if snapshot.next:
+                next_labels = ", ".join(
+                    stage_label(n) for n in snapshot.next
+                )
+            else:
+                next_labels = "-"
+            st.caption(f"{translate('label_next')}: {next_labels}")
             if pending:
                 render_pending_approval(app, config, pending[0])
-            render_search_strategy_detail(state)
-            with st.expander(translate("expander_artifact_refs"), expanded=False):
-                st.json(state.get("artifacts", {}))
-            with st.expander(translate("expander_approvals_locks"), expanded=False):
-                st.json(
-                    {
-                        "approvals": state.get("approvals", {}),
-                        "locks": state.get("locks", {}),
-                    }
-                )
+            render_artifact_summary(state)
             render_approval_timeline(state)
             if not pending and state.get("run_status") == "complete":
                 st.success(translate("success_pipeline_complete"))
@@ -277,15 +272,18 @@ def render_pending_approval(
     # Standard approval gates
     st.markdown('<div class="approval-card">', unsafe_allow_html=True)
     st.subheader(translate("pending_action_header"))
-    st.caption(translate("pending_action_caption", stage=stage_label(gate_name)))
-    st.write(
-        {
-            translate("pending_action_gate"): gate_field(gate_name, "title"),
-            translate("pending_action_next"): stage_label(
-                gate.get("proposed_next_stage")
-            ),
-        }
+    st.caption(
+        translate("pending_action_caption", stage=gate_stage_label(gate_name))
     )
+    st.markdown(
+        f"**{translate('pending_action_gate')}:** "
+        f"{gate_field(gate_name, 'title')}"
+    )
+    next_stage = stage_label(gate.get("proposed_next_stage"))
+    if next_stage:
+        st.markdown(
+            f"**{translate('pending_action_next')}:** {next_stage}"
+        )
     st.caption(gate_field(gate_name, "summary"))
 
     role_options = ["investigator", "statistician"]
@@ -351,14 +349,20 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
     events: list[dict[str, Any]] = []
 
     for gate_key, ap in approvals.items():
+        decision_raw = ap.get("decision", "")
         events.append(
             {
                 "sort_key": ap.get("decided_at", ""),
                 translate("col_event_type"): translate("col_decision"),
-                translate("col_gate"): stage_label(gate_key),
-                translate("col_decision"): ap.get("decision", ""),
+                translate("col_gate"): gate_stage_label(gate_key),
+                translate("col_decision"): translate(
+                    f"decision.{decision_raw}",
+                )
+                if decision_raw
+                else "",
                 translate("col_reviewer"): (
-                    f"{ap.get('reviewer_id', '')} ({ap.get('reviewer_role', '')})"
+                    f"{ap.get('reviewer_id', '')} "
+                    f"({translate(f'role_{ap.get("reviewer_role", "")}')})"
                 ),
                 translate("col_decided_at"): ap.get("decided_at", ""),
                 translate("col_message"): ap.get("comment", ""),
@@ -371,11 +375,11 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
                 "sort_key": lk.get("locked_at", ""),
                 translate("col_event_type"): translate("col_lock_type"),
                 translate("col_gate"): lk.get("lock_type", lock_key),
-                translate("col_decision"): "locked",
+                translate("col_decision"): translate("label_passed"),
                 translate("col_reviewer"): lk.get("locked_by", ""),
                 translate("col_decided_at"): lk.get("locked_at", ""),
                 translate("col_message"): (
-                    f"version: {str(lk.get('subject_version_id', ''))[:16]}"
+                    f"v{lk.get('subject_version_id', '')[:8]}"
                 ),
             }
         )
@@ -392,46 +396,44 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
         )
 
 
-def render_workspace_actions(app: Application) -> None:
-    """Render the Golden workspace load/run buttons in the sidebar."""
+def _artifact_status_label(status: str) -> str:
+    """Translate a raw artifact status into a user-friendly label."""
 
-    notice = st.session_state.pop("golden_workspace_notice", None)
-    if isinstance(notice, str):
-        st.success(notice)
+    key = f"artifact_status_{status}"
+    text = translate(key)
+    # translate() falls back to the key itself when not found.
+    return text if text != key else status
 
-    st.subheader(translate("workspace_actions_header"))
-    st.caption(translate("workspace_actions_caption"))
-    col_load, col_run = st.columns(2)
-    load_clicked = col_load.button(
-        translate("golden_workspace_load"),
-        use_container_width=True,
-    )
-    run_clicked = col_run.button(
-        translate("golden_workspace_run"),
-        type="primary",
-        use_container_width=True,
-    )
 
-    if load_clicked:
-        try:
-            with st.spinner(translate("golden_workspace_loading")):
-                pid = prepare_golden_workspace(app, bump_search_form_version)
-        except (OSError, ValueError) as exc:
-            st.error(translate("golden_demo_load_error", error=str(exc)))
-        else:
-            st.session_state["golden_workspace_notice"] = translate(
-                "golden_workspace_loaded", id=pid[:8]
+def render_artifact_summary(state: dict[str, Any]) -> None:
+    """Render artifact references as a clean, readable table.
+
+    Replaces the previous ``st.json()`` dump with a compact table showing
+    only the columns a user cares about: role, type, version, and status.
+    """
+
+    artifacts = state.get("artifacts", {})
+    if not artifacts:
+        return
+
+    with st.expander(translate("expander_artifact_refs"), expanded=False):
+        rows: list[dict[str, Any]] = []
+        for role, art in artifacts.items():
+            if not isinstance(art, dict):
+                continue
+            rows.append(
+                {
+                    translate("col_artifact_role"): role,
+                    translate("col_artifact_type"): art.get(
+                        "artifact_type", "-"
+                    ),
+                    translate("col_artifact_version"): art.get("version", "-"),
+                    translate("col_artifact_status"): _artifact_status_label(
+                        art.get("status", "")
+                    ),
+                }
             )
-            st.rerun()
-
-    if run_clicked:
-        try:
-            with st.spinner(translate("golden_workspace_running")):
-                pid, _tid = run_golden_workspace_pipeline(app, bump_search_form_version)
-        except (OSError, ValueError) as exc:
-            st.error(translate("golden_demo_load_error", error=str(exc)))
+        if rows:
+            st.dataframe(rows, use_container_width=True, hide_index=True)
         else:
-            st.session_state["golden_workspace_notice"] = translate(
-                "golden_workspace_finished", id=pid[:8]
-            )
-            st.rerun()
+            st.caption(translate("label_no_artifacts"))

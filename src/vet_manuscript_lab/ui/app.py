@@ -55,7 +55,10 @@ from vet_manuscript_lab.ui.tabs.methodology import (
 )
 from vet_manuscript_lab.ui.tabs.pipeline import (
     render_pipeline_bar,
-    render_workspace_actions,
+)
+from vet_manuscript_lab.ui.tabs.review_queue import (
+    render_provenance_inspector,
+    render_review_queue,
 )
 from vet_manuscript_lab.ui.tabs.writing import (
     render_citations,
@@ -123,10 +126,6 @@ def render_workflow(app: Application, project_id: str) -> None:
             thread_id,
         )
 
-        # Golden workspace actions (only for Golden Project)
-        if golden_pid == project_id:
-            render_workspace_actions(app)
-
     with main_col:
         (
             tab_design,
@@ -136,6 +135,7 @@ def render_workflow(app: Application, project_id: str) -> None:
             tab_manuscript,
             tab_review,
             tab_export,
+            tab_review_queue,
         ) = st.tabs(
             [
                 translate("tab_intake_question"),
@@ -145,6 +145,7 @@ def render_workflow(app: Application, project_id: str) -> None:
                 translate("tab_manuscript"),
                 translate("tab_review_compliance"),
                 translate("tab_export"),
+                translate("tab_review_queue"),
             ]
         )
 
@@ -194,6 +195,14 @@ def render_workflow(app: Application, project_id: str) -> None:
                 render_export(state)
                 render_usage_summary(state)
                 render_ai_disclosure(state)
+            else:
+                st.info(translate("info_start_pipeline"))
+
+        with tab_review_queue:
+            if state:
+                render_review_queue(state)
+                st.divider()
+                render_provenance_inspector(state)
             else:
                 st.info(translate("info_start_pipeline"))
 

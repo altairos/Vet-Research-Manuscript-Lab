@@ -5,6 +5,14 @@ from vet_manuscript_lab.services.export.generator import (
     ExportInput,
     MockExportGenerator,
 )
+from vet_manuscript_lab.services.export.privacy_scan import (
+    ComponentPrivacyReport,
+    ExportPrivacyReport,
+    scan_component,
+    scan_export,
+    scan_export_content,
+    summarize_report,
+)
 from vet_manuscript_lab.services.export.renderer import (
     DocxRenderer,
     DocxRenderInput,
@@ -22,6 +30,7 @@ from vet_manuscript_lab.services.export.types import (
 )
 
 __all__ = [
+    "ComponentPrivacyReport",
     "DocxRenderInput",
     "DocxRenderResult",
     "DocxRenderer",
@@ -30,10 +39,15 @@ __all__ = [
     "ExportGenerator",
     "ExportInput",
     "ExportManifest",
+    "ExportPrivacyReport",
     "ExportResult",
     "MockDocxRenderer",
     "MockExportGenerator",
     "PandocDocxRenderer",
     "QuartoDocxRenderer",
     "create_docx_renderer",
+    "scan_component",
+    "scan_export",
+    "scan_export_content",
+    "summarize_report",
 ]

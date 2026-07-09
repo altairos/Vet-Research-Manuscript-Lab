@@ -98,6 +98,38 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Approvals and locks",
         "zh": "审批与锁定",
     },
+    "col_artifact_role": {
+        "en": "Artifact",
+        "zh": "产物",
+    },
+    "col_artifact_type": {
+        "en": "Type",
+        "zh": "类型",
+    },
+    "col_artifact_version": {
+        "en": "Version",
+        "zh": "版本",
+    },
+    "col_artifact_status": {
+        "en": "Status",
+        "zh": "状态",
+    },
+    "artifact_status_in_review": {
+        "en": "In review",
+        "zh": "待审批",
+    },
+    "artifact_status_locked": {
+        "en": "Locked",
+        "zh": "已锁定",
+    },
+    "artifact_status_approved": {
+        "en": "Approved",
+        "zh": "已批准",
+    },
+    "label_no_artifacts": {
+        "en": "No artifacts generated yet.",
+        "zh": "尚未生成任何产物。",
+    },
     "success_protocol_locked": {
         "en": "Protocol is approved and locked.",
         "zh": "方案已审批并锁定。",
@@ -158,6 +190,10 @@ STRINGS: dict[str, dict[str, str]] = {
     "stage.analysis_plan_lock": {"en": "Analysis plan lock", "zh": "分析计划锁定"},
     "stage.statistics_execution": {"en": "Statistics execution", "zh": "统计执行"},
     "stage.results_approval": {"en": "Results approval", "zh": "结果审批"},
+    "stage.argument_spine": {
+        "en": "Argument spine",
+        "zh": "论证骨架",
+    },
     "stage.writing": {"en": "Writing", "zh": "正文写作"},
     "stage.claim_audit": {"en": "Claim audit", "zh": "论点审计"},
     "stage.review": {"en": "Review", "zh": "审阅"},
@@ -1248,6 +1284,216 @@ STRINGS.update(
             "en": "Stay",
             "zh": "留在此处",
         },
+        # -- Phase G: Review Queue tab --------------------------------------
+        "tab_review_queue": {
+            "en": "Needs review",
+            "zh": "待审",
+        },
+        "rq_header": {
+            "en": "Needs Review Queue",
+            "zh": "待审队列",
+        },
+        "rq_empty": {
+            "en": "No items require attention.",
+            "zh": "暂无需要处理的条目。",
+        },
+        "rq_total_items": {
+            "en": "Total items",
+            "zh": "总条目数",
+        },
+        "rq_critical_items": {
+            "en": "Critical",
+            "zh": "严重",
+        },
+        "rq_warning_items": {
+            "en": "Warnings",
+            "zh": "警告",
+        },
+        "rq_filter_category": {
+            "en": "Filter by category",
+            "zh": "按类别筛选",
+        },
+        "rq_items_showing": {
+            "en": "Showing {shown} of {total} items",
+            "zh": "显示 {shown} / {total} 条",
+        },
+        "rq_source_type": {
+            "en": "Source type",
+            "zh": "来源类型",
+        },
+        "rq_source_id": {
+            "en": "Source ID",
+            "zh": "来源 ID",
+        },
+        "rq_related": {
+            "en": "Related",
+            "zh": "关联",
+        },
+        "rq_category_evidence_low_confidence": {
+            "en": "Evidence: low confidence",
+            "zh": "证据：低置信度",
+        },
+        "rq_category_evidence_no_span": {
+            "en": "Evidence: no source span",
+            "zh": "证据：无来源段落",
+        },
+        "rq_category_evidence_needs_review": {
+            "en": "Evidence: needs review",
+            "zh": "证据：需人工审核",
+        },
+        "rq_category_claim_high_risk": {
+            "en": "Claim: high risk",
+            "zh": "论点：高风险",
+        },
+        "rq_category_claim_unsupported": {
+            "en": "Claim: unsupported",
+            "zh": "论点：无支撑",
+        },
+        "rq_category_methodology_finding": {
+            "en": "Methodology finding",
+            "zh": "方法学发现",
+        },
+        "rq_category_review_finding": {
+            "en": "Review finding",
+            "zh": "审阅发现",
+        },
+        "rq_category_compliance_finding": {
+            "en": "Compliance finding",
+            "zh": "合规发现",
+        },
+        "rq_category_section_over_limit": {
+            "en": "Section: over word limit",
+            "zh": "章节：超字数限制",
+        },
+        "rq_category_exploratory_in_abstract": {
+            "en": "Exploratory result in Abstract",
+            "zh": "探索性结果进入摘要",
+        },
+        "rq_category_other": {
+            "en": "Other",
+            "zh": "其他",
+        },
+        "rq_detail_evidence_no_span": {
+            "en": "This evidence item has no linked source span.",
+            "zh": "此证据条目未关联来源段落。",
+        },
+        "rq_detail_evidence_missing_span": {
+            "en": "One or more referenced spans are missing.",
+            "zh": "引用的来源段落缺失。",
+        },
+        "rq_detail_evidence_needs_review": {
+            "en": "Flagged for human review.",
+            "zh": "已标记需人工审核。",
+        },
+        "rq_detail_evidence_low_confidence": {
+            "en": "Extraction confidence is low.",
+            "zh": "抽取置信度较低。",
+        },
+        "rq_detail_claim_unsupported": {
+            "en": "Factual claim has no supporting evidence or result.",
+            "zh": "事实性论点缺少支撑证据或结果。",
+        },
+        "rq_detail_claim_hypothesis_abstract": {
+            "en": "Hypothesis-type claim appears in the Abstract.",
+            "zh": "假设性论点出现在摘要中。",
+        },
+        "rq_detail_claim_overcertain": {
+            "en": "High-certainty claim without support.",
+            "zh": "高确定性论点缺少支撑。",
+        },
+        "rq_detail_section_over_limit": {
+            "en": "Section exceeds the recommended word limit.",
+            "zh": "章节超出建议字数限制。",
+        },
+        # Provenance Inspector
+        "rq_provenance_header": {
+            "en": "Provenance Inspector",
+            "zh": "溯源检视器",
+        },
+        "rq_provenance_select_type": {
+            "en": "Trace from",
+            "zh": "从何处溯源",
+        },
+        "rq_type_claim": {
+            "en": "Claim",
+            "zh": "论点",
+        },
+        "rq_type_evidence": {
+            "en": "Evidence item",
+            "zh": "证据条目",
+        },
+        "rq_type_result": {
+            "en": "Statistical result",
+            "zh": "统计结果",
+        },
+        "rq_provenance_select_claim": {
+            "en": "Select a claim",
+            "zh": "选择论点",
+        },
+        "rq_provenance_select_evidence": {
+            "en": "Select an evidence item",
+            "zh": "选择证据条目",
+        },
+        "rq_provenance_select_result": {
+            "en": "Select a statistical result",
+            "zh": "选择统计结果",
+        },
+        "rq_provenance_no_claims": {
+            "en": "No claims available.",
+            "zh": "无可用论点。",
+        },
+        "rq_provenance_no_evidence": {
+            "en": "No evidence items available.",
+            "zh": "无可用证据条目。",
+        },
+        "rq_provenance_no_results": {
+            "en": "No statistical results available.",
+            "zh": "无可用统计结果。",
+        },
+        "rq_provenance_no_support": {
+            "en": "This claim has no support links.",
+            "zh": "此论点无支撑链接。",
+        },
+        "rq_provenance_support_chain": {
+            "en": "Support chain",
+            "zh": "支撑链",
+        },
+        "rq_provenance_span_missing": {
+            "en": "span not found",
+            "zh": "段落缺失",
+        },
+        "rq_provenance_analysis_run": {
+            "en": "Analysis run",
+            "zh": "分析运行",
+        },
+        "rq_provenance_status": {
+            "en": "status",
+            "zh": "状态",
+        },
+        "rq_provenance_claims_using": {
+            "en": "Claims referencing this object",
+            "zh": "引用此对象的论点",
+        },
+        "rq_evidence_type": {
+            "en": "Evidence type",
+            "zh": "证据类型",
+        },
+        "rq_analysis_class": {
+            "en": "Analysis class",
+            "zh": "分析类别",
+        },
+        "rq_exploratory_result_flag": {
+            "en": "This result is exploratory; do not present as confirmatory.",
+            "zh": "此结果为探索性分析，不可作为确证性结论呈现。",
+        },
+        "rq_run_id": {
+            "en": "Run ID",
+            "zh": "运行 ID",
+        },
+        "rq_reproducible": {
+            "en": "Reproducible",
+            "zh": "可复现",
+        },
     }
 )
 
@@ -1312,6 +1558,34 @@ def status_label(status: str | None, *, lang: str | None = None) -> str:
     return translate(key, lang=lang)
 
 
+# Map approval-gate short names to the workflow-stage label that best
+# describes the paused state shown to the user.
+_GATE_TO_STAGE: dict[str, str] = {
+    "question": "question_approval",
+    "protocol": "protocol_approval",
+    "search_strategy": "search_approval",
+    "analysis_plan": "analysis_plan_approval",
+    "results_interpretation": "results_approval",
+    "argument_spine": "argument_spine",
+    "review": "review",
+    "final_sign_off": "final_sign_off",
+}
+
+
+def gate_stage_label(gate: str | None, *, lang: str | None = None) -> str:
+    """Return a human-readable stage name for an approval *gate*.
+
+    Gate short names (e.g. ``"question"``, ``"protocol"``) differ from the
+    workflow-stage enum values used in :func:`stage_label`.  This helper bridges
+    that gap so the UI never shows a raw key like ``"question"``.
+    """
+
+    if not gate:
+        return ""
+    stage = _GATE_TO_STAGE.get(gate, gate)
+    return stage_label(stage, lang=lang)
+
+
 def gate_field(gate: str, field: str, *, lang: str | None = None) -> str:
     """Translate an approval gate's dynamic ``title``/``summary`` payload."""
 
@@ -1324,6 +1598,7 @@ __all__ = [
     "STRINGS",
     "SUPPORTED_LANGUAGES",
     "gate_field",
+    "gate_stage_label",
     "stage_label",
     "status_label",
     "translate",

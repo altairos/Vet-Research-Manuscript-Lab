@@ -78,31 +78,31 @@ approval gate after a process restart.
 ```text
 src/vet_manuscript_lab/
   domain/
-    conventions.py    # IDs, timestamps, hashes, ArtifactType enum
+    conventions.py    # IDs, timestamps, hashes, ArtifactType, RunMode, EvidenceType
     policies/         # pure policy functions (foundation, evidence, analysis,
-                      #   writing, compliance)
+                      #   writing, compliance, privacy)
   workflow/
     state.py               # WorkflowState TypedDict + stage transitions
     foundation_graph.py    # PROJECT_INIT → PROTOCOL_LOCK
     literature_graph.py    # LITERATURE_SEARCH → EVIDENCE_AUDIT
     analysis_graph.py      # METHODOLOGY_CRITIC → RESULTS_APPROVAL
-    writing_graph.py       # WRITING → REVIEW → REVISION
+    writing_graph.py       # ARGUMENT_SPINE → WRITING → REVIEW → REVISION
     compliance_graph.py    # FINAL_COMPLIANCE_AUDIT → EXPORT → COMPLETE
   services/
     zotero/           # Zotero API client + mapper + synchroniser
     retrieval/        # chunker + hybrid retriever (BM25 / LlamaIndex)
     documents/        # PDF parser + importer
-    analysis/         # dictionary + importer + statistics runner
+    analysis/         # dictionary + importer + statistics runner + validator
     writing/          # section writer + reviewer + reviser (Protocol + Mock)
     compliance/       # STROBE-Vet checklist + auditor (Protocol + Mock)
-    export/           # export generator + DOCX renderer (Protocol + Mock)
+    export/           # export generator + DOCX renderer + privacy scanner
   infrastructure/
     database/         # SQLAlchemy ORM + Alembic migrations
     artifacts/        # content-addressed artifact store
-    checkpoints/      # LangGraph SQLite checkpointer
+    checkpoints/      # LangGraph checkpointer (SQLite / PostgreSQL)
     model_gateway/    # Router Agent + providers + pricing + usage
   ui/
-    app.py            # Streamlit entry point + 7-tab workspace
+    app.py            # Streamlit entry point + 8-tab workspace
     application.py    # Application container (DB, graph, repos)
     golden.py         # Golden Project fixture seeding and demo
     i18n.py           # bilingual labels (English / Chinese)
@@ -116,13 +116,15 @@ src/vet_manuscript_lab/
       writing.py      # manuscript, claims, citations, review
       pipeline.py     # pipeline control bar + workspace actions
       compliance.py   # compliance findings, export, usage
+      review_queue.py # needs-review queue + provenance inspector
 tests/
   test_*.py           # unit, integration, and adversarial tests
 fixtures/
   golden_project/     # synthetic dataset + analysis plan + literature
+  stress_projects/    # adversarial stress fixtures (pdf / data / citation / writing)
 artifacts/            # local development only; ignored by Git
 migrations/
-  versions/           # Alembic migrations (0001–0005, expandable)
+  versions/           # Alembic migrations (0001–0006, expandable)
 docs/
   adr/                # Architecture Decision Records (0001–0010)
 ```
@@ -169,11 +171,46 @@ docs/
    (Quarto → Pandoc → Mock fallback chain).
    55 new tests across policy, graph, and renderer.
 
+8. **Vertical Hardening — Phases A–H** ✅
+   Systematic hardening to ensure the system remains fail-closed,
+   traceable, reproducible, and auditable when real PDFs, real data,
+   and real models enter the pipeline:
+   - **A. RunMode fail-closed** — DEMO / TEST / PRODUCTION modes;
+     production blocks all mock fallbacks (evidence, statistics, writing, DOCX).
+   - **B. Prompt / Version governance** — ModelInvocation records
+     `rendered_prompt_hash`, `prompt_template_id`, `output_schema_version`,
+     and input artifact hashes for full reproducibility.
+   - **C. Evidence type schema** — 10-type `EvidenceType` enum with
+     per-type required metadata validation; migration 0006.
+   - **D. Stress test fixtures** — adversarial fixtures for dirty PDFs,
+     messy data, semantic-similar-but-unsupporting citations, and
+     non-significant / small-sample / wide-CI writing scenarios.
+   - **E. Argument Spine layer** — `ArgumentSpineDraft` with
+     `must_not_claim` constraints generated from result characteristics;
+     inserted between results approval and section writing with its own
+     interrupt gate.
+   - **F. Statistical trustworthiness** — `validate_analysis_results()`
+     checks categorical-as-continuous, binary-outcome linear model,
+     sample-size mismatch, and exploratory-not-marked.
+     `requirements_hash` pins the execution environment.
+     Claim audit warns when exploratory results enter the Abstract.
+   - **G. Review-style UI workbench** — Needs Review Queue aggregating
+     low-confidence evidence, missing spans, unsupported claims, unresolved
+     findings, and over-limit sections; Provenance Inspector for
+     claim → evidence/result → source-span → literature-record tracing.
+   - **H1. Documentation fix** — README and DEVELOPMENT migration/phase
+     descriptions corrected.
+   - **H2. Privacy & redaction hardening** — `scan_for_secrets()`,
+     `scan_for_pii()`, `sanitize_text()` / `sanitize_dict()` for log
+     scrubbing; export-time privacy scan blocks production exports
+     containing detected secrets.
+
 ### Planned
 
-8. **Phase 6 — Production** *(in progress)*
+9. **Phase 6 — Production** *(in progress)*
    - 6.1 — Multi-database backend support (SQLite + PostgreSQL) ✅
-   - 6.2 — Local hardening: RunMode fail-closed, mock-rejection, privacy ✅
+   - 6.2 — Local hardening: RunMode fail-closed, mock-rejection ✅
+   - 6.2b — Privacy & redaction hardening (secret/PII scan, export scan) ✅
    - 6.3 — Observability *(planned)*
    - 6.4 — Background jobs *(planned)*
    - 6.5 — Auth / multi-user *(planned)*
@@ -204,9 +241,9 @@ consistent journal formatting.
 | Gate | Status |
 |---|---|
 | ruff check | All checks passed |
-| ruff format | 119 files formatted |
-| pytest | 391 tests passed |
-| mypy | No new issues (1 pre-existing in repository.py) |
+| ruff format | 135 files formatted |
+| pytest | 604 tests passed, 1 skipped |
+| mypy | No issues found in 92 source files |
 
 ## Architecture Decision Records
 
@@ -255,7 +292,7 @@ After setup, rerun lint, formatting, type checks, and tests with:
 ## Streamlit UI
 
 The Streamlit UI runs the full pipeline from project initialization through
-DOCX export. It is organized as a seven-tab workspace:
+DOCX export. It is organized as an eight-tab workspace:
 
 1. **Intake / Question** — research question, search strategy, data dictionary,
    and analysis plan entry.
@@ -266,6 +303,10 @@ DOCX export. It is organized as a seven-tab workspace:
 5. **Manuscript** — drafted sections, claim traceability, citations, claim audit.
 6. **Review & Compliance** — reviewer findings, revision diff, compliance findings.
 7. **Export** — DOCX export, AI usage summary, AI disclosure.
+8. **Needs Review** — prioritised review queue aggregating low-confidence
+   evidence, unsupported claims, unresolved findings, and over-limit sections;
+   provenance inspector for claim → evidence/result → source-span →
+   literature-record drill-down.
 
 A pipeline control bar is docked as a sticky right sidebar showing the current
 workflow stage and approval gates. The left sidebar provides project management
@@ -294,14 +335,16 @@ ADR-0010 and `.env.example`.
 
 ## Quality gates
 
-The test suite (391 tests across 30 files) includes schema and routing tests,
+The test suite (604 tests across 36 files) includes schema and routing tests,
 checkpoint resume tests, idempotency tests, approval-bypass attempts,
 immutable-version tests, adversarial citation tests, claim-inflation tests,
 statistical reproducibility, model-routing bypass tests, budget-downgrade
-adversarial tests, evidence-pipeline integration tests, golden-project
-end-to-end regression tests, writing/revision cycle tests, compliance audit
-tests, sign-off fail-closed tests, DOCX renderer tests, export package
-integrity tests, and production fail-closed (RunMode) tests.
+adversarial tests, evidence-pipeline integration tests, evidence-type schema
+tests, golden-project end-to-end regression tests, argument-spine constraint
+tests, statistical validation tests, writing/revision cycle tests, compliance
+audit tests, sign-off fail-closed tests, DOCX renderer tests, export package
+integrity tests, production fail-closed (RunMode) tests, stress-test fixtures,
+review-queue aggregation tests, and privacy/PII/secret detection tests.
 
 ## Safety statement
 

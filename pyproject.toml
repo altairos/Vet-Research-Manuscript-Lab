@@ -17,7 +17,7 @@ dependencies = [
   "pymupdf>=1.24,<2",
   "pyzotero>=1.5,<2",
   "sqlalchemy>=2.0,<3",
-  "streamlit>=1.45,<2",
+  "streamlit>=1.58.0,<1.59.0",  # pin to match local dev; CSS selectors target internal DOM
 ]
 
 [project.optional-dependencies]
