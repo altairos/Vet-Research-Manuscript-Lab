@@ -151,7 +151,7 @@ def render_workflow(app: Application, project_id: str) -> None:
 
         # ---- 1. Dashboard ------------------------------------------------
         with tab_dashboard:
-            render_dashboard(state, pending, thread_id)
+            render_dashboard(state, pending, thread_id, app)
 
         # ---- 2. Study Setup ----------------------------------------------
         with tab_setup:

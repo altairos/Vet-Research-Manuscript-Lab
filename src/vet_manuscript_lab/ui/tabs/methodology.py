@@ -10,7 +10,6 @@ from vet_manuscript_lab.ui.components import (
     Metric,
     clean_table,
     metric_strip,
-    short_hash,
 )
 from vet_manuscript_lab.ui.i18n import translate
 
@@ -45,16 +44,17 @@ def render_guideline_mapping(state: dict[str, Any]) -> None:
             st.caption(f"{translate('label_manuscript_status')}: {status}")
 
     with st.expander(translate("show_technical_info"), expanded=False):
+        # Full values shown so user can copy from st.json's built-in copy button
         detail = {}
         if guideline:
             detail["guideline_mapping"] = {
-                "version_id": short_hash(guideline.get("version_id", "")),
-                "content_hash": short_hash(guideline.get("content_hash", "")),
+                "version_id": guideline.get("version_id", ""),
+                "content_hash": guideline.get("content_hash", ""),
             }
         if protocol:
             detail["protocol"] = {
-                "version_id": short_hash(protocol.get("version_id", "")),
-                "content_hash": short_hash(protocol.get("content_hash", "")),
+                "version_id": protocol.get("version_id", ""),
+                "content_hash": protocol.get("content_hash", ""),
             }
         if detail:
             st.json(detail)

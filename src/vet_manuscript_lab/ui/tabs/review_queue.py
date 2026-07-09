@@ -580,6 +580,17 @@ def _provenance_for_claim(
                                     st.caption(
                                         f"{translate('label_seed')}: {seed}"
                                     )
+                                pkg_versions = analysis_run.get(
+                                    "package_versions", {}
+                                )
+                                if isinstance(pkg_versions, dict) and pkg_versions:
+                                    st.caption(
+                                        f"{translate('label_package_versions')}: "
+                                        f"{', '.join(
+                                            f'{k}=={v}'
+                                            for k, v in list(pkg_versions.items())[:6]
+                                        )}"
+                                    )
 
     # Citations
     claim_citations = [c for c in citations if c.get("claim_id") == selected_id]

@@ -1688,6 +1688,60 @@ STRINGS.update(
             "en": "No analysis run recorded.",
             "zh": "未记录分析运行。",
         },
+        # -- Audit event types -----------------------------------------------
+        "audit_stage_started": {
+            "en": "Stage started",
+            "zh": "阶段开始",
+        },
+        "audit_stage_completed": {
+            "en": "Stage completed",
+            "zh": "阶段完成",
+        },
+        "audit_gate_approved": {
+            "en": "Gate approved",
+            "zh": "审批通过",
+        },
+        "audit_gate_rejected": {
+            "en": "Gate rejected",
+            "zh": "审批驳回",
+        },
+        "audit_artifact_created": {
+            "en": "Artifact created",
+            "zh": "产物创建",
+        },
+        "audit_artifact_locked": {
+            "en": "Artifact locked",
+            "zh": "产物锁定",
+        },
+        "audit_run_started": {
+            "en": "Run started",
+            "zh": "运行开始",
+        },
+        "audit_run_completed": {
+            "en": "Run completed",
+            "zh": "运行完成",
+        },
+        # -- Additional labels referenced by dashboard ------------------------
+        "label_argument_spine": {
+            "en": "Argument spine",
+            "zh": "论证主线",
+        },
+        "label_analysis_run": {
+            "en": "Analysis run",
+            "zh": "分析运行",
+        },
+        "section_revision": {
+            "en": "Revision",
+            "zh": "修订",
+        },
+        "section_search_strategy": {
+            "en": "Search strategy",
+            "zh": "检索策略",
+        },
+        "label_protocol_version": {
+            "en": "Protocol",
+            "zh": "研究方案",
+        },
     }
 )
 

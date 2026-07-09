@@ -113,9 +113,7 @@ def apply_theme() -> None:
           'Noto Sans SC','Source Han Sans','Microsoft YaHei',
           system-ui, sans-serif !important;
         }}
-        [data-testid="stIconMaterial"] {{
-          font-family:'Material Symbols Rounded' !important;
-        }}
+        /* Material Icons: let Streamlit handle natively, don't override font */
         .stApp {{
           background:var(--vrl-bg); color:var(--vrl-text);
         }}
@@ -219,9 +217,11 @@ def apply_theme() -> None:
         .pipeline-bar-header {{
           margin-bottom:.5rem; padding-bottom:.35rem;
           border-bottom:1px solid var(--vrl-border);
-          font-size:1rem; color:var(--vrl-primary);
+          font-size:.95rem; color:var(--vrl-primary);
+          white-space: normal; word-break: break-word;
+          line-height:1.4;
         }}
-        .pipeline-bar-header strong {{ font-size:1.05rem; }}
+        .pipeline-bar-header strong {{ font-size:1rem; }}
         [data-testid="stVerticalBlockBorderContainer"]
           [data-testid="stVerticalBlock"] {{
           gap:1.1rem;
@@ -406,6 +406,17 @@ def apply_theme() -> None:
           border-color:#C4DBCF;
         }}
 
+        /* ---- Forms & inputs: ensure visible borders everywhere ---- */
+        [data-baseweb="input"],
+        [data-baseweb="input"] > div,
+        [data-baseweb="select"] > div,
+        [data-baseweb="textarea"],
+        textarea {{
+          border:1px solid var(--vrl-border) !important;
+          border-radius:8px !important;
+          background:var(--vrl-surface) !important;
+        }}
+
         /* Right sticky sidebar */
         [data-testid="stHorizontalBlock"]:has(.pipeline-sidebar-marker) {{
           align-items: flex-start;
@@ -415,6 +426,7 @@ def apply_theme() -> None:
           max-height: calc(100vh - 6rem);
           overflow-y: auto; overflow-x: hidden;
           padding-right: .3rem;
+          word-break: break-word;
         }}
         [data-testid="stColumn"]:has(.pipeline-sidebar-marker)::-webkit-scrollbar {{
           width: 6px;

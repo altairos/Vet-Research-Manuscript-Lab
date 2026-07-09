@@ -102,19 +102,26 @@ src/vet_manuscript_lab/
     checkpoints/      # LangGraph checkpointer (SQLite / PostgreSQL)
     model_gateway/    # Router Agent + providers + pricing + usage
   ui/
-    app.py            # Streamlit entry point + 8-tab workspace
+    app.py            # Streamlit entry point + 5-workspace layout
     application.py    # Application container (DB, graph, repos)
     golden.py         # Golden Project fixture seeding and demo
     i18n.py           # bilingual labels (English / Chinese)
     sidebar.py        # project list, creation, context menu
     state.py          # session-state and intake helpers
-    theme.py          # styling, hero, pipeline phase bar
-    tabs/             # per-tab render functions
+    theme.py          # design system: THEME tokens, CSS, hero, phase tracker
+    components/       # reusable design-system components
+      __init__.py     # public exports
+      cards.py        # card, metric_strip, artifact_card, finding_card
+      badges.py       # badge, status_badge, severity_pill
+      tables.py       # clean_table, collapsible_details, short_hash
+    tabs/             # per-workspace render functions
+      dashboard.py    # command center: status, risk, artifacts, audit log
+      onboarding.py   # empty-state with Golden/New/Import entry cards
       intake.py       # research question + data/analysis intake
       literature.py   # literature records + evidence items
-      methodology.py  # methodology, analysis plan, results
-      writing.py      # manuscript, claims, citations, review
-      pipeline.py     # pipeline control bar + workspace actions
+      methodology.py  # methodology, analysis plan, results, cost
+      writing.py      # manuscript, claims, citations, review, revision diff
+      pipeline.py     # next-action panel + approval gates + review summary
       compliance.py   # compliance findings, export, usage
       review_queue.py # needs-review queue + provenance inspector
 tests/
@@ -292,26 +299,34 @@ After setup, rerun lint, formatting, type checks, and tests with:
 ## Streamlit UI
 
 The Streamlit UI runs the full pipeline from project initialization through
-DOCX export. It is organized as an eight-tab workspace:
+DOCX export. It is organized as a **five-workspace** layout with a sticky
+right-sidebar action panel:
 
-1. **Intake / Question** — research question, search strategy, data dictionary,
-   and analysis plan entry.
-2. **Intake / Data** — dataset upload and variable specification.
-3. **Literature & Evidence** — literature records, evidence items, source spans.
-4. **Methodology & Statistics** — guideline mapping, methodology findings,
-   analysis plan, statistical results, and provenance.
-5. **Manuscript** — drafted sections, claim traceability, citations, claim audit.
-6. **Review & Compliance** — reviewer findings, revision diff, compliance findings.
-7. **Export** — DOCX export, AI usage summary, AI disclosure.
-8. **Needs Review** — prioritised review queue aggregating low-confidence
-   evidence, unsupported claims, unresolved findings, and over-limit sections;
-   provenance inspector for claim → evidence/result → source-span →
-   literature-record drill-down.
+1. **Dashboard** — command center showing current pipeline status, risk
+   summary (critical findings), recent artifacts, stage timeline, cost
+   summary, and a collapsed audit log. When no pipeline run exists, an
+   onboarding empty-state with three entry cards is shown (Golden Project
+   one-click demo, Create New Project, Import).
+2. **Study Setup** — research question (PECO), search strategy, data
+   dictionary, and dataset upload.
+3. **Evidence & Analysis** — literature records, evidence items, source
+   spans, guideline mapping, methodology findings, analysis plan,
+   statistical results, and analysis provenance.
+4. **Manuscript** — drafted sections, claim traceability, citations, claim
+   audit, reviewer findings, revision diff (side-by-side with green/red
+   highlighting), and provenance inspector.
+5. **Audit & Export** — compliance findings, AI usage/cost summary, AI
+   disclosure, DOCX export with provenance package.
 
-A pipeline control bar is docked as a sticky right sidebar showing the current
-workflow stage and approval gates. The left sidebar provides project management
-(click to switch, right-click for rename/delete context menu) and an English /
-Chinese language switch.
+A **Next Action Panel** is docked as a sticky right sidebar showing the
+current workflow stage, approval gates, phase tracker, and a compact
+Review Queue summary (critical/warning counts + top 3 items). Technical
+details (run metrics, artifact table, approval timeline) are collapsed
+under "Show details".
+
+The design system uses a unified color-token palette (THEME dict in
+`theme.py`), reusable card/badge/table components (`ui/components/`),
+and a single-primary-button-per-workspace strategy to guide user attention.
 
 Start the UI with:
 

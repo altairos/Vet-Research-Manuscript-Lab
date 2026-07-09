@@ -10,7 +10,6 @@ from langgraph.types import Command
 from vet_manuscript_lab.ui.application import Application
 from vet_manuscript_lab.ui.components import (
     collapsible_details,
-    short_hash,
 )
 from vet_manuscript_lab.ui.i18n import (
     gate_field,
@@ -75,7 +74,6 @@ def render_pipeline_bar(
 
         if thread_id is not None and config is not None:
             render_phase_tracker(state.get("current_stage"))
-            render_run_metrics(state, thread_id)
             if snapshot.next:
                 next_labels = ", ".join(
                     stage_label(n) for n in snapshot.next
@@ -85,8 +83,11 @@ def render_pipeline_bar(
             st.caption(f"{translate('label_next')}: {next_labels}")
             if pending:
                 render_pending_approval(app, config, pending[0])
-            render_artifact_summary(state)
-            render_approval_timeline(state)
+            # Technical details (run metrics, artifacts, timeline) collapsed
+            with st.expander(translate("show_details"), expanded=False):
+                render_run_metrics(state, thread_id)
+                render_artifact_summary(state)
+                render_approval_timeline(state)
             if not pending and state.get("run_status") == "complete":
                 st.success(translate("success_pipeline_complete"))
 
@@ -438,15 +439,15 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
                     ),
                 }
             )
-            # Collect technical details for collapsible display
+            # Collect full technical details for collapsible display.
+            # Values are stored UNTRUNCED so the user can copy them from
+            # the expanded st.json view (which has a built-in copy button).
             version_id = art.get("version_id", "")
             content_hash = art.get("content_hash", "")
             if version_id or content_hash:
                 tech_details[role] = {
-                    "version_id": short_hash(version_id) if version_id else "-",
-                    "content_hash": (
-                        short_hash(content_hash) if content_hash else "-"
-                    ),
+                    "version_id": version_id or "-",
+                    "content_hash": content_hash or "-",
                 }
         if rows:
             st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -499,34 +500,42 @@ def render_next_action_panel(
 
     # Review Queue compact summary
     if state:
-        from vet_manuscript_lab.ui.components import severity_pill
-        from vet_manuscript_lab.ui.tabs.review_queue import collect_review_items
+        render_review_queue_summary(state)
 
-        items = collect_review_items(state)
-        if items:
-            st.markdown("---")
-            st.markdown(f"**{translate('rq_header')}**")
-            critical = [
-                i for i in items if i.severity in ("critical", "error")
-            ]
-            col_c, col_w = st.columns(2)
-            col_c.metric(
-                translate("rq_critical_items"), len(critical)
+
+def render_review_queue_summary(state: dict[str, Any]) -> None:
+    """Render a compact Review Queue summary for the right sidebar.
+
+    Shows critical/warning counts and the top 3 critical items as
+    severity pills so the user always sees risks at a glance.
+    """
+
+    from vet_manuscript_lab.ui.components import severity_pill
+    from vet_manuscript_lab.ui.tabs.review_queue import collect_review_items
+
+    items = collect_review_items(state)
+    if not items:
+        return
+
+    st.markdown("---")
+    st.markdown(f"**{translate('rq_header')}**")
+    critical = [i for i in items if i.severity in ("critical", "error")]
+    col_c, col_w = st.columns(2)
+    col_c.metric(translate("rq_critical_items"), len(critical))
+    col_w.metric(
+        translate("rq_warning_items"),
+        len(items) - len(critical),
+    )
+    # Show top 3 critical items as compact severity pills
+    for item in critical[:3]:
+        st.markdown(
+            f"{severity_pill(item.severity)} "
+            f"{item.title[:60]}",
+            unsafe_allow_html=True,
+        )
+    if len(items) > 3:
+        st.caption(
+            translate("rq_items_showing").format(
+                shown=min(3, len(critical)), total=len(items)
             )
-            col_w.metric(
-                translate("rq_warning_items"),
-                len(items) - len(critical),
-            )
-            # Show top 3 critical items as compact severity pills
-            for item in critical[:3]:
-                st.markdown(
-                    f"{severity_pill(item.severity)} "
-                    f"{item.title[:60]}",
-                    unsafe_allow_html=True,
-                )
-            if len(items) > 3:
-                st.caption(
-                    translate("rq_items_showing").format(
-                        shown=min(3, len(critical)), total=len(items)
-                    )
-                )
+        )

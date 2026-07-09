@@ -2,12 +2,37 @@
 
 from __future__ import annotations
 
+import html
 from typing import Any
 
 import streamlit as st
 
 from vet_manuscript_lab.ui.components import short_hash
 from vet_manuscript_lab.ui.i18n import translate
+
+# Background colours for diff highlighting.
+_DIFF_TONES: dict[str, str] = {
+    "success": "#DFF3E8",
+    "danger": "#FEE4E2",
+}
+
+
+def _render_highlighted_lines(lines: list[str], *, tone: str) -> None:
+    """Render diff lines with a coloured background (green=added, red=removed)."""
+
+    bg = _DIFF_TONES.get(tone, "#EEF2F6")
+    blocks: list[str] = []
+    for line in lines:
+        safe = html.escape(line)
+        blocks.append(
+            f'<div style="background:{bg};'
+            f'border-radius:4px;padding:.15rem .5rem;'
+            f'margin-bottom:.15rem;font-size:.85rem;">{safe}</div>'
+        )
+    st.markdown(
+        f'<div>{"".join(blocks)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def render_manuscript(state: dict[str, Any]) -> None:
@@ -258,15 +283,17 @@ def render_revision_diff(state: dict[str, Any]) -> None:
                 if before:
                     before_lines = before.splitlines(keepends=False)
                     after_lines = after.splitlines(keepends=False)
-                    diff = difflib.unified_diff(
-                        before_lines,
-                        after_lines,
-                        lineterm="",
-                        n=1,
-                    )
-                    diff_text = "\n".join(diff)
-                    if diff_text.strip():
-                        st.code(diff_text, language="diff")
+                    # Use ndiff to identify removed/changed lines
+                    diff = difflib.ndiff(before_lines, after_lines)
+                    removed_lines = [
+                        line[2:]
+                        for line in diff
+                        if line.startswith("- ")
+                    ]
+                    if removed_lines:
+                        _render_highlighted_lines(
+                            removed_lines, tone="danger"
+                        )
                     else:
                         st.write(before)
                 else:
@@ -274,7 +301,23 @@ def render_revision_diff(state: dict[str, Any]) -> None:
 
             with col_after, st.container(border=True):
                 st.markdown(f"**{translate('col_after')}**")
-                st.write(after)
+                if after:
+                    before_lines = before.splitlines(keepends=False)
+                    after_lines = after.splitlines(keepends=False)
+                    diff = difflib.ndiff(before_lines, after_lines)
+                    added_lines = [
+                        line[2:]
+                        for line in diff
+                        if line.startswith("+ ")
+                    ]
+                    if added_lines:
+                        _render_highlighted_lines(
+                            added_lines, tone="success"
+                        )
+                    else:
+                        st.write(after)
+                else:
+                    st.caption(translate("label_no_changes"))
 
 
 def render_claim_traceability(state: dict[str, Any]) -> None:
