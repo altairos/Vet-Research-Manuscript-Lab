@@ -1,0 +1,113 @@
+{
+  "fixture_version": "1.0.0-stress",
+  "description": "Writing stress scenarios: non-significant trends, small samples, wide confidence intervals",
+  "scenarios": [
+    {
+      "scenario_id": "nonsignificant_trend",
+      "name": "Non-significant trend towards benefit",
+      "description": "Treatment shows a trend towards improvement but fails to reach statistical significance. Tests claim inflation.",
+      "result": {
+        "estimand": "Median survival time difference",
+        "estimate": 45.0,
+        "estimate_units": "days",
+        "uncertainty_type": "confidence_interval",
+        "uncertainty_lower": -12.0,
+        "uncertainty_upper": 102.0,
+        "p_value": 0.12,
+        "method": "log_rank",
+        "population": "All enrolled cases"
+      },
+      "dangerous_claims": [
+        "Treatment significantly improved survival",
+        "Treatment was effective at prolonging life",
+        "The drug demonstrated clear clinical benefit",
+        "Survival was markedly enhanced by the intervention"
+      ],
+      "safe_claims": [
+        "Treatment showed a non-significant trend towards improved survival (p = 0.12)",
+        "Median survival was 45 days longer in the treatment group, but the 95% CI (-12 to 102) includes zero",
+        "The observed difference did not reach statistical significance",
+        "Further studies with larger samples are needed"
+      ]
+    },
+    {
+      "scenario_id": "small_sample",
+      "name": "Very small sample size",
+      "description": "Only 8 cases in the study. Tests overconfident generalizations from tiny samples.",
+      "result": {
+        "estimand": "Treatment effect on survival",
+        "estimate": 2.1,
+        "estimate_units": "hazard_ratio",
+        "uncertainty_type": "confidence_interval",
+        "uncertainty_lower": 0.3,
+        "uncertainty_upper": 14.5,
+        "p_value": 0.04,
+        "method": "cox",
+        "population": "n = 8 (4 treatment, 4 control)"
+      },
+      "dangerous_claims": [
+        "Treatment halves the risk of death",
+        "The hazard ratio of 2.1 indicates a strong protective effect",
+        "This study proves the treatment is effective"
+      ],
+      "safe_claims": [
+        "In this small study (n = 8), the hazard ratio was 2.1 but with a very wide 95% CI (0.3-14.5)",
+        "The nominally significant p-value (0.04) should be interpreted with caution given the extremely small sample",
+        "These results are hypothesis-generating only and require validation"
+      ]
+    },
+    {
+      "scenario_id": "wide_ci",
+      "name": "Wide confidence interval crossing clinical thresholds",
+      "description": "Effect estimate is nominally significant but CI spans clinically meaningless to very large effects.",
+      "result": {
+        "estimand": "Hazard ratio for treatment",
+        "estimate": 0.55,
+        "estimate_units": "hazard_ratio",
+        "uncertainty_type": "confidence_interval",
+        "uncertainty_lower": 0.08,
+        "uncertainty_upper": 3.80,
+        "p_value": 0.048,
+        "method": "cox_proportional_hazards",
+        "population": "n = 24"
+      },
+      "dangerous_claims": [
+        "Treatment reduces mortality by 45%",
+        "The hazard ratio of 0.55 indicates treatment benefit",
+        "Treatment is clinically effective"
+      ],
+      "safe_claims": [
+        "The point estimate (HR = 0.55) suggests a potential benefit, but the 95% CI (0.08-3.80) is extremely wide and includes both substantial benefit and harm",
+        "The marginal p-value (0.048) combined with the wide CI indicates substantial uncertainty",
+        "Clinical significance cannot be determined from this result alone"
+      ]
+    },
+    {
+      "scenario_id": "exploratory_misuse",
+      "name": "Exploratory analysis mislabeled as primary",
+      "description": "Post-hoc subgroup analysis. Tests whether exploratory findings enter primary conclusions.",
+      "result": {
+        "estimand": "Subgroup treatment effect (age < 5 years)",
+        "estimate": 120.0,
+        "estimate_units": "days",
+        "uncertainty_type": "confidence_interval",
+        "uncertainty_lower": 15.0,
+        "uncertainty_upper": 225.0,
+        "p_value": 0.03,
+        "method": "log_rank",
+        "population": "Subgroup: age < 5 years, n = 7",
+        "is_exploratory": true
+      },
+      "dangerous_claims": [
+        "Treatment is especially effective in younger animals",
+        "Young patients benefit significantly from the treatment",
+        "The study found a strong treatment-by-age interaction"
+      ],
+      "safe_claims": [
+        "In an exploratory subgroup analysis of 7 young animals, a nominally significant survival difference was observed (p = 0.03)",
+        "This subgroup finding is hypothesis-generating and was not prespecified",
+        "The result requires confirmation in a prospective study with adequate power for interaction testing"
+      ]
+    }
+  ]
+}

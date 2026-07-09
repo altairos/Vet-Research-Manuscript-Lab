@@ -28,9 +28,12 @@ from vet_manuscript_lab.infrastructure.model_gateway.router import (
 )
 from vet_manuscript_lab.infrastructure.model_gateway.types import (
     AgentTaskSpec,
+    ArtifactRef,
     BudgetLimit,
     ModelInvocation,
     ModelTier,
+    PromptInputManifest,
+    PromptTemplate,
     RoutingDecision,
     TaskKind,
 )
@@ -465,6 +468,266 @@ class ModelGatewayAdversarialTests(unittest.TestCase):
         inv = gateway.usage_log.invocations[0]
         with self.assertRaises(AttributeError):
             inv.status = "tampered"  # type: ignore[misc]
+
+
+class PromptGovernanceTests(unittest.TestCase):
+    """Tests for Phase B: prompt template + version governance fields."""
+
+    # -----------------------------------------------------------------
+    # PromptTemplate dataclass
+    # -----------------------------------------------------------------
+
+    def test_prompt_template_is_frozen(self) -> None:
+        """PromptTemplate must be immutable."""
+
+        pt = PromptTemplate(
+            template_id="section_writer_v2",
+            version="2.1",
+            task_kind=TaskKind.SECTION_WRITING,
+            template_hash="abc123",
+        )
+        with self.assertRaises(AttributeError):
+            pt.version = "3.0"  # type: ignore[misc]
+
+    def test_prompt_template_fields(self) -> None:
+        """PromptTemplate stores all expected fields."""
+
+        pt = PromptTemplate(
+            template_id="methodology_critic_v1",
+            version="1.0",
+            task_kind=TaskKind.METHODOLOGY_CRITIC,
+            template_hash="sha256:deadbeef",
+        )
+        self.assertEqual(pt.template_id, "methodology_critic_v1")
+        self.assertEqual(pt.version, "1.0")
+        self.assertEqual(pt.task_kind, TaskKind.METHODOLOGY_CRITIC)
+        self.assertEqual(pt.template_hash, "sha256:deadbeef")
+
+    # -----------------------------------------------------------------
+    # ArtifactRef + PromptInputManifest
+    # -----------------------------------------------------------------
+
+    def test_artifact_ref_is_frozen(self) -> None:
+        """ArtifactRef must be immutable."""
+
+        ref = ArtifactRef(
+            artifact_id="protocol",
+            version_id="v1",
+            content_hash="h1",
+        )
+        with self.assertRaises(AttributeError):
+            ref.artifact_id = "tampered"  # type: ignore[misc]
+
+    def test_prompt_input_manifest_extracts_ids_and_hashes(self) -> None:
+        """PromptInputManifest.artifact_ids / artifact_hashes derive from refs."""
+
+        manifest = PromptInputManifest(
+            artifact_refs=(
+                ArtifactRef("protocol", "v1", "hash_a"),
+                ArtifactRef("evidence", "v3", "hash_b"),
+            )
+        )
+        self.assertEqual(manifest.artifact_ids, ("protocol", "evidence"))
+        self.assertEqual(manifest.artifact_hashes, ("hash_a", "hash_b"))
+
+    def test_prompt_input_manifest_default_empty(self) -> None:
+        """Default PromptInputManifest has empty tuples."""
+
+        manifest = PromptInputManifest()
+        self.assertEqual(manifest.artifact_ids, ())
+        self.assertEqual(manifest.artifact_hashes, ())
+
+    # -----------------------------------------------------------------
+    # Governance fields in ModelInvocation
+    # -----------------------------------------------------------------
+
+    def test_invoke_without_governance_fields_defaults(self) -> None:
+        """invoke() without governance params computes hash but has no template refs."""
+
+        gateway = ModelGateway()
+        result = gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt="Write intro.",
+        )
+        inv = result.invocation
+        self.assertIsNone(inv.prompt_template_id)
+        # rendered_prompt_hash is always computed from the prompt
+        self.assertTrue(inv.rendered_prompt_hash)
+        self.assertEqual(inv.output_schema_version, "")
+        self.assertEqual(inv.input_artifact_ids, ())
+        self.assertEqual(inv.input_artifact_hashes, ())
+        self.assertEqual(inv.validator_version, "")
+
+    def test_invoke_with_prompt_template_records_fields(self) -> None:
+        """invoke() with prompt_template records template_id and version."""
+
+        pt = PromptTemplate(
+            template_id="section_writer_v2",
+            version="2.1",
+            task_kind=TaskKind.SECTION_WRITING,
+            template_hash="sha256:tpl_body",
+        )
+        gateway = ModelGateway()
+        result = gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt="Write intro with evidence.",
+            prompt_template=pt,
+            output_schema_version="section_v3",
+            validator_version="validator_v2",
+        )
+        inv = result.invocation
+        self.assertEqual(inv.prompt_template_id, "section_writer_v2")
+        self.assertEqual(inv.prompt_template_version, "2.1")
+        self.assertEqual(inv.output_schema_version, "section_v3")
+        self.assertEqual(inv.validator_version, "validator_v2")
+
+    def test_rendered_prompt_hash_is_reproducible(self) -> None:
+        """Same prompt → same rendered_prompt_hash across invocations."""
+
+        gateway = ModelGateway()
+        prompt = "Analyze the survival data and report findings."
+        result1 = gateway.invoke(
+            _spec(TaskKind.METHODOLOGY_CRITIC),
+            prompt=prompt,
+            output_schema_version="v1",
+        )
+        result2 = gateway.invoke(
+            _spec(TaskKind.METHODOLOGY_CRITIC),
+            prompt=prompt,
+            output_schema_version="v1",
+        )
+        self.assertEqual(
+            result1.invocation.rendered_prompt_hash,
+            result2.invocation.rendered_prompt_hash,
+        )
+        self.assertTrue(result1.invocation.rendered_prompt_hash)
+
+    def test_rendered_prompt_hash_differs_for_different_prompts(self) -> None:
+        """Different prompts → different rendered_prompt_hash."""
+
+        gateway = ModelGateway()
+        r1 = gateway.invoke(
+            _spec(), prompt="Write about dogs.", output_schema_version="v1"
+        )
+        r2 = gateway.invoke(
+            _spec(), prompt="Write about cats.", output_schema_version="v1"
+        )
+        self.assertNotEqual(
+            r1.invocation.rendered_prompt_hash,
+            r2.invocation.rendered_prompt_hash,
+        )
+
+    def test_invoke_with_input_artifact_refs_records_ids_and_hashes(self) -> None:
+        """invoke() with input_artifact_refs records artifact provenance."""
+
+        manifest = PromptInputManifest(
+            artifact_refs=(
+                ArtifactRef("protocol", "v1", "hash_proto"),
+                ArtifactRef("evidence_ledger", "v5", "hash_ev"),
+            )
+        )
+        gateway = ModelGateway()
+        result = gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt="Write methods section.",
+            input_artifact_refs=manifest,
+        )
+        inv = result.invocation
+        self.assertEqual(inv.input_artifact_ids, ("protocol", "evidence_ledger"))
+        self.assertEqual(inv.input_artifact_hashes, ("hash_proto", "hash_ev"))
+
+    def test_rendered_prompt_hash_equals_input_hash(self) -> None:
+        """rendered_prompt_hash and input_hash are both SHA-256 of the prompt."""
+
+        gateway = ModelGateway()
+        result = gateway.invoke(
+            _spec(),
+            prompt="Test prompt.",
+            output_schema_version="v1",
+        )
+        inv = result.invocation
+        self.assertEqual(inv.rendered_prompt_hash, inv.input_hash)
+
+    # -----------------------------------------------------------------
+    # Serialization (UsageLog.to_dict)
+    # -----------------------------------------------------------------
+
+    def test_usage_log_to_dict_includes_governance_fields(self) -> None:
+        """UsageLog.to_dict() must serialize governance fields."""
+
+        pt = PromptTemplate(
+            template_id="critic_v3",
+            version="3.0",
+            task_kind=TaskKind.METHODOLOGY_CRITIC,
+            template_hash="sha256:body",
+        )
+        manifest = PromptInputManifest(
+            artifact_refs=(ArtifactRef("plan", "v2", "hash_plan"),)
+        )
+        gateway = ModelGateway()
+        gateway.invoke(
+            _spec(TaskKind.METHODOLOGY_CRITIC),
+            prompt="Review methodology.",
+            prompt_template=pt,
+            output_schema_version="findings_v2",
+            input_artifact_refs=manifest,
+            validator_version="val_v1",
+        )
+        data = gateway.usage_log.to_dict()
+        inv_data = data["invocations"][0]
+        self.assertEqual(inv_data["prompt_template_id"], "critic_v3")
+        self.assertTrue(inv_data["rendered_prompt_hash"])
+        self.assertEqual(inv_data["output_schema_version"], "findings_v2")
+        self.assertEqual(inv_data["input_artifact_ids"], ["plan"])
+        self.assertEqual(inv_data["input_artifact_hashes"], ["hash_plan"])
+        self.assertEqual(inv_data["validator_version"], "val_v1")
+
+    def test_usage_log_to_dict_defaults_when_no_governance(self) -> None:
+        """UsageLog.to_dict() with no governance params has no template refs."""
+
+        gateway = ModelGateway()
+        gateway.invoke(_spec(), prompt="Simple.")
+        data = gateway.usage_log.to_dict()
+        inv_data = data["invocations"][0]
+        self.assertIsNone(inv_data["prompt_template_id"])
+        # rendered_prompt_hash is always computed
+        self.assertTrue(inv_data["rendered_prompt_hash"])
+        self.assertEqual(inv_data["output_schema_version"], "")
+        self.assertEqual(inv_data["input_artifact_ids"], [])
+        self.assertEqual(inv_data["input_artifact_hashes"], [])
+        self.assertEqual(inv_data["validator_version"], "")
+
+    def test_governance_fields_survive_fallback(self) -> None:
+        """Fallback invocations also carry governance fields."""
+
+        pt = PromptTemplate(
+            template_id="writer_v1",
+            version="1.0",
+            task_kind=TaskKind.SECTION_WRITING,
+            template_hash="sha256:body",
+        )
+        gateway = ModelGateway(
+            provider=MockProvider(fail_first=1),
+        )
+        result = gateway.invoke(
+            _spec(TaskKind.SECTION_WRITING),
+            prompt="Write results.",
+            prompt_template=pt,
+            output_schema_version="section_v2",
+        )
+        inv = result.invocation
+        self.assertEqual(inv.status, "fallback")
+        self.assertEqual(inv.prompt_template_id, "writer_v1")
+        self.assertEqual(inv.output_schema_version, "section_v2")
+        self.assertTrue(inv.rendered_prompt_hash)
+
+    def test_backward_compatibility_prompt_template_version(self) -> None:
+        """Without prompt_template param, old prompt_template_version is used."""
+
+        gateway = ModelGateway(prompt_template_version="legacy_v5")
+        result = gateway.invoke(_spec(), prompt="Hello.")
+        self.assertEqual(result.invocation.prompt_template_version, "legacy_v5")
+        self.assertIsNone(result.invocation.prompt_template_id)
 
 
 if __name__ == "__main__":

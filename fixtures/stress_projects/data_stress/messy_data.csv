@@ -1,0 +1,16 @@
+case_id,species,age_years,treatment_group,survival_months,temperature,weight_kg
+CASE-001,canine,8.5,1,24.0,38.5,25.3
+CASE-002,CANINE,10.2,0,18.5,39.1,30.1
+CASE-003,feline,5.1,1,,38.2,4.5
+CASE-004,Canine,12.0,0,NA,40.0,28.7
+CASE-005,Feline,7.3,1,30.0,39.5,5.2
+CASE-006,canine,,0,22.0,38.8,NA
+CASE-007,feline,4.2,1,36.0,,3.8
+CASE-008,canine,9.5,1,28.0,39.0,27.0
+CASE-009,feline,11.1,0,15.5,40.5,
+CASE-010,canine,-5.0,1,24.0,41.2,26.5
+CASE-011,feline,3.8,1,999.0,38.0,4.0
+CASE-012,canine,8.0,2,20.0,39.0,25.0
+CASE-013,hamster,2.0,1,18.0,37.5,0.15
+CASE-014,canine,7.5,1,23.0,38.9,N/A
+CASE-015,feline,6.0,0,19.0,39.3,4.8

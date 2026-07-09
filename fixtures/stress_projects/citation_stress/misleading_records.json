@@ -1,0 +1,84 @@
+{
+  "fixture_version": "1.0.0-stress",
+  "description": "Literature records that are semantically similar to the research question but do NOT support the claim. Tests adversarial citation behavior.",
+  "records": [
+    {
+      "literature_id": "stress-lit-001",
+      "title": "Feline oncology: a comprehensive review of treatment modalities",
+      "authors": ["Synthetic Reviewer A"],
+      "year": 2023,
+      "journal": "Synthetic Veterinary Reviews",
+      "doi": "10.1000/stress.2023.001",
+      "item_type": "journalArticle",
+      "species_scope": ["feline"],
+      "abstract": "This review provides an overview of treatment options for feline tumors. It mentions chemotherapy, radiation, and surgery as potential modalities. However, no specific survival data or comparative outcomes are reported. The review concludes that more research is needed.",
+      "tags": ["review", "feline", "oncology", "treatment"],
+      "support_level": "background_only"
+    },
+    {
+      "literature_id": "stress-lit-002",
+      "title": "Survival analysis methods in veterinary medicine: a methodological overview",
+      "authors": ["Synthetic Methodologist B"],
+      "year": 2022,
+      "journal": "Journal of Synthetic Statistical Methods",
+      "doi": "10.1000/stress.2022.002",
+      "item_type": "journalArticle",
+      "species_scope": ["canine", "feline"],
+      "abstract": "This paper discusses Kaplan-Meier estimation, Cox proportional hazards, and log-rank tests. It describes the mathematical foundations but does not report any clinical outcomes. The abstract mentions canine lymphoma as an example application area, but no treatment effect estimates are provided.",
+      "tags": ["methodology", "survival analysis", "review"],
+      "support_level": "methodological_context"
+    },
+    {
+      "literature_id": "stress-lit-003",
+      "title": "Case report: a single canine patient with lymphoma treated with combination chemotherapy",
+      "authors": ["Synthetic Clinician C"],
+      "year": 2021,
+      "journal": "Synthetic Case Reports in Veterinary Medicine",
+      "doi": "10.1000/stress.2021.003",
+      "item_type": "journalArticle",
+      "species_scope": ["canine"],
+      "abstract": "We present a single case of a 10-year-old golden retriever diagnosed with multicentric lymphoma who received CHOP chemotherapy and survived for 18 months. This is a single case report and findings cannot be generalized.",
+      "tags": ["case report", "canine", "lymphoma", "chemotherapy"],
+      "support_level": "anecdotal"
+    },
+    {
+      "literature_id": "stress-lit-004",
+      "title": "In vitro effects of chemotherapy agents on canine lymphoma cell lines",
+      "authors": ["Synthetic Researcher D"],
+      "year": 2024,
+      "journal": "Synthetic In Vitro Pharmacology",
+      "doi": "10.1000/stress.2024.004",
+      "item_type": "journalArticle",
+      "species_scope": ["canine"],
+      "abstract": "This in vitro study examined the cytotoxic effects of doxorubicin and vincristine on cultured canine lymphoma cell lines. IC50 values were determined. However, in vitro results do not directly translate to clinical survival outcomes in patients.",
+      "tags": ["in vitro", "canine", "lymphoma", "pharmacology"],
+      "support_level": "mechanistic_hypothesis"
+    },
+    {
+      "literature_id": "stress-lit-005",
+      "title": "Retrospective study of feline mammary tumors and surgical outcomes",
+      "authors": ["Synthetic Surgeon E"],
+      "year": 2023,
+      "journal": "Synthetic Feline Surgery",
+      "doi": "10.1000/stress.2023.005",
+      "item_type": "journalArticle",
+      "species_scope": ["feline"],
+      "abstract": "This study examined survival after mastectomy in 45 feline patients with mammary adenocarcinoma. Median survival was 420 days. While this is a feline survival study, the cancer type and treatment modality (surgery) are different from the research question about canine lymphoma chemotherapy.",
+      "tags": ["feline", "survival", "surgery", "mammary"],
+      "support_level": "population_mismatch"
+    },
+    {
+      "literature_id": "stress-lit-006",
+      "title": "Prognostic factors in canine lymphoma: a narrative review without systematic methodology",
+      "authors": ["Synthetic Narrator F"],
+      "year": 2020,
+      "journal": "Synthetic Veterinary Newsletter",
+      "doi": "10.1000/stress.2020.006",
+      "item_type": "journalArticle",
+      "species_scope": ["canine"],
+      "abstract": "An informal narrative review citing various studies on prognostic factors for canine lymphoma. Claims that chemotherapy 'appears beneficial' but provides no specific effect sizes, confidence intervals, or systematic comparisons. The methodology is unclear and no PRISMA or similar guidelines were followed.",
+      "tags": ["review", "narrative", "canine", "lymphoma", "prognosis"],
+      "support_level": "unsupported_claim"
+    }
+  ]
+}

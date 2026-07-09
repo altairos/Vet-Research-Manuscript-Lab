@@ -33,6 +33,8 @@ from vet_manuscript_lab.infrastructure.model_gateway.types import (
     AgentTaskSpec,
     BudgetLimit,
     ModelInvocation,
+    PromptInputManifest,
+    PromptTemplate,
     TokenUsageRecord,
     UsageLog,
 )
@@ -132,11 +134,27 @@ class ModelGateway:
         *,
         prompt: str,
         budget: BudgetLimit | None = None,
+        prompt_template: PromptTemplate | None = None,
+        output_schema_version: str = "",
+        input_artifact_refs: PromptInputManifest | None = None,
+        validator_version: str = "",
     ) -> GatewayResult:
         """Route → call provider → record invocation.
 
         Returns a ``GatewayResult`` containing the output text and the
         full ``ModelInvocation`` provenance record.
+
+        Governance parameters (Phase B):
+
+        - ``prompt_template``: versioned prompt identity (template_id,
+          version, template_hash).  When omitted, falls back to the
+          gateway's default ``prompt_template_version``.
+        - ``output_schema_version``: version of the output schema
+          validator used to check the provider response.
+        - ``input_artifact_refs``: manifest of input artifacts consumed
+          by the prompt rendering, enabling reproducibility audits.
+        - ``validator_version``: version of the structured-output
+          validator that checked the response.
 
         Raises ``BudgetExhaustedError`` if budget is insufficient.
         """
@@ -150,6 +168,20 @@ class ModelGateway:
             )
 
         input_hash = sha256_bytes(prompt.encode())
+        rendered_prompt_hash = sha256_bytes(prompt.encode())
+
+        # Resolve governance fields
+        template_id: str | None = None
+        template_version = self._prompt_template_version
+        if prompt_template is not None:
+            template_id = prompt_template.template_id
+            template_version = prompt_template.version
+
+        artifact_ids: tuple[str, ...] = ()
+        artifact_hashes: tuple[str, ...] = ()
+        if input_artifact_refs is not None:
+            artifact_ids = input_artifact_refs.artifact_ids
+            artifact_hashes = input_artifact_refs.artifact_hashes
 
         # Try primary model, then fallback chain
         models_to_try: list[tuple[str, str | None]] = [(decision.model_id, None)]
@@ -177,7 +209,7 @@ class ModelGateway:
                 model_id=model_id,
                 provider=profile.provider,
                 tier=profile.tier,
-                prompt_template_version=self._prompt_template_version,
+                prompt_template_version=template_version,
                 input_hash=input_hash,
                 routing_decision=decision,
                 usage=usage,
@@ -185,6 +217,12 @@ class ModelGateway:
                 fallback_from=fallback_from,
                 error_message=None,
                 timestamp=utc_now(),
+                prompt_template_id=template_id,
+                rendered_prompt_hash=rendered_prompt_hash,
+                output_schema_version=output_schema_version,
+                input_artifact_ids=artifact_ids,
+                input_artifact_hashes=artifact_hashes,
+                validator_version=validator_version,
             )
             self._invocations.append(invocation)
 
@@ -200,7 +238,7 @@ class ModelGateway:
             model_id=decision.model_id,
             provider=decision.provider,
             tier=decision.tier,
-            prompt_template_version=self._prompt_template_version,
+            prompt_template_version=template_version,
             input_hash=input_hash,
             routing_decision=decision,
             usage=TokenUsageRecord(
@@ -214,6 +252,12 @@ class ModelGateway:
             fallback_from=None,
             error_message=last_error,
             timestamp=utc_now(),
+            prompt_template_id=template_id,
+            rendered_prompt_hash=rendered_prompt_hash,
+            output_schema_version=output_schema_version,
+            input_artifact_ids=artifact_ids,
+            input_artifact_hashes=artifact_hashes,
+            validator_version=validator_version,
         )
         self._invocations.append(fail_invocation)
         raise ProviderError(

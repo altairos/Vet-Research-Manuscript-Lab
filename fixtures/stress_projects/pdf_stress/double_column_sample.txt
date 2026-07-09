@@ -1,0 +1,58 @@
+Journal of Synthetic Veterinary Research, Vol. 42, No. 3, 2024              Page 1 of 8
+DOI: 10.1000/synth.2024.stress.001
+
+Canine Survival After Chemotherapy: A                          ABSTRACT
+Retrospective Observational Study
+                                                                 Objective: To assess survival outcomes in canine
+                                                                 patients receiving combination chemotherapy
+Authors: Synthetic A, Synthetic B,                               regimens for lymphoma.
+Synthetic C
+                                                                 Methods: Retrospective review of medical records
+                                                                 from 2018-2023. Kaplan-Meier survival analysis
+                                                                 was performed with log-rank tests for group
+                                                                 comparisons.
+
+Key Words: canine; lymphoma; chemotherapy;                      Results: Median survival time was 285 days
+survival analysis; retrospective study                          (95% CI: 210-360). Treatment group showed
+                                                                 significantly longer survival compared to
+                                                                 historical controls (p = 0.003).
+
+Running title: Canine Chemotherapy Survival                     Conclusion: Combination chemotherapy is
+                                                                 associated with improved survival in canine
+                                                                 lymphoma patients.
+
+Corresponding author: synthetic@example.com                    (Table 1 continues on next page)
+Telephone: +1-555-0100
+Fax: +1-555-0101
+
+© 2024 Journal of Synthetic Veterinary Research. All rights reserved.
+
+INTRODUCTION
+
+Canine lymphoma is one of the most common hematopoietic tumors in
+dogs, accounting for approximately 7-24% of all canine cancers [1].
+The CHOP-based chemotherapy protocol (cyclophosphamide, doxorubicin,
+vincristine, and prednisone) has been the standard of care for
+decades, with reported median survival times ranging from 6 to 12
+months depending on protocol variations and patient characteristics.
+
+Several factors influence treatment outcomes, including clinical
+stage, immunophenotype (B-cell vs T-cell), substage (a vs b), and
+presence of hypercalcemia [2,3]. Recent studies have also explored
+the role of breed-specific predispositions and molecular markers
+in predicting treatment response [4].
+
+However, most published studies suffer from small sample sizes,
+single-institution bias, and inconsistent reporting of censoring
+patterns. The STROBE-Vet guidelines were developed to address
+these reporting gaps in veterinary observational studies [5].
+
+MATERIALS AND METHODS
+
+Study Population
+
+This retrospective study included all canine patients diagnosed
+with multicentric lymphoma at the Synthetic Veterinary Teaching
+Hospital between January 2018 and December 2023. Patients were
+included if they received at least one cycle of CHOP chemotherapy
+and had complete medical records including follow-up data.

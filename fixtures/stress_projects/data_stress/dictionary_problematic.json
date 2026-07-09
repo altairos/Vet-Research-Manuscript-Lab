@@ -1,0 +1,66 @@
+{
+  "fixture_version": "1.0.0-stress",
+  "description": "Problematic dictionary for stress testing: missing units, bad roles, wrong types",
+  "dataset": {
+    "name": "Stress test messy dataset",
+    "file": "messy_data.csv"
+  },
+  "variables": [
+    {
+      "name": "case_id",
+      "var_type": "continuous",
+      "role": "outcome",
+      "unit": "years",
+      "missing_code": null,
+      "description": "ID column miscategorized as continuous outcome"
+    },
+    {
+      "name": "species",
+      "var_type": "continuous",
+      "role": "covariate",
+      "unit": null,
+      "missing_code": "unknown",
+      "description": "Species miscategorized as continuous without unit"
+    },
+    {
+      "name": "age_years",
+      "var_type": "binary",
+      "role": "exposure",
+      "unit": "years",
+      "missing_code": "NA",
+      "description": "Age miscategorized as binary with unit"
+    },
+    {
+      "name": "treatment_group",
+      "var_type": "continuous",
+      "role": "id",
+      "unit": null,
+      "missing_code": null,
+      "description": "Treatment as continuous ID (no outcome/exposure roles)"
+    },
+    {
+      "name": "survival_months",
+      "var_type": "continuous",
+      "role": "covariate",
+      "unit": null,
+      "missing_code": "NA",
+      "description": "Survival without unit and wrong role"
+    },
+    {
+      "name": "temperature",
+      "var_type": "continuous",
+      "role": "covariate",
+      "unit": "celsius",
+      "missing_code": null,
+      "description": "Normal continuous var but unit mismatch with real-world usage"
+    },
+    {
+      "name": "weight_kg",
+      "var_type": "continuous",
+      "role": "covariate",
+      "unit": "",
+      "missing_code": "NA",
+      "description": "Empty string unit instead of null"
+    }
+  ]
+}

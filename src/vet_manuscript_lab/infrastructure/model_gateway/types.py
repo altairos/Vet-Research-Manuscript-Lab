@@ -156,11 +156,66 @@ class TokenUsageRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class PromptTemplate:
+    """Versioned prompt template for reproducible LLM invocations.
+
+    A ``PromptTemplate`` captures the *identity* of a prompt used for a
+    specific task.  The ``template_hash`` is computed from the template
+    body (not the rendered prompt), enabling deduplication and version
+    drift detection across runs.
+    """
+
+    template_id: str
+    version: str
+    task_kind: TaskKind
+    template_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactRef:
+    """Reference to an input artifact consumed by a prompt rendering.
+
+    ``artifact_id`` is the logical ID (e.g. ``"protocol_v1"``),
+    ``version_id`` is the immutable version, and ``content_hash`` is
+    the SHA-256 of the artifact payload.
+    """
+
+    artifact_id: str
+    version_id: str
+    content_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class PromptInputManifest:
+    """Bundle of input artifact references for provenance tracking.
+
+    When a prompt is rendered from multiple artifacts (e.g. evidence
+    items + analysis plan), this manifest records exactly which versions
+    and hashes were used, enabling reproducibility audits.
+    """
+
+    artifact_refs: tuple[ArtifactRef, ...] = ()
+
+    @property
+    def artifact_ids(self) -> tuple[str, ...]:
+        return tuple(ref.artifact_id for ref in self.artifact_refs)
+
+    @property
+    def artifact_hashes(self) -> tuple[str, ...]:
+        return tuple(ref.content_hash for ref in self.artifact_refs)
+
+
+@dataclass(frozen=True, slots=True)
 class ModelInvocation:
     """Full provenance record for one model call.
 
     Binds the routing decision, usage, and status so the ``AI_USAGE_LOG``
     artifact can be reconstructed deterministically.
+
+    Governance fields (B1) enable tracing quality changes back to their
+    source: which prompt template was used, what the rendered prompt
+    hash was, which schema version validated the output, and which input
+    artifacts were consumed.
     """
 
     invocation_id: str
@@ -176,6 +231,13 @@ class ModelInvocation:
     fallback_from: str | None = None
     error_message: str | None = None
     timestamp: str = ""
+    # --- Governance fields (Phase B) ---
+    prompt_template_id: str | None = None
+    rendered_prompt_hash: str = ""
+    output_schema_version: str = ""
+    input_artifact_ids: tuple[str, ...] = ()
+    input_artifact_hashes: tuple[str, ...] = ()
+    validator_version: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +323,12 @@ class UsageLog:
                     "input_tokens": inv.usage.input_tokens,
                     "output_tokens": inv.usage.output_tokens,
                     "fallback_from": inv.fallback_from,
+                    "prompt_template_id": inv.prompt_template_id,
+                    "rendered_prompt_hash": inv.rendered_prompt_hash,
+                    "output_schema_version": inv.output_schema_version,
+                    "input_artifact_ids": list(inv.input_artifact_ids),
+                    "input_artifact_hashes": list(inv.input_artifact_hashes),
+                    "validator_version": inv.validator_version,
                 }
                 for inv in self.invocations
             ],

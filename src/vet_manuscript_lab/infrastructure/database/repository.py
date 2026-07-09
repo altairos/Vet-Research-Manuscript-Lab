@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import select, text
+from sqlalchemy import Table, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from vet_manuscript_lab.domain.conventions import new_id
@@ -121,10 +121,9 @@ class FoundationRepository:
                     session.execute(
                         table.delete().where(table.c.project_id == project_id)
                     )
+            project_table = cast(Table, ProjectRecord.__table__)
             session.execute(
-                ProjectRecord.__table__.delete().where(
-                    ProjectRecord.__table__.c.id == project_id
-                )
+                project_table.delete().where(project_table.c.id == project_id)
             )
             if dialect == "sqlite":
                 session.execute(text("PRAGMA foreign_keys = ON"))
