@@ -102,17 +102,29 @@ src/vet_manuscript_lab/
     checkpoints/      # LangGraph SQLite checkpointer
     model_gateway/    # Router Agent + providers + pricing + usage
   ui/
-    app.py            # Streamlit entry point
-    i18n.py           # bilingual labels
+    app.py            # Streamlit entry point + 7-tab workspace
+    application.py    # Application container (DB, graph, repos)
+    golden.py         # Golden Project fixture seeding and demo
+    i18n.py           # bilingual labels (English / Chinese)
+    sidebar.py        # project list, creation, context menu
+    state.py          # session-state and intake helpers
+    theme.py          # styling, hero, pipeline phase bar
+    tabs/             # per-tab render functions
+      intake.py       # research question + data/analysis intake
+      literature.py   # literature records + evidence items
+      methodology.py  # methodology, analysis plan, results
+      writing.py      # manuscript, claims, citations, review
+      pipeline.py     # pipeline control bar + workspace actions
+      compliance.py   # compliance findings, export, usage
 tests/
   test_*.py           # unit, integration, and adversarial tests
 fixtures/
   golden_project/     # synthetic dataset + analysis plan + literature
 artifacts/            # local development only; ignored by Git
 migrations/
-  versions/           # Alembic migrations (0001–0005)
+  versions/           # Alembic migrations (0001–0005, expandable)
 docs/
-  adr/                # Architecture Decision Records (0001–0009)
+  adr/                # Architecture Decision Records (0001–0010)
 ```
 
 ## Delivery phases
@@ -159,8 +171,13 @@ docs/
 
 ### Planned
 
-8. **Phase 6 — Production** — PostgreSQL, authentication, background jobs,
-   object storage, observability, backup and deployment.
+8. **Phase 6 — Production** *(in progress)*
+   - 6.1 — Multi-database backend support (SQLite + PostgreSQL) ✅
+   - 6.2 — Local hardening: RunMode fail-closed, mock-rejection, privacy ✅
+   - 6.3 — Observability *(planned)*
+   - 6.4 — Background jobs *(planned)*
+   - 6.5 — Auth / multi-user *(planned)*
+   - 6.6 — Object storage / deployment *(planned)*
 
 ## DOCX export
 
@@ -187,9 +204,9 @@ consistent journal formatting.
 | Gate | Status |
 |---|---|
 | ruff check | All checks passed |
-| ruff format | 105+ files formatted |
-| pytest | 335 tests passed |
-| mypy | No issues in source files |
+| ruff format | 119 files formatted |
+| pytest | 391 tests passed |
+| mypy | No new issues (1 pre-existing in repository.py) |
 
 ## Architecture Decision Records
 
@@ -204,6 +221,7 @@ consistent journal formatting.
 | [0007](docs/adr/0007-model-gateway-and-router-agent.md) | Model Gateway and Router Agent |
 | [0008](docs/adr/0008-writing-review-and-revision-architecture.md) | Writing, review, and revision architecture |
 | [0009](docs/adr/0009-compliance-and-export-architecture.md) | Compliance, sign-off, and export architecture |
+| [0010](docs/adr/0010-multi-database-support.md) | Multi-database support (SQLite + PostgreSQL) |
 
 ## Golden project fixture
 
@@ -237,7 +255,24 @@ After setup, rerun lint, formatting, type checks, and tests with:
 ## Streamlit UI
 
 The Streamlit UI runs the full pipeline from project initialization through
-results approval. Start it with:
+DOCX export. It is organized as a seven-tab workspace:
+
+1. **Intake / Question** — research question, search strategy, data dictionary,
+   and analysis plan entry.
+2. **Intake / Data** — dataset upload and variable specification.
+3. **Literature & Evidence** — literature records, evidence items, source spans.
+4. **Methodology & Statistics** — guideline mapping, methodology findings,
+   analysis plan, statistical results, and provenance.
+5. **Manuscript** — drafted sections, claim traceability, citations, claim audit.
+6. **Review & Compliance** — reviewer findings, revision diff, compliance findings.
+7. **Export** — DOCX export, AI usage summary, AI disclosure.
+
+A pipeline control bar is docked as a sticky right sidebar showing the current
+workflow stage and approval gates. The left sidebar provides project management
+(click to switch, right-click for rename/delete context menu) and an English /
+Chinese language switch.
+
+Start the UI with:
 
 ```powershell
 & .\tools\run-streamlit.ps1
@@ -248,19 +283,25 @@ stale Python processes before launching Streamlit. This avoids `sys.modules`
 cache issues after editing `__init__.py` exports. Do **not** use `streamlit run`
 directly — always launch through the script.
 
-The local UI persists project/governance records in SQLite, immutable payloads
-under `artifacts/`, and LangGraph checkpoints in a separate SQLite file.
+The UI includes a built-in **Golden Project** demo that auto-seeds synthetic
+fixture data, allowing one-click end-to-end pipeline execution from intake
+to export without any external APIs.
+
+The local UI persists project/governance records in the database, immutable
+payloads under `artifacts/`, and LangGraph checkpoints in a separate
+database file. PostgreSQL is also supported for production deployments — see
+ADR-0010 and `.env.example`.
 
 ## Quality gates
 
-The test suite (335 tests across 24 files) includes schema and routing tests,
+The test suite (391 tests across 30 files) includes schema and routing tests,
 checkpoint resume tests, idempotency tests, approval-bypass attempts,
 immutable-version tests, adversarial citation tests, claim-inflation tests,
 statistical reproducibility, model-routing bypass tests, budget-downgrade
 adversarial tests, evidence-pipeline integration tests, golden-project
 end-to-end regression tests, writing/revision cycle tests, compliance audit
-tests, sign-off fail-closed tests, DOCX renderer tests, and export package
-integrity tests.
+tests, sign-off fail-closed tests, DOCX renderer tests, export package
+integrity tests, and production fail-closed (RunMode) tests.
 
 ## Safety statement
 

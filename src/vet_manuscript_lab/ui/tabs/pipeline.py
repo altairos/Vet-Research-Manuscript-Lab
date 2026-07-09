@@ -46,15 +46,11 @@ def render_pipeline_bar(
             translate("tab_research_question"): bool(
                 intake.get("research_question_input")
             ),
-            translate("readiness_search"): bool(
-                intake.get("search_strategy_input")
-            ),
+            translate("readiness_search"): bool(intake.get("search_strategy_input")),
             translate("readiness_literature"): bool(
                 intake.get("literature_record_drafts")
             ),
-            translate("readiness_dataset"): bool(
-                intake.get("dataset_summary")
-            ),
+            translate("readiness_dataset"): bool(intake.get("dataset_summary")),
         }
         status_cols = st.columns(4)
         for col, (label, complete) in zip(
@@ -62,9 +58,7 @@ def render_pipeline_bar(
         ):
             col.metric(
                 label,
-                translate("label_ready")
-                if complete
-                else translate("label_incomplete"),
+                translate("label_ready") if complete else translate("label_incomplete"),
             )
 
         if st.button(
@@ -79,20 +73,14 @@ def render_pipeline_bar(
         if thread_id is not None and config is not None:
             render_phase_tracker(state.get("current_stage"))
             render_run_metrics(state, thread_id)
-            next_nodes = (
-                ", ".join(snapshot.next) if snapshot.next else "-"
-            )
+            next_nodes = ", ".join(snapshot.next) if snapshot.next else "-"
             st.caption(f"{translate('label_next')}: {next_nodes}")
             if pending:
                 render_pending_approval(app, config, pending[0])
             render_search_strategy_detail(state)
-            with st.expander(
-                translate("expander_artifact_refs"), expanded=False
-            ):
+            with st.expander(translate("expander_artifact_refs"), expanded=False):
                 st.json(state.get("artifacts", {}))
-            with st.expander(
-                translate("expander_approvals_locks"), expanded=False
-            ):
+            with st.expander(translate("expander_approvals_locks"), expanded=False):
                 st.json(
                     {
                         "approvals": state.get("approvals", {}),
@@ -122,15 +110,11 @@ def render_review_disposition(
     role_options = ["reviewer", "investigator"]
     required_role = gate.get("required_reviewer_role", "reviewer")
     default_index = (
-        role_options.index(required_role)
-        if required_role in role_options
-        else 0
+        role_options.index(required_role) if required_role in role_options else 0
     )
 
     decision_options = ["accept", "reject", "defer"]
-    decision_labels = {
-        d: translate(f"decision_{d}") for d in decision_options
-    }
+    decision_labels = {d: translate(f"decision_{d}") for d in decision_options}
 
     decisions: list[dict[str, str]] = []
 
@@ -160,9 +144,7 @@ def render_review_disposition(
                     f"| **{translate('col_category')}:** {cat}"
                 )
                 if loc:
-                    st.caption(
-                        f"{translate('col_location')}: {loc}"
-                    )
+                    st.caption(f"{translate('col_location')}: {loc}")
                 st.write(f.get("rationale", ""))
                 rec = f.get("recommendation", "")
                 if rec:
@@ -206,9 +188,7 @@ def render_review_disposition(
                 ),
                 config,
             )
-            app.governance.sync_state(
-                app.graph.get_state(config).values
-            )
+            app.governance.sync_state(app.graph.get_state(config).values)
         except (LookupError, PermissionError, ValueError) as exc:
             st.error(str(exc))
         else:
@@ -271,9 +251,7 @@ def render_sign_off_approval(
                 ),
                 config,
             )
-            app.governance.sync_state(
-                app.graph.get_state(config).values
-            )
+            app.governance.sync_state(app.graph.get_state(config).values)
         except (LookupError, PermissionError, ValueError) as exc:
             st.error(str(exc))
         else:
@@ -299,14 +277,10 @@ def render_pending_approval(
     # Standard approval gates
     st.markdown('<div class="approval-card">', unsafe_allow_html=True)
     st.subheader(translate("pending_action_header"))
-    st.caption(
-        translate("pending_action_caption", stage=stage_label(gate_name))
-    )
+    st.caption(translate("pending_action_caption", stage=stage_label(gate_name)))
     st.write(
         {
-            translate("pending_action_gate"): gate_field(
-                gate_name, "title"
-            ),
+            translate("pending_action_gate"): gate_field(gate_name, "title"),
             translate("pending_action_next"): stage_label(
                 gate.get("proposed_next_stage")
             ),
@@ -317,9 +291,7 @@ def render_pending_approval(
     role_options = ["investigator", "statistician"]
     required_role = gate.get("required_reviewer_role", "investigator")
     default_index = (
-        role_options.index(required_role)
-        if required_role in role_options
-        else 0
+        role_options.index(required_role) if required_role in role_options else 0
     )
     with st.form(f"approval_{gate_name}"):
         reviewer_id = st.text_input(
@@ -359,9 +331,7 @@ def render_pending_approval(
                 ),
                 config,
             )
-            app.governance.sync_state(
-                app.graph.get_state(config).values
-            )
+            app.governance.sync_state(app.graph.get_state(config).values)
         except (LookupError, PermissionError, ValueError) as exc:
             st.error(str(exc))
         else:
@@ -384,18 +354,13 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
         events.append(
             {
                 "sort_key": ap.get("decided_at", ""),
-                translate("col_event_type"): translate(
-                    "col_decision"
-                ),
+                translate("col_event_type"): translate("col_decision"),
                 translate("col_gate"): stage_label(gate_key),
                 translate("col_decision"): ap.get("decision", ""),
                 translate("col_reviewer"): (
-                    f"{ap.get('reviewer_id', '')} "
-                    f"({ap.get('reviewer_role', '')})"
+                    f"{ap.get('reviewer_id', '')} ({ap.get('reviewer_role', '')})"
                 ),
-                translate("col_decided_at"): ap.get(
-                    "decided_at", ""
-                ),
+                translate("col_decided_at"): ap.get("decided_at", ""),
                 translate("col_message"): ap.get("comment", ""),
             }
         )
@@ -404,20 +369,13 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
         events.append(
             {
                 "sort_key": lk.get("locked_at", ""),
-                translate("col_event_type"): translate(
-                    "col_lock_type"
-                ),
-                translate("col_gate"): lk.get(
-                    "lock_type", lock_key
-                ),
+                translate("col_event_type"): translate("col_lock_type"),
+                translate("col_gate"): lk.get("lock_type", lock_key),
                 translate("col_decision"): "locked",
                 translate("col_reviewer"): lk.get("locked_by", ""),
-                translate("col_decided_at"): lk.get(
-                    "locked_at", ""
-                ),
+                translate("col_decided_at"): lk.get("locked_at", ""),
                 translate("col_message"): (
-                    f"version: "
-                    f"{str(lk.get('subject_version_id', ''))[:16]}"
+                    f"version: {str(lk.get('subject_version_id', ''))[:16]}"
                 ),
             }
         )
@@ -457,13 +415,9 @@ def render_workspace_actions(app: Application) -> None:
     if load_clicked:
         try:
             with st.spinner(translate("golden_workspace_loading")):
-                pid = prepare_golden_workspace(
-                    app, bump_search_form_version
-                )
+                pid = prepare_golden_workspace(app, bump_search_form_version)
         except (OSError, ValueError) as exc:
-            st.error(
-                translate("golden_demo_load_error", error=str(exc))
-            )
+            st.error(translate("golden_demo_load_error", error=str(exc)))
         else:
             st.session_state["golden_workspace_notice"] = translate(
                 "golden_workspace_loaded", id=pid[:8]
@@ -473,13 +427,9 @@ def render_workspace_actions(app: Application) -> None:
     if run_clicked:
         try:
             with st.spinner(translate("golden_workspace_running")):
-                pid, _tid = run_golden_workspace_pipeline(
-                    app, bump_search_form_version
-                )
+                pid, _tid = run_golden_workspace_pipeline(app, bump_search_form_version)
         except (OSError, ValueError) as exc:
-            st.error(
-                translate("golden_demo_load_error", error=str(exc))
-            )
+            st.error(translate("golden_demo_load_error", error=str(exc)))
         else:
             st.session_state["golden_workspace_notice"] = translate(
                 "golden_workspace_finished", id=pid[:8]

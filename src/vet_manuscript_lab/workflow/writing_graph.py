@@ -20,7 +20,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from vet_manuscript_lab.domain.conventions import utc_now
+from vet_manuscript_lab.domain.conventions import RunMode, utc_now
 from vet_manuscript_lab.domain.policies import (
     AuditContext,
     ClaimSnapshot,
@@ -29,6 +29,7 @@ from vet_manuscript_lab.domain.policies import (
     require_factual_claim_has_support,
     require_finding_before_revision,
     require_no_causal_overreach,
+    require_no_mock_fallback,
     require_numeric_consistency,
     require_reviewer_readonly,
     require_revision_within_limit,
@@ -149,6 +150,7 @@ def section_writing_node(
     state: WorkflowState,
     *,
     writer: SectionWriter | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> dict[str, Any]:
     """Generate manuscript sections from evidence and statistical results.
 
@@ -177,6 +179,15 @@ def section_writing_node(
     )
 
     actual_writer = writer or MockSectionWriter()
+
+    # In production mode, the mock writer must not generate formal manuscript
+    if isinstance(actual_writer, MockSectionWriter):
+        require_no_mock_fallback(
+            run_mode=run_mode,
+            is_mock_generated=True,
+            context="section writing (no real writer provided)",
+        )
+
     output = actual_writer.write_sections(
         WritingInput(
             project_id=state["project_id"],
@@ -696,6 +707,7 @@ class WritingPipeline:
     writer: SectionWriter | None = None
     reviewer: Reviewer | None = None
     reviser: Reviser | None = None
+    run_mode: RunMode = RunMode.DEMO
 
 
 def _make_writing_builder(
@@ -703,6 +715,7 @@ def _make_writing_builder(
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     writing_pipeline: WritingPipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> Any:
     """Create the StateGraph builder with all writing-pipeline nodes and edges.
 
@@ -716,6 +729,7 @@ def _make_writing_builder(
     writer = writing_pipeline.writer if writing_pipeline else None
     reviewer = writing_pipeline.reviewer if writing_pipeline else None
     reviser = writing_pipeline.reviser if writing_pipeline else None
+    effective_run_mode = writing_pipeline.run_mode if writing_pipeline else run_mode
 
     builder = StateGraph(WorkflowState)
 
@@ -740,34 +754,34 @@ def _make_writing_builder(
         "evidence_extraction",
         evidence_extraction_node
         if evidence_pipeline is None
-        else lambda s: evidence_extraction_node(s, pipeline=evidence_pipeline),
+        else lambda s: evidence_extraction_node(
+            s, pipeline=evidence_pipeline, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("evidence_audit", _evidence_audit_running)
 
     # Methodology + statistics stage
     builder.add_node(
         "methodology_critic",
-        methodology_critic_node
-        if gateway is None
-        else lambda s: methodology_critic_node(s, gateway=gateway),
+        lambda s: methodology_critic_node(
+            s, gateway=gateway, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("analysis_plan", analysis_plan_node)
     builder.add_node("analysis_plan_approval", analysis_plan_approval_node)
     builder.add_node("analysis_plan_lock", analysis_plan_lock_node)
     builder.add_node(
         "statistics_execution",
-        statistics_execution_node
-        if runner is None
-        else lambda s: statistics_execution_node(s, runner=runner),
+        lambda s: statistics_execution_node(
+            s, runner=runner, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("results_approval", results_approval_node)
 
     # Writing stage
     builder.add_node(
         "section_writing",
-        section_writing_node
-        if writer is None
-        else lambda s: section_writing_node(s, writer=writer),
+        lambda s: section_writing_node(s, writer=writer, run_mode=effective_run_mode),
     )
     builder.add_node("claim_audit", claim_audit_node)
     builder.add_node(
@@ -826,6 +840,7 @@ def build_writing_pipeline_graph(
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     writing_pipeline: WritingPipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> Any:
     """Compile the full pipeline from ``PROJECT_INIT`` through ``REVISION``.
 
@@ -838,6 +853,7 @@ def build_writing_pipeline_graph(
         synchroniser=synchroniser,
         evidence_pipeline=evidence_pipeline,
         writing_pipeline=writing_pipeline,
+        run_mode=run_mode,
     )
     return builder.compile(checkpointer=checkpointer)
 

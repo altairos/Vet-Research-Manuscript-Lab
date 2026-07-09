@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from vet_manuscript_lab.domain.policies.foundation import PolicyViolation
+from vet_manuscript_lab.domain.conventions import RunMode, run_mode_allows_mock
+from vet_manuscript_lab.domain.policies.foundation import (
+    EvidenceExtractionFailed,
+    NeedsHumanSourceSpan,
+    PolicyViolation,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,11 +95,56 @@ def require_non_duplicate_reference(
         raise PolicyViolation(f"Duplicate PMID already in project: {pmid}")
 
 
+def require_no_mock_fallback(
+    *,
+    run_mode: RunMode,
+    is_mock_generated: bool,
+    context: str = "evidence extraction",
+) -> None:
+    """In production mode, mock-generated evidence must not be admitted.
+
+    ``is_mock_generated`` is ``True`` when the span/evidence was produced by
+    a deterministic stub rather than real retrieval.  In ``PRODUCTION`` this
+    is a hard failure — the system must fail closed instead of fabricating
+    evidence.
+    """
+
+    if is_mock_generated and not run_mode_allows_mock(run_mode):
+        raise EvidenceExtractionFailed(
+            f"Mock fallback used during {context} in {run_mode.value} mode; "
+            "this is forbidden in production. "
+            "Either provide a real retrieval pipeline or switch to DEMO/TEST mode."
+        )
+
+
+def require_real_source_span(
+    *,
+    run_mode: RunMode,
+    span_attachment_version_id: str | None,
+    record_id: str,
+) -> None:
+    """In production mode, every source span must trace to a real attachment.
+
+    A source span without ``attachment_version_id`` is synthetic (generated
+    to maintain the source-span invariant).  In production this is
+    unacceptable — the record must be flagged for human resolution instead.
+    """
+
+    if span_attachment_version_id is None and not run_mode_allows_mock(run_mode):
+        raise NeedsHumanSourceSpan(
+            f"Record '{record_id}' has no real source span in {run_mode.value} "
+            "mode; retrieval returned no hits. "
+            "Human resolution is required to locate the source passage."
+        )
+
+
 __all__ = [
     "EvidenceCandidate",
     "ScreeningSummary",
     "SearchGateSnapshot",
+    "require_no_mock_fallback",
     "require_non_duplicate_reference",
+    "require_real_source_span",
     "require_screening_complete",
     "require_search_approved",
     "require_source_span_for_evidence",

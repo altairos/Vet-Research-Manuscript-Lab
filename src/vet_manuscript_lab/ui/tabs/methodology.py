@@ -36,13 +36,9 @@ def render_guideline_mapping(state: dict[str, Any]) -> None:
         )
         status = protocol.get("status", "")
         if status:
-            st.caption(
-                f"{translate('label_manuscript_status')}: {status}"
-            )
+            st.caption(f"{translate('label_manuscript_status')}: {status}")
 
-    with st.expander(
-        translate("expander_artifact_refs"), expanded=False
-    ):
+    with st.expander(translate("expander_artifact_refs"), expanded=False):
         detail = {}
         if guideline:
             detail["guideline_mapping"] = {
@@ -68,9 +64,7 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
 
     st.subheader(translate("section_methodology"))
 
-    warning_count = sum(
-        1 for f in findings if f.get("severity") == "warning"
-    )
+    warning_count = sum(1 for f in findings if f.get("severity") == "warning")
     col1, col2 = st.columns(2)
     col1.metric(translate("label_findings_count"), len(findings))
     col2.metric(translate("label_warnings_count"), warning_count)
@@ -82,9 +76,7 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
                 translate("col_category"): f.get("category", ""),
                 translate("col_severity"): f.get("severity", ""),
                 translate("col_rationale"): f.get("rationale", ""),
-                translate("col_recommendation"): f.get(
-                    "recommendation", ""
-                ),
+                translate("col_recommendation"): f.get("recommendation", ""),
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -112,9 +104,7 @@ def render_analysis_plan(state: dict[str, Any]) -> None:
     plan_locked = plan_summary.get("locked", False)
     col3.metric(
         translate("label_plan_locked"),
-        translate("label_yes")
-        if plan_locked
-        else translate("label_no"),
+        translate("label_yes") if plan_locked else translate("label_no"),
     )
 
     locks = state.get("locks", {})
@@ -127,16 +117,10 @@ def render_analysis_plan(state: dict[str, Any]) -> None:
         for a in analyses:
             rows.append(
                 {
-                    translate("col_analysis_name"): a.get(
-                        "name", ""
-                    ),
+                    translate("col_analysis_name"): a.get("name", ""),
                     translate("col_estimand"): a.get("estimand", ""),
-                    translate("col_method"): a.get(
-                        "model_type", ""
-                    ),
-                    translate("col_class"): a.get(
-                        "analysis_class", ""
-                    ),
+                    translate("col_method"): a.get("model_type", ""),
+                    translate("col_class"): a.get("analysis_class", ""),
                 }
             )
         st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -175,27 +159,15 @@ def render_statistical_results(state: dict[str, Any]) -> None:
         for d in drafts:
             lower = d.get("uncertainty_lower")
             upper = d.get("uncertainty_upper")
-            ci = (
-                f"{lower} - {upper}"
-                if lower is not None and upper is not None
-                else ""
-            )
+            ci = f"{lower} - {upper}" if lower is not None and upper is not None else ""
             rows.append(
                 {
-                    translate("col_analysis_name"): d.get(
-                        "estimand", ""
-                    ),
-                    translate("col_estimate"): str(
-                        d.get("estimate", "")
-                    ),
+                    translate("col_analysis_name"): d.get("estimand", ""),
+                    translate("col_estimate"): str(d.get("estimate", "")),
                     translate("col_ci"): ci,
-                    translate("col_p_value"): str(
-                        d.get("p_value", "")
-                    ),
+                    translate("col_p_value"): str(d.get("p_value", "")),
                     translate("col_method"): d.get("method", ""),
-                    translate("col_class"): d.get(
-                        "analysis_class", ""
-                    ),
+                    translate("col_class"): d.get("analysis_class", ""),
                 }
             )
         st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -221,9 +193,7 @@ def render_effect_plots(state: dict[str, Any]) -> None:
                 ci_str = f"{lower} to {upper}"
         plot_data.append(
             {
-                translate("col_analysis_name"): d.get(
-                    "estimand", ""
-                ),
+                translate("col_analysis_name"): d.get("estimand", ""),
                 translate("col_estimate"): estimate,
                 "CI": ci_str,
                 translate("col_method"): d.get("method", ""),
@@ -236,9 +206,7 @@ def render_effect_plots(state: dict[str, Any]) -> None:
     st.subheader(translate("section_figures"))
     import pandas as pd  # type: ignore[import-untyped]
 
-    df = pd.DataFrame(plot_data).set_index(
-        translate("col_analysis_name")
-    )
+    df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
     st.bar_chart(df[translate("col_estimate")])
     st.dataframe(
         df.drop(columns=[translate("col_estimate")]),
@@ -290,13 +258,10 @@ def render_analysis_provenance(state: dict[str, Any]) -> None:
 
     package_versions = payload.get("package_versions", {})
     if package_versions:
-        with st.expander(
-            translate("label_package_versions"), expanded=False
-        ):
+        with st.expander(translate("label_package_versions"), expanded=False):
             if isinstance(package_versions, dict):
                 pv_rows = [
-                    {"Package": k, "Version": v}
-                    for k, v in package_versions.items()
+                    {"Package": k, "Version": v} for k, v in package_versions.items()
                 ]
                 st.dataframe(
                     pv_rows,
@@ -309,14 +274,10 @@ def render_analysis_provenance(state: dict[str, Any]) -> None:
     stdout = payload.get("stdout", "")
     stderr = payload.get("stderr", "")
     if stdout or stderr:
-        with st.expander(
-            translate("label_stdout"), expanded=False
-        ):
+        with st.expander(translate("label_stdout"), expanded=False):
             st.code(stdout, language="text")
         if stderr:
-            with st.expander(
-                translate("label_stderr"), expanded=False
-            ):
+            with st.expander(translate("label_stderr"), expanded=False):
                 st.code(stderr, language="text")
 
 
@@ -364,19 +325,14 @@ def render_usage_summary(state: dict[str, Any]) -> None:
             stage_rows.append(
                 {
                     translate("col_task_kind"): task_kind,
-                    translate("col_invocations"): data.get(
-                        "invocations", 0
-                    ),
+                    translate("col_invocations"): data.get("invocations", 0),
                     translate("col_cost_cents"): (
                         f"${data.get('cost_cents', 0) / 100:.2f}"
                     ),
                     translate("col_tokens"): (
-                        data.get("input_tokens", 0)
-                        + data.get("output_tokens", 0)
+                        data.get("input_tokens", 0) + data.get("output_tokens", 0)
                     ),
                 }
             )
         if stage_rows:
-            st.dataframe(
-                stage_rows, use_container_width=True, hide_index=True
-            )
+            st.dataframe(stage_rows, use_container_width=True, hide_index=True)

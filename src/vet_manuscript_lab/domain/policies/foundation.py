@@ -9,6 +9,25 @@ class PolicyViolation(PermissionError):
     pass
 
 
+class EvidenceExtractionFailed(PolicyViolation):
+    """Raised when evidence extraction cannot produce real evidence.
+
+    In ``RunMode.PRODUCTION`` the system must **not** fall back to mock
+    spans.  Instead it raises this exception so the workflow fails
+    closed, forcing human resolution.
+    """
+
+
+class NeedsHumanSourceSpan(PolicyViolation):
+    """A retriever returned no hits in production mode.
+
+    Rather than generating a synthetic source span to maintain the
+    source-span invariant, the node flags this as requiring human
+    attention.  The record is marked ``requires_human_review`` and
+    excluded from the formal evidence ledger.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class ApprovalSnapshot:
     gate: str

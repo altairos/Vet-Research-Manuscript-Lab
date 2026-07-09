@@ -41,6 +41,7 @@ class DocxRenderResult:
     media_type: str = (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
+    is_mock_output: bool = False
 
 
 class DocxRenderer(Protocol):
@@ -419,6 +420,7 @@ class MockDocxRenderer:
             docx_base64=_bytes_to_base64(docx_bytes),
             content_hash=_bytes_to_hash(docx_bytes),
             renderer_name="mock",
+            is_mock_output=True,
         )
 
 

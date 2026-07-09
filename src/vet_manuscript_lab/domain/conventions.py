@@ -33,6 +33,31 @@ class ArtifactType(StrEnum):
     EXPORT_PACKAGE = "export_package"
 
 
+class RunMode(StrEnum):
+    """Determines whether mock fallbacks are permitted.
+
+    - ``DEMO`` (default): mock fallbacks allowed — for local development
+      and the golden-project demo.
+    - ``TEST``: fixture/mock fallbacks allowed but must be explicitly
+      tagged; used by automated test suites.
+    - ``PRODUCTION``: mock fallbacks forbidden.  Any node that would
+      fall back to a mock raises a fail-closed error instead.
+    """
+
+    DEMO = "demo"
+    TEST = "test"
+    PRODUCTION = "production"
+
+
+RUN_MODE_ENV = "VET_LAB_RUN_MODE"
+
+
+def run_mode_allows_mock(mode: RunMode) -> bool:
+    """Return ``True`` when *mode* permits mock fallbacks."""
+
+    return mode != RunMode.PRODUCTION
+
+
 class ErrorCode(StrEnum):
     VALIDATION_ERROR = "validation_error"
     TRANSIENT_SERVICE_ERROR = "transient_service_error"

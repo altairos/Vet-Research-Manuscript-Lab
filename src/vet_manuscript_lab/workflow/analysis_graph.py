@@ -25,11 +25,12 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from vet_manuscript_lab.domain.conventions import sha256_bytes, utc_now
+from vet_manuscript_lab.domain.conventions import RunMode, sha256_bytes, utc_now
 from vet_manuscript_lab.domain.policies import (
     AnalysisPlanSnapshot,
     DatasetVersionSnapshot,
     PolicyViolation,
+    require_no_mock_fallback,
 )
 from vet_manuscript_lab.infrastructure.model_gateway.gateway import (
     GatewayResult,
@@ -323,6 +324,7 @@ def methodology_critic_node(
     state: WorkflowState,
     *,
     gateway: ModelGateway | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> dict[str, Any]:
     """Produce structured methodology findings via the Model Gateway.
 
@@ -369,6 +371,12 @@ def methodology_critic_node(
             result.invocation.invocation_id,
         )
     else:
+        # In production mode, mock findings are forbidden
+        require_no_mock_fallback(
+            run_mode=run_mode,
+            is_mock_generated=True,
+            context="methodology critic (no gateway provided)",
+        )
         findings = _mock_methodology_findings(state)
 
     findings_artifact = _make_artifact(
@@ -682,6 +690,7 @@ def statistics_execution_node(
     state: WorkflowState,
     *,
     runner: StatisticsRunner | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> dict[str, Any]:
     """Execute the locked analysis plan against the locked dataset.
 
@@ -690,6 +699,16 @@ def statistics_execution_node(
     and execution immutability.  Records full provenance including
     script hash, seed, package versions, and stdout/stderr.
     """
+
+    # Fail-closed check: in production mode, reject MockStatisticsRunner
+    # before any state processing so the error is clear.
+    actual_runner = runner or MockStatisticsRunner()
+    if isinstance(actual_runner, MockStatisticsRunner):
+        require_no_mock_fallback(
+            run_mode=run_mode,
+            is_mock_generated=True,
+            context="statistics execution (no real runner provided)",
+        )
 
     plan_snapshot = _build_plan_snapshot(state)
     dataset_snapshot = _build_dataset_snapshot(state)
@@ -724,7 +743,6 @@ def statistics_execution_node(
         ),
     )
 
-    actual_runner = runner or MockStatisticsRunner()
     run_id = _stable_id(state["project_id"], "analysis_run")
 
     run_result: RunResult = actual_runner.execute(
@@ -887,6 +905,7 @@ class AnalysisPipeline:
 
     gateway: ModelGateway | None = None
     runner: StatisticsRunner | None = None
+    run_mode: RunMode = RunMode.DEMO
 
 
 def build_analysis_pipeline_graph(
@@ -895,6 +914,7 @@ def build_analysis_pipeline_graph(
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     analysis_pipeline: AnalysisPipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> Any:
     """Compile the full pipeline from ``PROJECT_INIT`` to ``RESULTS_APPROVAL``.
 
@@ -912,6 +932,7 @@ def build_analysis_pipeline_graph(
 
     gateway = analysis_pipeline.gateway if analysis_pipeline else None
     runner = analysis_pipeline.runner if analysis_pipeline else None
+    effective_run_mode = analysis_pipeline.run_mode if analysis_pipeline else run_mode
 
     builder = StateGraph(WorkflowState)
 
@@ -936,25 +957,27 @@ def build_analysis_pipeline_graph(
         "evidence_extraction",
         evidence_extraction_node
         if evidence_pipeline is None
-        else lambda s: evidence_extraction_node(s, pipeline=evidence_pipeline),
+        else lambda s: evidence_extraction_node(
+            s, pipeline=evidence_pipeline, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("evidence_audit", _evidence_audit_running)
 
     # Methodology + statistics stage (new)
     builder.add_node(
         "methodology_critic",
-        methodology_critic_node
-        if gateway is None
-        else lambda s: methodology_critic_node(s, gateway=gateway),
+        lambda s: methodology_critic_node(
+            s, gateway=gateway, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("analysis_plan", analysis_plan_node)
     builder.add_node("analysis_plan_approval", analysis_plan_approval_node)
     builder.add_node("analysis_plan_lock", analysis_plan_lock_node)
     builder.add_node(
         "statistics_execution",
-        statistics_execution_node
-        if runner is None
-        else lambda s: statistics_execution_node(s, runner=runner),
+        lambda s: statistics_execution_node(
+            s, runner=runner, run_mode=effective_run_mode
+        ),
     )
     builder.add_node("results_approval", results_approval_node)
 

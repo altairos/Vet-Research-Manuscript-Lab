@@ -114,9 +114,7 @@ def build_golden_workspace_intake(fixture: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def ensure_golden_workspace_project(
-    app: Application, fixture: dict[str, Any]
-) -> str:
+def ensure_golden_workspace_project(app: Application, fixture: dict[str, Any]) -> str:
     project_meta = fixture.get("project", {}).get("project", {})
     title = str(project_meta.get("title", "Golden Project")).strip()
     for project in app.repository.list_projects():
@@ -131,9 +129,7 @@ def ensure_golden_workspace_project(
                     "study_type", "retrospective_observational_clinical_study"
                 )
             ),
-            species_scope=list(
-                project_meta.get("species_scope", ["canine", "feline"])
-            ),
+            species_scope=list(project_meta.get("species_scope", ["canine", "feline"])),
             owner_id="golden-demo",
         )
     )
@@ -158,9 +154,7 @@ def seed_golden_literature_records(
                 doi=doi if isinstance(doi, str) and doi else None,
                 publication_year=record.get("year"),
                 journal=record.get("journal"),
-                creators=[
-                    {"name": author} for author in record.get("authors", [])
-                ],
+                creators=[{"name": author} for author in record.get("authors", [])],
                 metadata_json={
                     "tags": record.get("tags", []),
                     "abstract": record.get("abstract", ""),
@@ -170,17 +164,15 @@ def seed_golden_literature_records(
         )
 
 
-def prepare_golden_workspace(
-    app: Application, bump_search_form_version: Any
-) -> str:
+def prepare_golden_workspace(app: Application, bump_search_form_version: Any) -> str:
     fixture = load_golden_fixture()
     if fixture is None:
         raise ValueError("golden fixture not found")
 
     project_id = ensure_golden_workspace_project(app, fixture)
     seed_golden_literature_records(app, project_id, fixture)
-    st.session_state[f"analysis_intake:{project_id}"] = (
-        build_golden_workspace_intake(fixture)
+    st.session_state[f"analysis_intake:{project_id}"] = build_golden_workspace_intake(
+        fixture
     )
     st.session_state["project_id"] = project_id
     st.session_state.pop(thread_session_key(project_id), None)

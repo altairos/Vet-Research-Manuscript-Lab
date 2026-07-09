@@ -62,39 +62,26 @@ def render_manuscript(state: dict[str, Any]) -> None:
         section_claims = claims_by_section.get(sid, [])
         header = stype.title()
         if section_claims:
-            header += (
-                f" ({len(section_claims)} "
-                f"{translate('label_claim_bound')})"
-            )
+            header += f" ({len(section_claims)} {translate('label_claim_bound')})"
         with st.expander(header, expanded=False):
             st.write(content)
             if section_claims:
-                st.markdown(
-                    f"**{translate('label_claim_bound')}:**"
-                )
+                st.markdown(f"**{translate('label_claim_bound')}:**")
                 badges = []
                 for c in section_claims:
                     cid = c.get("claim_id", "")
                     ctype = c.get("claim_type", "")
                     count = support_by_claim.get(cid, 0)
                     if ctype == "hypothesis":
-                        sl = translate(
-                            "label_claim_status_hypothesis"
-                        )
+                        sl = translate("label_claim_status_hypothesis")
                         icon = "\U0001f914"
                     elif count > 0:
-                        sl = translate(
-                            "label_claim_status_supported"
-                        )
+                        sl = translate("label_claim_status_supported")
                         icon = "\u2705"
                     else:
-                        sl = translate(
-                            "label_claim_status_unsupported"
-                        )
+                        sl = translate("label_claim_status_unsupported")
                         icon = "\u26a0\ufe0f"
-                    badges.append(
-                        f"{icon} {sl}: {c.get('text', '')[:80]}"
-                    )
+                    badges.append(f"{icon} {sl}: {c.get('text', '')[:80]}")
                 for badge in badges:
                     st.markdown(f"- {badge}")
 
@@ -121,24 +108,14 @@ def render_claims(state: dict[str, Any]) -> None:
         count = support_counts.get(cid, 0)
         rows.append(
             {
-                translate("col_claim_type"): c.get(
-                    "claim_type", ""
-                ),
-                translate("col_claim_text"): c.get("text", "")[
-                    :200
-                ],
-                translate("col_certainty"): c.get(
-                    "certainty", ""
-                ),
+                translate("col_claim_type"): c.get("claim_type", ""),
+                translate("col_claim_text"): c.get("text", "")[:200],
+                translate("col_certainty"): c.get("certainty", ""),
                 translate("col_has_support"): (
-                    translate("label_yes")
-                    if count
-                    else translate("label_no")
+                    translate("label_yes") if count else translate("label_no")
                 ),
                 translate("col_support_count"): count,
-                translate("col_ref_numbers"): str(
-                    c.get("referenced_numbers", [])
-                ),
+                translate("col_ref_numbers"): str(c.get("referenced_numbers", [])),
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -157,18 +134,10 @@ def render_citations(state: dict[str, Any]) -> None:
     for c in citations:
         rows.append(
             {
-                translate("col_citation_key"): c.get(
-                    "citation_key", ""
-                ),
-                translate("col_lit_record"): c.get(
-                    "literature_record_id", ""
-                )[:16],
-                translate("col_section"): c.get(
-                    "section_id", ""
-                )[:24],
-                translate("col_claim_type"): c.get(
-                    "claim_id", ""
-                )[:24],
+                translate("col_citation_key"): c.get("citation_key", ""),
+                translate("col_lit_record"): c.get("literature_record_id", "")[:16],
+                translate("col_section"): c.get("section_id", "")[:24],
+                translate("col_claim_type"): c.get("claim_id", "")[:24],
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -189,9 +158,7 @@ def render_claim_audit(state: dict[str, Any]) -> None:
     col1, col2 = st.columns(2)
     col1.metric(
         translate("label_audit_passed"),
-        translate("label_yes")
-        if "passed" in status
-        else translate("label_no"),
+        translate("label_yes") if "passed" in status else translate("label_no"),
     )
     col2.metric(
         translate("label_audit_errors"),
@@ -214,37 +181,24 @@ def render_review(state: dict[str, Any]) -> None:
 
     if findings:
         decision_map = {  # noqa: F841
-            d.get("finding_id", ""): d.get("decision", "")
-            for d in decisions
+            d.get("finding_id", ""): d.get("decision", "") for d in decisions
         }
         rows = []
         for f in findings:
             rows.append(
                 {
-                    translate("col_category"): f.get(
-                        "category", ""
-                    ),
-                    translate("col_severity"): f.get(
-                        "severity", ""
-                    ),
-                    translate("col_location"): f.get(
-                        "location", ""
-                    ),
-                    translate("col_rationale"): f.get(
-                        "rationale", ""
-                    ),
-                    translate("col_recommendation"): f.get(
-                        "recommendation", ""
-                    ),
+                    translate("col_category"): f.get("category", ""),
+                    translate("col_severity"): f.get("severity", ""),
+                    translate("col_location"): f.get("location", ""),
+                    translate("col_rationale"): f.get("rationale", ""),
+                    translate("col_recommendation"): f.get("recommendation", ""),
                     translate("col_status"): f.get("status", ""),
                 }
             )
         st.dataframe(rows, use_container_width=True, hide_index=True)
 
     if revision_summary:
-        with st.expander(
-            translate("section_revision"), expanded=False
-        ):
+        with st.expander(translate("section_revision"), expanded=False):
             col1, col2, col3, col4 = st.columns(4)
             col1.metric(
                 translate("label_revision_round"),
@@ -291,22 +245,15 @@ def render_revision_diff(state: dict[str, Any]) -> None:
         with st.expander(section_id, expanded=False):
             if resolved:
                 st.caption(
-                    f"{translate('label_resolved_findings')}: "
-                    f"{', '.join(resolved)}"
+                    f"{translate('label_resolved_findings')}: {', '.join(resolved)}"
                 )
 
             col_before, col_after = st.columns(2)
             with col_before:
-                st.markdown(
-                    f"**{translate('col_before')}**"
-                )
+                st.markdown(f"**{translate('col_before')}**")
                 if before:
-                    before_lines = before.splitlines(
-                        keepends=False
-                    )
-                    after_lines = after.splitlines(
-                        keepends=False
-                    )
+                    before_lines = before.splitlines(keepends=False)
+                    after_lines = after.splitlines(keepends=False)
                     diff = difflib.unified_diff(
                         before_lines,
                         after_lines,
@@ -322,9 +269,7 @@ def render_revision_diff(state: dict[str, Any]) -> None:
                     st.caption(translate("label_no_changes"))
 
             with col_after:
-                st.markdown(
-                    f"**{translate('col_after')}**"
-                )
+                st.markdown(f"**{translate('col_after')}**")
                 st.write(after)
 
 
@@ -353,9 +298,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
     result_by_id: dict[str, dict[str, Any]] = {
         r.get("result_id", ""): r for r in results
     }
-    span_by_id: dict[str, dict[str, Any]] = {
-        s.get("span_id", ""): s for s in spans
-    }
+    span_by_id: dict[str, dict[str, Any]] = {s.get("span_id", ""): s for s in spans}
     record_by_id: dict[str, dict[str, Any]] = {
         r.get("record_id", ""): r for r in records
     }
@@ -391,9 +334,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
             )
 
             if not has_support and is_factual:
-                st.warning(
-                    translate("label_claim_unsupported_warning")
-                )
+                st.warning(translate("label_claim_unsupported_warning"))
 
             if claim_supports:
                 for s in claim_supports:
@@ -427,9 +368,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                             )
                             if ev.get("units"):
                                 st.markdown(
-                                    f"  - "
-                                    f"{translate('col_unit')}: "
-                                    f"{ev.get('units')}"
+                                    f"  - {translate('col_unit')}: {ev.get('units')}"
                                 )
                             if ev.get("population"):
                                 st.markdown(
@@ -437,9 +376,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                                     f"{translate('col_population')}:"
                                     f" {ev.get('population')}"
                                 )
-                            span_ids = ev.get(
-                                "source_span_ids", []
-                            )
+                            span_ids = ev.get("source_span_ids", [])
                             for sid in span_ids:
                                 span = span_by_id.get(sid, {})
                                 if span:
@@ -447,9 +384,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                                         "literature_record_id",
                                         "",
                                     )
-                                    rec = record_by_id.get(
-                                        rec_id, {}
-                                    )
+                                    rec = record_by_id.get(rec_id, {})
                                     st.markdown(
                                         f"  - "
                                         f"{translate('label_span_page')}:"
@@ -482,8 +417,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                             upper = res.get("uncertainty_upper")
                             ci_str = (
                                 f"{lower} - {upper}"
-                                if lower is not None
-                                and upper is not None
+                                if lower is not None and upper is not None
                                 else ""
                             )
                             st.markdown(
@@ -492,11 +426,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                                 f"{res.get('estimate', '')}"
                             )
                             if ci_str:
-                                st.markdown(
-                                    f"  - **"
-                                    f"{translate('col_ci')}:** "
-                                    f"{ci_str}"
-                                )
+                                st.markdown(f"  - **{translate('col_ci')}:** {ci_str}")
                             st.markdown(
                                 f"  - **"
                                 f"{translate('col_p_value')}:** "
@@ -512,9 +442,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
             claim_citations = citation_by_claim.get(cid, [])
             if claim_citations:
                 for cit in claim_citations:
-                    rec_id = cit.get(
-                        "literature_record_id", ""
-                    )
+                    rec_id = cit.get("literature_record_id", "")
                     rec = record_by_id.get(rec_id, {})
                     locator = cit.get("locator", "")
                     st.markdown(
@@ -524,17 +452,10 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                     )
                     if rec:
                         st.markdown(
-                            f"  - "
-                            f"{translate('col_title')}: "
-                            f"{rec.get('title', '')}"
+                            f"  - {translate('col_title')}: {rec.get('title', '')}"
                         )
-                        st.markdown(
-                            f"  - DOI: "
-                            f"{rec.get('doi', '') or '-'}"
-                        )
+                        st.markdown(f"  - DOI: {rec.get('doi', '') or '-'}")
                     if locator:
                         st.markdown(
-                            f"  - "
-                            f"{translate('label_citation_locator')}:"
-                            f" {locator}"
+                            f"  - {translate('label_citation_locator')}: {locator}"
                         )

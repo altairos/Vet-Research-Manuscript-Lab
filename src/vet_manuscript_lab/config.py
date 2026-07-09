@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from vet_manuscript_lab.domain.conventions import RUN_MODE_ENV, RunMode
 from vet_manuscript_lab.infrastructure.database.backends import PoolConfig
 
 
@@ -21,6 +22,7 @@ class Settings:
     db_pool_size: int
     db_max_overflow: int
     db_pool_recycle: int
+    run_mode: RunMode = RunMode.DEMO
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -37,6 +39,7 @@ class Settings:
             db_pool_size=int(os.getenv("VET_LAB_DB_POOL_SIZE", "5")),
             db_max_overflow=int(os.getenv("VET_LAB_DB_MAX_OVERFLOW", "10")),
             db_pool_recycle=int(os.getenv("VET_LAB_DB_POOL_RECYCLE", "1800")),
+            run_mode=RunMode(os.getenv(RUN_MODE_ENV, RunMode.DEMO.value)),
         )
 
     @property
@@ -56,6 +59,24 @@ class Settings:
         """True when the configured database URL targets PostgreSQL."""
 
         return self.database_url.startswith(("postgresql", "postgresql+psycopg"))
+
+    @property
+    def is_production(self) -> bool:
+        """True when the system is running in production fail-closed mode."""
+
+        return self.run_mode == RunMode.PRODUCTION
+
+    @property
+    def is_demo(self) -> bool:
+        """True when running in demo mode (mock fallbacks permitted)."""
+
+        return self.run_mode == RunMode.DEMO
+
+    @property
+    def allows_mock_fallback(self) -> bool:
+        """True when mock fallbacks are permitted by the current run mode."""
+
+        return self.run_mode != RunMode.PRODUCTION
 
     @property
     def pool_config(self) -> PoolConfig:

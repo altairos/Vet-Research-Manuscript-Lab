@@ -26,7 +26,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END
 from langgraph.types import interrupt
 
-from vet_manuscript_lab.domain.conventions import utc_now
+from vet_manuscript_lab.domain.conventions import RunMode, run_mode_allows_mock, utc_now
 from vet_manuscript_lab.domain.policies import (
     ComplianceFindingSnapshot,
     PolicyViolation,
@@ -52,6 +52,7 @@ from vet_manuscript_lab.services.export import (
     DocxRenderer,
     ExportGenerator,
     ExportInput,
+    MockDocxRenderer,
     MockExportGenerator,
     create_docx_renderer,
 )
@@ -641,6 +642,7 @@ class CompliancePipeline:
     generator: ExportGenerator | None = None
     docx_renderer: DocxRenderer | None = None
     auto_docx: bool = True
+    run_mode: RunMode = RunMode.DEMO
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +656,7 @@ def build_compliance_pipeline_graph(
     synchroniser: Any = None,
     evidence_pipeline: Any = None,
     compliance_pipeline: CompliancePipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> Any:
     """Compile the full pipeline from ``PROJECT_INIT`` through ``COMPLETE``.
 
@@ -670,15 +673,21 @@ def build_compliance_pipeline_graph(
             writer=compliance_pipeline.writer,
             reviewer=compliance_pipeline.reviewer,
             reviser=compliance_pipeline.reviser,
+            run_mode=compliance_pipeline.run_mode,
         )
         if compliance_pipeline
         else None
+    )
+
+    effective_run_mode = (
+        compliance_pipeline.run_mode if compliance_pipeline else run_mode
     )
 
     builder = _make_writing_builder(
         synchroniser=synchroniser,
         evidence_pipeline=evidence_pipeline,
         writing_pipeline=writing_pipeline,
+        run_mode=effective_run_mode,
     )
 
     auditor = compliance_pipeline.auditor if compliance_pipeline else None
@@ -691,6 +700,16 @@ def build_compliance_pipeline_graph(
     elif compliance_pipeline is None or compliance_pipeline.auto_docx:
         # Auto-detect: use Quarto/Pandoc if available, else Mock
         docx_renderer = create_docx_renderer()
+
+    # In production mode, a mock DOCX renderer must not produce formal output
+    if not run_mode_allows_mock(effective_run_mode) and isinstance(
+        docx_renderer, MockDocxRenderer
+    ):
+        raise PolicyViolation(
+            "Mock DOCX renderer cannot produce formal export packages in "
+            f"{effective_run_mode.value} mode. Install Quarto or pandoc, "
+            "or provide a real DocxRenderer via CompliancePipeline."
+        )
 
     # Wire up the generator with the DOCX renderer
     if generator is None and docx_renderer is not None:

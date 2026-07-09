@@ -63,9 +63,7 @@ def render_intake_question(intake: dict[str, Any]) -> None:
             translate("field_hypothesis"),
             value=question.get("hypothesis", ""),
         )
-        if st.form_submit_button(
-            translate("button_save_question"), type="primary"
-        ):
+        if st.form_submit_button(translate("button_save_question"), type="primary"):
             required = (objective, population, exposure, outcome)
             if not all(value.strip() for value in required):
                 st.error(translate("error_required_fields"))
@@ -84,9 +82,7 @@ def render_intake_question(intake: dict[str, Any]) -> None:
 def bump_search_form_version(project_id: str) -> None:
     """Increment the search-strategy form version."""
 
-    current = st.session_state.get(
-        f"search_form_version:{project_id}", 0
-    )
+    current = st.session_state.get(f"search_form_version:{project_id}", 0)
     st.session_state[f"search_form_version:{project_id}"] = current + 1
 
 
@@ -100,9 +96,7 @@ def render_intake_materials(
 
     st.markdown(f"##### {translate('edit_strategy_header')}")
 
-    search_version = st.session_state.get(
-        f"search_form_version:{project_id}", 0
-    )
+    search_version = st.session_state.get(f"search_form_version:{project_id}", 0)
     ss_query_key = f"ss_query:{project_id}:{search_version}"
     ss_dbs_key = f"ss_databases:{project_id}:{search_version}"
     ss_date_key = f"ss_date:{project_id}:{search_version}"
@@ -137,9 +131,7 @@ def render_intake_materials(
         submitted = save_col.form_submit_button(
             translate("button_save_search"), type="primary"
         )
-        reset_clicked = reset_col.form_submit_button(
-            translate("button_reset_search")
-        )
+        reset_clicked = reset_col.form_submit_button(translate("button_reset_search"))
         if submitted:
             if not query.strip():
                 st.error(translate("error_search_required"))
@@ -155,13 +147,10 @@ def render_intake_materials(
             st.rerun()
 
     saved = intake.get("search_strategy_input", {})
-    with st.expander(
-        translate("saved_strategy_header"), expanded=False
-    ):
+    with st.expander(translate("saved_strategy_header"), expanded=False):
         if saved and saved.get("query"):
             st.markdown(
-                f"**{translate('saved_strategy_query')}**: "
-                f"{saved.get('query', '')}"
+                f"**{translate('saved_strategy_query')}**: {saved.get('query', '')}"
             )
             st.markdown(
                 f"**{translate('saved_strategy_databases')}**: "
@@ -178,9 +167,7 @@ def render_intake_materials(
     with col_zotero:
         st.markdown("##### Zotero")
         if app.settings.zotero_enabled:
-            if st.button(
-                translate("button_sync_zotero"), type="primary"
-            ):
+            if st.button(translate("button_sync_zotero"), type="primary"):
                 try:
                     client = ZoteroClient(
                         ZoteroConfig(
@@ -191,9 +178,7 @@ def render_intake_materials(
                     )
                     result = ZoteroSynchroniser(
                         client, app.literature_repository
-                    ).sync_library(
-                        project_id=project_id, fetch_attachments=True
-                    )
+                    ).sync_library(project_id=project_id, fetch_attachments=True)
                 except Exception as exc:
                     st.error(translate("error_zotero_sync", error=exc))
                 else:
@@ -209,13 +194,9 @@ def render_intake_materials(
     with col_manual:
         st.markdown(f"##### {translate('manual_entry_header')}")
         with st.form("manual-literature", clear_on_submit=True):
-            lit_title = st.text_input(
-                translate("field_literature_title")
-            )
+            lit_title = st.text_input(translate("field_literature_title"))
             lit_doi = st.text_input("DOI", placeholder="10.1038/...")
-            if st.form_submit_button(
-                translate("button_add_literature")
-            ):
+            if st.form_submit_button(translate("button_add_literature")):
                 try:
                     app.literature_repository.create_literature_record(
                         project_id=project_id,
@@ -229,9 +210,7 @@ def render_intake_materials(
                 else:
                     st.success(translate("success_literature_added"))
 
-    records = app.literature_repository.list_literature_records(
-        project_id
-    )
+    records = app.literature_repository.list_literature_records(project_id)
     if records:
         intake["literature_record_drafts"] = [
             literature_draft(record) for record in records
@@ -254,12 +233,8 @@ def render_intake_materials(
             list(record_labels),
             format_func=lambda value: record_labels[value],
         )
-        pdf = st.file_uploader(
-            translate("field_import_pdf"), type=["pdf"]
-        )
-        if pdf is not None and st.button(
-            translate("button_archive_pdf")
-        ):
+        pdf = st.file_uploader(translate("field_import_pdf"), type=["pdf"])
+        if pdf is not None and st.button(translate("button_archive_pdf")):
             import_result = app.document_importer.import_bytes(
                 project_id=project_id,
                 literature_record_id=target_id,
@@ -297,19 +272,13 @@ def render_intake_materials(
                     names=", ".join(columns),
                 )
             )
-            outcome_var = st.selectbox(
-                translate("field_outcome_variable"), columns
-            )
-            exposure_var = st.selectbox(
-                translate("field_exposure_variable"), columns
-            )
+            outcome_var = st.selectbox(translate("field_outcome_variable"), columns)
+            exposure_var = st.selectbox(translate("field_exposure_variable"), columns)
             id_var = st.selectbox(
                 translate("field_id_variable"),
                 [translate("option_none"), *columns],
             )
-            if st.button(
-                translate("button_save_dataset"), type="primary"
-            ):
+            if st.button(translate("button_save_dataset"), type="primary"):
                 dataset_id = str(uuid.uuid4())
                 intake["dataset_summary"] = {
                     "dataset_id": dataset_id,
@@ -405,21 +374,16 @@ def render_intake_materials(
             hide_index=True,
             key=f"var_editor_{project_id}",
         )
-        if st.button(
-            translate("button_save_variables"), type="primary"
-        ):
+        if st.button(translate("button_save_variables"), type="primary"):
             updated_specs = []
             for _, r in edited.iterrows():
                 updated_specs.append(
                     {
                         "name": str(r["name"]),
-                        "var_type": _type_rmap.get(
-                            r["var_type"], "continuous"
-                        ),
+                        "var_type": _type_rmap.get(r["var_type"], "continuous"),
                         "role": str(r["role"]),
                         "unit": str(r["unit"]) or None,
-                        "missing_code": str(r["missing_code"])
-                        or None,
+                        "missing_code": str(r["missing_code"]) or None,
                     }
                 )
             intake["variable_spec_drafts"] = updated_specs

@@ -19,11 +19,13 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from vet_manuscript_lab.domain.conventions import sha256_bytes, utc_now
+from vet_manuscript_lab.domain.conventions import RunMode, sha256_bytes, utc_now
 from vet_manuscript_lab.domain.policies import (
     EvidenceCandidate,
     PolicyViolation,
     ScreeningSummary,
+    require_no_mock_fallback,
+    require_real_source_span,
     require_screening_complete,
     require_source_span_for_evidence,
 )
@@ -337,9 +339,23 @@ def screening_node(state: WorkflowState) -> dict[str, Any]:
 
 
 def _extract_mock(
-    state: WorkflowState, included: list[LiteratureRecordDraft]
+    state: WorkflowState,
+    included: list[LiteratureRecordDraft],
+    *,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> tuple[list[SourceSpanDraft], list[EvidenceDraft]]:
-    """Generate deterministic mock spans and evidence (offline fallback)."""
+    """Generate deterministic mock spans and evidence (offline fallback).
+
+    In ``RunMode.PRODUCTION`` this function raises
+    ``EvidenceExtractionFailed`` because mock evidence must never enter
+    the formal evidence ledger.
+    """
+
+    require_no_mock_fallback(
+        run_mode=run_mode,
+        is_mock_generated=True,
+        context="mock evidence extraction (no pipeline provided)",
+    )
 
     spans: list[SourceSpanDraft] = []
     drafts: list[EvidenceDraft] = []
@@ -377,6 +393,8 @@ def _extract_with_pipeline(
     state: WorkflowState,
     included: list[LiteratureRecordDraft],
     pipeline: EvidencePipeline,
+    *,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> tuple[list[SourceSpanDraft], list[EvidenceDraft]]:
     """Use PDF parser + chunker + retriever to extract real evidence.
 
@@ -384,8 +402,12 @@ def _extract_with_pipeline(
     top candidate chunk becomes the source span (carrying page, section,
     and char offsets), and its text is used as the evidence value.
 
-    Records without retrieval hits fall back to a mock span so the
-    source-span policy invariant is never violated.
+    Records without retrieval hits:
+    - In ``DEMO``/``TEST`` mode: fall back to a mock span so the
+      source-span policy invariant is never violated.
+    - In ``PRODUCTION`` mode: raise ``NeedsHumanSourceSpan`` so the
+      record is flagged for human resolution instead of fabricating
+      a source span.
     """
 
     spans: list[SourceSpanDraft] = []
@@ -432,7 +454,13 @@ def _extract_with_pipeline(
                 )
             )
         else:
-            # No retrieval hit — fall back to mock span to maintain invariant
+            # No retrieval hit — fail-closed in production, mock fallback otherwise
+            require_real_source_span(
+                run_mode=run_mode,
+                span_attachment_version_id=None,
+                record_id=record_id,
+            )
+            # Only reached in non-production modes
             quote = f"{title} — key result excerpt"
             quote_hash = sha256_bytes(quote.encode())
             span_id = _stable_id(state["project_id"], "span", record_id)
@@ -466,6 +494,7 @@ def evidence_extraction_node(
     state: WorkflowState,
     *,
     pipeline: EvidencePipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> dict[str, Any]:
     """Extract source spans and evidence items for every included record.
 
@@ -483,9 +512,11 @@ def evidence_extraction_node(
     included = [r for r in records if r.get("screening_decision") == "included"]
 
     if pipeline is not None:
-        spans, drafts = _extract_with_pipeline(state, included, pipeline)
+        spans, drafts = _extract_with_pipeline(
+            state, included, pipeline, run_mode=run_mode
+        )
     else:
-        spans, drafts = _extract_mock(state, included)
+        spans, drafts = _extract_mock(state, included, run_mode=run_mode)
 
     # Enforce source-span invariant for every candidate before persisting.
     for draft in drafts:
@@ -623,6 +654,7 @@ def build_evidence_pipeline_graph(
     *,
     synchroniser: ZoteroSynchroniser | None = None,
     pipeline: EvidencePipeline | None = None,
+    run_mode: RunMode = RunMode.DEMO,
 ) -> Any:
     """Compile the full pipeline from ``PROJECT_INIT`` to ``EVIDENCE_AUDIT``.
 
@@ -635,6 +667,9 @@ def build_evidence_pipeline_graph(
 
     When ``pipeline`` is provided the ``evidence_extraction`` node uses
     real PDF parsing and retrieval candidates instead of mock spans.
+
+    ``run_mode`` controls fail-closed behavior: in ``PRODUCTION`` mode
+    mock fallbacks and synthetic source spans are forbidden.
     """
 
     builder = StateGraph(WorkflowState)
@@ -654,7 +689,9 @@ def build_evidence_pipeline_graph(
     builder.add_node("screening", screening_node)
     builder.add_node(
         "evidence_extraction",
-        lambda state: evidence_extraction_node(state, pipeline=pipeline),
+        lambda state: evidence_extraction_node(
+            state, pipeline=pipeline, run_mode=run_mode
+        ),
     )
     builder.add_node("evidence_audit", evidence_audit_node)
 

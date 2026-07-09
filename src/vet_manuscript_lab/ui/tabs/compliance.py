@@ -23,9 +23,7 @@ def render_compliance_findings(state: dict[str, Any]) -> None:
         col1, col2 = st.columns(2)
         col1.metric(
             translate("label_compliance_status"),
-            translate("label_pass")
-            if passed
-            else translate("label_fail"),
+            translate("label_pass") if passed else translate("label_fail"),
         )
         col2.metric(
             translate("label_findings_count"),
@@ -37,21 +35,13 @@ def render_compliance_findings(state: dict[str, Any]) -> None:
         for f in findings:
             rows.append(
                 {
-                    translate("col_rule_id"): f.get(
-                        "rule_id", ""
-                    ),
-                    translate("col_severity"): f.get(
-                        "severity", ""
-                    ),
+                    translate("col_rule_id"): f.get("rule_id", ""),
+                    translate("col_severity"): f.get("severity", ""),
                     translate("col_message"): f.get("message", ""),
-                    translate("col_object_id"): f.get(
-                        "object_id", ""
-                    )[:40],
+                    translate("col_object_id"): f.get("object_id", "")[:40],
                 }
             )
-        st.dataframe(
-            rows, use_container_width=True, hide_index=True
-        )
+        st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def render_export(state: dict[str, Any]) -> None:
@@ -73,10 +63,7 @@ def render_export(state: dict[str, Any]) -> None:
         translate("label_manuscript_status"),
         package.get("status", ""),
     )
-    st.caption(
-        f"{translate('col_package_uri')}: "
-        f"`{package.get('package_uri', '')}`"
-    )
+    st.caption(f"{translate('col_package_uri')}: `{package.get('package_uri', '')}`")
 
     from vet_manuscript_lab.services.export import (
         ExportInput,
@@ -84,24 +71,14 @@ def render_export(state: dict[str, Any]) -> None:
         create_docx_renderer,
     )
 
-    sections = tuple(
-        dict(s) for s in state.get("section_drafts", [])
-    )
-    citations = tuple(
-        dict(c) for c in state.get("citation_drafts", [])
-    )
-    results = tuple(
-        dict(r) for r in state.get("result_drafts", [])
-    )
-    literature = tuple(
-        dict(r) for r in state.get("literature_record_drafts", [])
-    )
+    sections = tuple(dict(s) for s in state.get("section_drafts", []))
+    citations = tuple(dict(c) for c in state.get("citation_drafts", []))
+    results = tuple(dict(r) for r in state.get("result_drafts", []))
+    literature = tuple(dict(r) for r in state.get("literature_record_drafts", []))
     analysis_plan = dict(state.get("analysis_plan_summary") or {})
     ai_usage = dict(state.get("ai_usage") or {})
     manuscript = dict(state.get("manuscript_summary") or {})
-    sign_off = dict(
-        state.get("approvals", {}).get("final_sign_off", {})
-    )
+    sign_off = dict(state.get("approvals", {}).get("final_sign_off", {}))
     sign_off["approval_id"] = (
         state.get("sign_off_binding", {}).get("approval_id", "")
         if state.get("sign_off_binding")
@@ -136,15 +113,10 @@ def render_export(state: dict[str, Any]) -> None:
             "manifest": "label_download_manifest",
             "docx": "label_download_docx",
         }.get(comp.role, "col_filename")
-        label = (
-            translate(label_key)
-            if label_key != "col_filename"
-            else comp.filename
-        )
+        label = translate(label_key) if label_key != "col_filename" else comp.filename
 
         is_binary = comp.media_type in (
-            "application/vnd.openxmlformats-"
-            "officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/octet-stream",
         )
         if is_binary:
@@ -184,9 +156,7 @@ def render_export(state: dict[str, Any]) -> None:
             }
         )
     if comp_rows:
-        st.dataframe(
-            comp_rows, use_container_width=True, hide_index=True
-        )
+        st.dataframe(comp_rows, use_container_width=True, hide_index=True)
 
 
 def render_ai_disclosure(state: dict[str, Any]) -> None:
@@ -207,9 +177,7 @@ def render_ai_disclosure(state: dict[str, Any]) -> None:
     failure = usage.get("failure_count", 0)
 
     col1, col2 = st.columns(2)
-    col1.metric(
-        translate("label_total_invocations"), total_invocations
-    )
+    col1.metric(translate("label_total_invocations"), total_invocations)
     col2.metric(
         translate("label_total_cost"),
         f"${total_cost / 100:.2f}",
@@ -251,10 +219,7 @@ def render_ai_disclosure(state: dict[str, Any]) -> None:
                 continue
             invocations = data.get("invocations", 0)
             cost_cents = data.get("cost_cents", 0)
-            lines.append(
-                f"| {task_kind} | {invocations} | "
-                f"${cost_cents / 100:.2f} |"
-            )
+            lines.append(f"| {task_kind} | {invocations} | ${cost_cents / 100:.2f} |")
 
     lines.append("")
     lines.append(
@@ -263,9 +228,7 @@ def render_ai_disclosure(state: dict[str, Any]) -> None:
     )
 
     disclosure_text = "\n".join(lines)
-    with st.expander(
-        translate("section_ai_disclosure"), expanded=False
-    ):
+    with st.expander(translate("section_ai_disclosure"), expanded=False):
         st.code(disclosure_text, language="markdown")
     st.download_button(
         translate("label_download_manifest"),

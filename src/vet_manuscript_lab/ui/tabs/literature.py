@@ -44,9 +44,7 @@ def render_literature_records(state: dict[str, Any]) -> None:
             icon = "\u23f3"
         rows.append(
             {
-                translate("col_record_id"): rec.get(
-                    "record_id", ""
-                )[:12],
+                translate("col_record_id"): rec.get("record_id", "")[:12],
                 translate("col_title"): rec.get("title", ""),
                 translate("col_doi"): rec.get("doi", ""),
                 translate("label_screening_auto"): f"{icon} {decision}",
@@ -78,9 +76,7 @@ def render_evidence_items(state: dict[str, Any]) -> None:
             summary.get("items_requiring_review", 0),
         )
 
-    span_lookup: dict[str, dict[str, Any]] = {
-        s["span_id"]: s for s in spans
-    }
+    span_lookup: dict[str, dict[str, Any]] = {s["span_id"]: s for s in spans}
 
     rows = []
     for draft in drafts:
@@ -93,48 +89,34 @@ def render_evidence_items(state: dict[str, Any]) -> None:
         rows.append(
             {
                 translate("col_concept"): draft.get("concept", ""),
-                translate("col_value"): str(
-                    draft.get("value", "")
-                )[:120],
+                translate("col_value"): str(draft.get("value", ""))[:120],
                 translate("col_page"): span.get("page", ""),
-                translate("col_section"): span.get(
-                    "section_label", ""
-                ),
+                translate("col_section"): span.get("section_label", ""),
                 translate("col_review"): (
                     translate("label_yes")
                     if draft.get("requires_human_review")
                     else translate("label_no")
                 ),
-                translate("col_status"): draft.get(
-                    "extraction_status", ""
-                ),
+                translate("col_status"): draft.get("extraction_status", ""),
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
-    with st.expander(
-        translate("section_source_spans"), expanded=False
-    ):
+    with st.expander(translate("section_source_spans"), expanded=False):
         span_rows = []
         for span in spans:
             span_rows.append(
                 {
-                    translate("col_span_id"): span.get(
-                        "span_id", ""
-                    )[:16],
-                    translate("col_record_id"): span.get(
-                        "literature_record_id", ""
-                    )[:12],
+                    translate("col_span_id"): span.get("span_id", "")[:16],
+                    translate("col_record_id"): span.get("literature_record_id", "")[
+                        :12
+                    ],
                     translate("col_page"): span.get("page", ""),
-                    translate("col_section"): span.get(
-                        "section_label", ""
-                    ),
+                    translate("col_section"): span.get("section_label", ""),
                 }
             )
         if span_rows:
-            st.dataframe(
-                span_rows, use_container_width=True, hide_index=True
-            )
+            st.dataframe(span_rows, use_container_width=True, hide_index=True)
         else:
             st.info(translate("info_no_evidence"))
 
@@ -146,9 +128,7 @@ def render_search_strategy_detail(state: dict[str, Any]) -> None:
     strategy = artifacts.get("search_strategy")
     if strategy is None:
         return
-    with st.expander(
-        translate("gate.search_strategy.title"), expanded=False
-    ):
+    with st.expander(translate("gate.search_strategy.title"), expanded=False):
         st.caption(translate("gate.search_strategy.summary"))
         st.json(
             {
