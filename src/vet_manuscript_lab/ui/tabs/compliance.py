@@ -41,7 +41,7 @@ def render_compliance_findings(state: dict[str, Any]) -> None:
                     translate("col_object_id"): f.get("object_id", "")[:40],
                 }
             )
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_export(state: dict[str, Any]) -> None:
@@ -156,7 +156,7 @@ def render_export(state: dict[str, Any]) -> None:
             }
         )
     if comp_rows:
-        st.dataframe(comp_rows, use_container_width=True, hide_index=True)
+        st.dataframe(comp_rows, width="stretch", hide_index=True)
 
 
 def render_ai_disclosure(state: dict[str, Any]) -> None:

@@ -335,4 +335,4 @@ def _render_audit_log(state: dict[str, Any]) -> None:
             )
         rows.reverse()  # newest first
         if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.dataframe(rows, width="stretch", hide_index=True)

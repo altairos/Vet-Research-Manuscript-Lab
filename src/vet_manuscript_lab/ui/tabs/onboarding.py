@@ -39,7 +39,7 @@ def render_onboarding(app: Application) -> None:
         if st.button(
             translate("onboard_golden_button"),
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key="onboard_run_golden",
         ):
             with st.spinner(translate("golden_workspace_loading")):
@@ -60,7 +60,7 @@ def render_onboarding(app: Application) -> None:
         )
         if st.button(
             translate("onboard_new_button"),
-            use_container_width=True,
+            width="stretch",
             key="onboard_new_project",
         ):
             # Switch to the Study Setup workspace by setting a hint
@@ -75,7 +75,7 @@ def render_onboarding(app: Application) -> None:
         )
         st.button(
             translate("onboard_import_title"),
-            use_container_width=True,
+            width="stretch",
             disabled=True,
             key="onboard_import",
             help=translate("onboard_import_body"),

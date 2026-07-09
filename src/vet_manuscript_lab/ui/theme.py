@@ -13,7 +13,6 @@ from __future__ import annotations
 from typing import Any
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from vet_manuscript_lab.ui.i18n import (
     stage_label,
@@ -507,7 +506,7 @@ def inject_auto_grow_textareas() -> None:
     its ``scrollHeight`` on render and on every keystroke.
     """
 
-    components.html(
+    st.iframe(
         """
 <script>
 (function() {
@@ -534,5 +533,5 @@ def inject_auto_grow_textareas() -> None:
 })();
 </script>
 """,
-        height=0,
+        height=1,
     )

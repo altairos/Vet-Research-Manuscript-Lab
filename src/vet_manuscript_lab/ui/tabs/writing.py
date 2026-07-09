@@ -144,7 +144,7 @@ def render_claims(state: dict[str, Any]) -> None:
                 translate("col_ref_numbers"): str(c.get("referenced_numbers", [])),
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_citations(state: dict[str, Any]) -> None:
@@ -168,7 +168,7 @@ def render_citations(state: dict[str, Any]) -> None:
                 translate("col_claim_type"): c.get("claim_id", "")[:24],
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_claim_audit(state: dict[str, Any]) -> None:
@@ -223,7 +223,7 @@ def render_review(state: dict[str, Any]) -> None:
                     translate("col_status"): f.get("status", ""),
                 }
             )
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
 
     if revision_summary:
         with st.expander(translate("section_revision"), expanded=False):

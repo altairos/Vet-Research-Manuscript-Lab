@@ -46,7 +46,7 @@ def clean_table(
             d[display_label] = val
         display_rows.append(d)
 
-    st.dataframe(display_rows, use_container_width=True, hide_index=True)
+    st.dataframe(display_rows, width="stretch", hide_index=True)
 
 
 def collapsible_details(
@@ -105,9 +105,7 @@ def copy_button_html(value: str, key: str = "") -> str:
 def inject_copy_js() -> None:
     """Inject JS that wires up ``.vrl-copy-btn`` click → clipboard."""
 
-    import streamlit.components.v1 as components
-
-    components.html(
+    st.iframe(
         """
 <script>
 (function() {
@@ -131,7 +129,7 @@ def inject_copy_js() -> None:
 })();
 </script>
 """,
-        height=0,
+        height=1,
     )
 
 

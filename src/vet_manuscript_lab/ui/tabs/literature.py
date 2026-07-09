@@ -50,7 +50,7 @@ def render_literature_records(state: dict[str, Any]) -> None:
                 translate("label_screening_auto"): f"{icon} {decision}",
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_evidence_items(state: dict[str, Any]) -> None:
@@ -100,7 +100,7 @@ def render_evidence_items(state: dict[str, Any]) -> None:
                 translate("col_status"): draft.get("extraction_status", ""),
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     with st.expander(translate("section_source_spans"), expanded=False):
         span_rows = []
@@ -116,7 +116,7 @@ def render_evidence_items(state: dict[str, Any]) -> None:
                 }
             )
         if span_rows:
-            st.dataframe(span_rows, use_container_width=True, hide_index=True)
+            st.dataframe(span_rows, width="stretch", hide_index=True)
         else:
             st.info(translate("info_no_evidence"))
 

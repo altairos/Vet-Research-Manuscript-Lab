@@ -224,7 +224,7 @@ def render_intake_materials(
                 }
                 for r in records
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         record_labels = {r.id: r.title for r in records}
@@ -370,7 +370,7 @@ def render_intake_materials(
                     required=True,
                 ),
             },
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             key=f"var_editor_{project_id}",
         )

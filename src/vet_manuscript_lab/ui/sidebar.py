@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from vet_manuscript_lab.infrastructure.database.repository import ProjectInput
 from vet_manuscript_lab.ui.application import Application
@@ -56,7 +55,7 @@ def render_project_creation(app: Application) -> None:
                 default=["canine"],
             )
             submitted = st.form_submit_button(
-                translate("button_create"), type="primary", use_container_width=True
+                translate("button_create"), type="primary", width="stretch"
             )
         if submitted:
             try:
@@ -91,7 +90,7 @@ def inject_context_menu_js() -> None:
 
     rename_label = translate("ctx_rename")
     delete_label = translate("ctx_delete")
-    components.html(
+    st.iframe(
         f"""
 <script>
 (function() {{
@@ -222,7 +221,7 @@ def inject_context_menu_js() -> None:
 }})();
 </script>
 """,
-        height=0,
+        height=1,
     )
 
 
@@ -263,7 +262,7 @@ def render_sidebar_project_management(app: Application) -> None:
         if st.sidebar.button(
             "\u2192",
             key=f"select_{project.id}",
-            use_container_width=True,
+            width="stretch",
             disabled=is_active,
         ):
             if is_intake_dirty(current_pid) and project.id != current_pid:
@@ -293,7 +292,7 @@ def render_sidebar_project_management(app: Application) -> None:
                 if col_save.form_submit_button(
                     translate("button_rename_project"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     try:
                         app.repository.rename_project(project.id, new_title)
@@ -306,7 +305,7 @@ def render_sidebar_project_management(app: Application) -> None:
                         )
                         st.rerun()
                 if col_cancel.form_submit_button(
-                    translate("label_no"), use_container_width=True
+                    translate("label_no"), width="stretch"
                 ):
                     st.session_state.pop("rename_target", None)
                     st.rerun()
@@ -318,7 +317,7 @@ def render_sidebar_project_management(app: Application) -> None:
             if c_del.button(
                 "OK",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key=f"confirm_del_{project.id}",
             ):
                 try:
@@ -335,7 +334,7 @@ def render_sidebar_project_management(app: Application) -> None:
                     st.rerun()
             if c_cancel.button(
                 translate("label_no"),
-                use_container_width=True,
+                width="stretch",
                 key=f"cancel_del_{project.id}",
             ):
                 st.session_state.pop("confirm_delete", None)
@@ -348,7 +347,7 @@ def render_sidebar_project_management(app: Application) -> None:
         if c_yes.button(
             translate("label_discard"),
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key="discard_yes",
         ):
             st.session_state["project_id"] = pending_switch
@@ -357,7 +356,7 @@ def render_sidebar_project_management(app: Application) -> None:
             st.rerun()
         if c_no.button(
             translate("label_stay"),
-            use_container_width=True,
+            width="stretch",
             key="discard_no",
         ):
             st.session_state.pop("pending_project_switch", None)

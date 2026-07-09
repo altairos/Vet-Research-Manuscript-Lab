@@ -8,7 +8,6 @@ import uuid
 from typing import Any, cast
 
 import streamlit as st
-import streamlit.components.v1 as components
 from langgraph.types import Command
 
 from vet_manuscript_lab.domain.conventions import utc_now
@@ -110,7 +109,7 @@ def inject_beforeunload(is_dirty: bool) -> None:
     """Inject JS to warn on page leave when there are unsaved changes."""
 
     flag = "true" if is_dirty else "false"
-    components.html(
+    st.iframe(
         f"""
 <script>
 (function() {{
@@ -123,7 +122,7 @@ def inject_beforeunload(is_dirty: bool) -> None:
 }})();
 </script>
 """,
-        height=0,
+        height=1,
     )
 
 

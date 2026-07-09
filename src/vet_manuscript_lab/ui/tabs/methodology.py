@@ -85,7 +85,7 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
                 translate("col_recommendation"): f.get("recommendation", ""),
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_analysis_plan(state: dict[str, Any]) -> None:
@@ -129,7 +129,7 @@ def render_analysis_plan(state: dict[str, Any]) -> None:
                     translate("col_class"): a.get("analysis_class", ""),
                 }
             )
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_statistical_results(state: dict[str, Any]) -> None:
@@ -176,7 +176,7 @@ def render_statistical_results(state: dict[str, Any]) -> None:
                     translate("col_class"): d.get("analysis_class", ""),
                 }
             )
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_effect_plots(state: dict[str, Any]) -> None:
@@ -216,7 +216,7 @@ def render_effect_plots(state: dict[str, Any]) -> None:
     st.bar_chart(df[translate("col_estimate")])
     st.dataframe(
         df.drop(columns=[translate("col_estimate")]),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -271,7 +271,7 @@ def render_analysis_provenance(state: dict[str, Any]) -> None:
                 ]
                 st.dataframe(
                     pv_rows,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:

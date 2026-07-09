@@ -172,7 +172,7 @@ def render_review_disposition(
         submitted = st.form_submit_button(
             translate("button_submit_review"),
             type="primary",
-            use_container_width=True,
+            width="stretch"
         )
 
     if submitted:
@@ -233,7 +233,7 @@ def render_sign_off_approval(
         submitted = st.form_submit_button(
             translate("button_submit_decision"),
             type="primary",
-            use_container_width=True,
+            width="stretch"
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -316,7 +316,7 @@ def render_pending_approval(
         submitted = st.form_submit_button(
             translate("button_submit_decision"),
             type="primary",
-            use_container_width=True,
+            width="stretch"
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -396,7 +396,7 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
     if events:
         st.dataframe(
             events,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -450,7 +450,7 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
                     "content_hash": content_hash or "-",
                 }
         if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.dataframe(rows, width="stretch", hide_index=True)
         else:
             st.caption(translate("label_no_artifacts"))
 
