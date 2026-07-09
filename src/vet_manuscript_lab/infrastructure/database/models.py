@@ -256,11 +256,13 @@ class EvidenceItemRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     concept: Mapped[str] = mapped_column(String(300))
+    evidence_type: Mapped[str] = mapped_column(String(64), default="background_claim")
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     units: Mapped[str | None] = mapped_column(String(128), nullable=True)
     population: Mapped[str | None] = mapped_column(String(300), nullable=True)
     certainty: Mapped[str] = mapped_column(String(64), default="unspecified")
     extraction_status: Mapped[str] = mapped_column(String(32), default="draft")
+    evidence_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     source_span_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     literature_record_id: Mapped[str] = mapped_column(
         ForeignKey("literature_records.id"), nullable=False

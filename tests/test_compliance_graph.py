@@ -84,7 +84,9 @@ def _run_to_results_approval(graph: Any, config: dict, initial: dict) -> None:
 def _run_to_compliance_audit(graph: Any, config: dict, initial: dict) -> None:
     """Run through to the final_compliance_audit interrupt or node."""
     _run_to_results_approval(graph, config, initial)
-    # Approve results -> writing -> claim_audit -> review -> compliance_audit
+    # Approve results -> argument_spine -> argument_spine_approval interrupt
+    graph.invoke(_approve(), config)
+    # Approve spine -> writing -> claim_audit -> review -> compliance_audit
     graph.invoke(_approve(), config)
 
 

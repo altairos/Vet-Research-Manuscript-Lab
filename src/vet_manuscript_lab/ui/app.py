@@ -102,7 +102,7 @@ def render_workflow(app: Application, project_id: str) -> None:
 
     # Two-column layout: main content (tabs) on the left, pipeline control
     # panel docked as a sticky sidebar on the far right.
-    main_col, pipeline_col = st.columns([0.66, 0.34], gap="large")
+    main_col, pipeline_col = st.columns([0.6, 0.4], gap="medium")
 
     with pipeline_col:
         # Hidden marker so the CSS ``:has()`` rule can pin this column.

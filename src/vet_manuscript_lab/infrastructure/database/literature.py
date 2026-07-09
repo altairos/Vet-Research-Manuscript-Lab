@@ -70,12 +70,14 @@ class EvidenceInput:
     concept: str
     literature_record_id: str
     source_span_ids: list[str]
+    evidence_type: str = "background_claim"
     value: str | None = None
     units: str | None = None
     population: str | None = None
     certainty: str = "unspecified"
     extraction_status: str = "draft"
     requires_human_review: bool = False
+    evidence_metadata: dict[str, str] | None = None
     created_by_run_id: str | None = None
 
 
@@ -292,11 +294,13 @@ class LiteratureRepository:
                 id=new_id(),
                 project_id=data.project_id,
                 concept=data.concept,
+                evidence_type=data.evidence_type,
                 value=data.value,
                 units=data.units,
                 population=data.population,
                 certainty=data.certainty,
                 extraction_status=data.extraction_status,
+                evidence_metadata=dict(data.evidence_metadata or {}),
                 source_span_ids=list(data.source_span_ids),
                 literature_record_id=data.literature_record_id,
                 created_by_run_id=data.created_by_run_id,

@@ -9,7 +9,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from vet_manuscript_lab.domain.conventions import RunMode, run_mode_allows_mock
+from vet_manuscript_lab.domain.conventions import (
+    EvidenceType,
+    RunMode,
+    run_mode_allows_mock,
+)
 from vet_manuscript_lab.domain.policies.foundation import (
     EvidenceExtractionFailed,
     NeedsHumanSourceSpan,
@@ -138,14 +142,99 @@ def require_real_source_span(
         )
 
 
+@dataclass(frozen=True, slots=True)
+class TypedEvidenceCandidate:
+    """Evidence candidate with a structured ``evidence_type`` field.
+
+    This extends ``EvidenceCandidate`` with a type classification that
+    drives type-specific validation rules.  The ``metadata`` dict holds
+    type-specific fields (e.g. variable, groups, effect_size for
+    ``STATISTICAL_RESULT``).
+    """
+
+    concept: str
+    evidence_type: EvidenceType
+    source_span_ids: list[str]
+    literature_record_id: str
+    extraction_status: str
+    requires_human_review: bool
+    value: str | None = None
+    units: str | None = None
+    population: str | None = None
+    metadata: dict[str, str] | None = None
+
+
+# Required fields per evidence type.
+#
+# Keys in the metadata dict that must be non-empty for the type to be
+# considered valid.  An empty tuple means the type has no extra
+# required metadata beyond the base fields.
+_REQUIRED_METADATA: dict[EvidenceType, tuple[str, ...]] = {
+    EvidenceType.SAMPLE_CHARACTERISTIC: (),
+    EvidenceType.DIAGNOSTIC_CRITERION: (),
+    EvidenceType.EXPOSURE_OR_INTERVENTION: (),
+    EvidenceType.OUTCOME_DEFINITION: (),
+    EvidenceType.STATISTICAL_RESULT: (
+        "variable",
+        "groups",
+        "effect_size",
+    ),
+    EvidenceType.ADVERSE_EVENT: ("event",),
+    EvidenceType.LIMITATION: (),
+    EvidenceType.MECHANISTIC_HYPOTHESIS: (),
+    EvidenceType.GUIDELINE_REQUIREMENT: ("guideline",),
+    EvidenceType.BACKGROUND_CLAIM: (),
+}
+
+
+def require_valid_evidence_type(candidate: TypedEvidenceCandidate) -> None:
+    """Validate that a typed evidence item has all required fields.
+
+    Different ``EvidenceType`` values require different metadata fields.
+    For example, ``STATISTICAL_RESULT`` must specify ``variable``,
+    ``groups``, and ``effect_size`` in its metadata dict.
+
+    Raises ``PolicyViolation`` if required fields are missing or empty.
+    """
+
+    required = _REQUIRED_METADATA.get(candidate.evidence_type, ())
+    if not required:
+        return
+
+    meta = candidate.metadata or {}
+    missing: list[str] = []
+    for field_name in required:
+        val = meta.get(field_name, "")
+        if not val or not str(val).strip():
+            missing.append(field_name)
+
+    if missing:
+        raise PolicyViolation(
+            f"Evidence item for concept '{candidate.concept}' with type "
+            f"'{candidate.evidence_type.value}' is missing required "
+            f"metadata fields: {', '.join(missing)}"
+        )
+
+
+def get_required_metadata_fields(
+    evidence_type: EvidenceType,
+) -> tuple[str, ...]:
+    """Return the tuple of required metadata field names for a type."""
+
+    return _REQUIRED_METADATA.get(evidence_type, ())
+
+
 __all__ = [
     "EvidenceCandidate",
     "ScreeningSummary",
     "SearchGateSnapshot",
+    "TypedEvidenceCandidate",
+    "get_required_metadata_fields",
     "require_no_mock_fallback",
     "require_non_duplicate_reference",
     "require_real_source_span",
     "require_screening_complete",
     "require_search_approved",
     "require_source_span_for_evidence",
+    "require_valid_evidence_type",
 ]

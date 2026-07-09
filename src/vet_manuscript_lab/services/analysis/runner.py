@@ -62,6 +62,9 @@ class RunResult:
     Carries the typed results, execution provenance, and status.  When
     ``exit_code != 0`` the ``status`` is ``failed`` and ``results`` is
     empty — the run retains logs but produces no approved result.
+
+    ``requirements_hash`` captures a hash of the frozen environment
+    (pip freeze / renv.lock / uv.lock) so the run is reproducible.
     """
 
     run_id: str
@@ -72,6 +75,7 @@ class RunResult:
     seed: int | None
     package_versions: dict[str, str]
     environment: dict[str, str]
+    requirements_hash: str
     stdout: str
     stderr: str
     started_at: str
@@ -133,6 +137,13 @@ _DEFAULT_PACKAGES = {
     "platform": platform.platform(),
     "runner": "mock-statistics-runner-v1",
 }
+
+
+def _compute_requirements_hash(packages: dict[str, str]) -> str:
+    """Compute a deterministic hash of the package versions."""
+
+    content = json.dumps(packages, sort_keys=True)
+    return sha256_bytes(content.encode())
 
 
 @dataclass(slots=True)
@@ -221,6 +232,9 @@ class MockStatisticsRunner:
                         seed=seed,
                         package_versions=dict(_DEFAULT_PACKAGES),
                         environment=self._environment(),
+                        requirements_hash=_compute_requirements_hash(
+                            dict(_DEFAULT_PACKAGES)
+                        ),
                         stdout="",
                         stderr=f"Mock failure triggered for analysis: {a.name}",
                         started_at=started_at,
@@ -248,6 +262,7 @@ class MockStatisticsRunner:
             seed=seed,
             package_versions=dict(_DEFAULT_PACKAGES),
             environment=self._environment(),
+            requirements_hash=_compute_requirements_hash(dict(_DEFAULT_PACKAGES)),
             stdout="\n".join(stdout_lines),
             stderr="",
             started_at=started_at,

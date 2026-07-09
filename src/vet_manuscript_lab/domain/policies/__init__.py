@@ -29,12 +29,15 @@ from vet_manuscript_lab.domain.policies.evidence import (
     EvidenceCandidate,
     ScreeningSummary,
     SearchGateSnapshot,
+    TypedEvidenceCandidate,
+    get_required_metadata_fields,
     require_no_mock_fallback,
     require_non_duplicate_reference,
     require_real_source_span,
     require_screening_complete,
     require_search_approved,
     require_source_span_for_evidence,
+    require_valid_evidence_type,
 )
 from vet_manuscript_lab.domain.policies.foundation import (
     ApprovalSnapshot,
@@ -86,7 +89,9 @@ __all__ = [
     "SectionSnapshot",
     "SignOffContext",
     "StatisticalResultSnapshot",
+    "TypedEvidenceCandidate",
     "extract_referenced_numbers",
+    "get_required_metadata_fields",
     "require_approved_subject",
     "require_checklist_complete",
     "require_execution_immutability",
@@ -113,5 +118,6 @@ __all__ = [
     "require_signoff_preconditions",
     "require_source_span_for_evidence",
     "require_unlocked_subject",
+    "require_valid_evidence_type",
     "require_writing_inputs_approved",
 ]

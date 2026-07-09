@@ -378,6 +378,7 @@ def _extract_mock(
             EvidenceDraft(
                 evidence_id=evidence_id,
                 concept="study_finding",
+                evidence_type="background_claim",
                 value="mock extracted value",
                 units="n/a",
                 literature_record_id=record_id,
@@ -445,6 +446,7 @@ def _extract_with_pipeline(
                 EvidenceDraft(
                     evidence_id=evidence_id,
                     concept="retrieved_finding",
+                    evidence_type="background_claim",
                     value=chunk.text[:500],
                     units="n/a",
                     literature_record_id=record_id,
@@ -478,6 +480,7 @@ def _extract_with_pipeline(
                 EvidenceDraft(
                     evidence_id=evidence_id,
                     concept="study_finding",
+                    evidence_type="background_claim",
                     value="no retrieval candidates found",
                     units="n/a",
                     literature_record_id=record_id,

@@ -34,6 +34,8 @@ class WritingInput:
     result_drafts: list[dict[str, Any]]
     literature_records: list[dict[str, Any]]
     analysis_plan_summary: dict[str, Any] = field(default_factory=dict)
+    must_not_claim: tuple[str, ...] = ()
+    argument_spine_finding: str = ""
 
 
 @dataclass(frozen=True, slots=True)

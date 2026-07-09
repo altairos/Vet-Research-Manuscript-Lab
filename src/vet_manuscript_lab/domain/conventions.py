@@ -31,6 +31,7 @@ class ArtifactType(StrEnum):
     AI_USAGE_LOG = "ai_usage_log"
     AUDIT_REPORT = "audit_report"
     EXPORT_PACKAGE = "export_package"
+    ARGUMENT_SPINE = "argument_spine"
 
 
 class RunMode(StrEnum):
@@ -50,6 +51,26 @@ class RunMode(StrEnum):
 
 
 RUN_MODE_ENV = "VET_LAB_RUN_MODE"
+
+
+class EvidenceType(StrEnum):
+    """Structured classification for evidence items.
+
+    Each type corresponds to a different kind of scientific claim and
+    has its own required-field validation rules (see
+    ``domain/policies/evidence.py``).
+    """
+
+    SAMPLE_CHARACTERISTIC = "sample_characteristic"
+    DIAGNOSTIC_CRITERION = "diagnostic_criterion"
+    EXPOSURE_OR_INTERVENTION = "exposure_or_intervention"
+    OUTCOME_DEFINITION = "outcome_definition"
+    STATISTICAL_RESULT = "statistical_result"
+    ADVERSE_EVENT = "adverse_event"
+    LIMITATION = "limitation"
+    MECHANISTIC_HYPOTHESIS = "mechanistic_hypothesis"
+    GUIDELINE_REQUIREMENT = "guideline_requirement"
+    BACKGROUND_CLAIM = "background_claim"
 
 
 def run_mode_allows_mock(mode: RunMode) -> bool:

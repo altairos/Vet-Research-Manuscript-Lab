@@ -47,7 +47,10 @@ from vet_manuscript_lab.domain.policies import (
     require_no_approved_result_on_failure,
     require_plan_variables_in_dataset,
 )
-from vet_manuscript_lab.services.analysis.runner import RunResult
+from vet_manuscript_lab.services.analysis.runner import (
+    RunResult,
+    _compute_requirements_hash,
+)
 from vet_manuscript_lab.services.analysis.types import (
     AnalysisClass,
     AnalysisSpec,
@@ -315,6 +318,9 @@ class SubprocessStatisticsRunner:
                     seed=seed,
                     package_versions=self._package_versions(),
                     environment=self._environment(),
+                    requirements_hash=_compute_requirements_hash(
+                        self._package_versions()
+                    ),
                     stdout=stdout,
                     stderr=stderr,
                     started_at=started_at,
@@ -332,6 +338,9 @@ class SubprocessStatisticsRunner:
                         seed=seed,
                         package_versions=self._package_versions(),
                         environment=self._environment(),
+                        requirements_hash=_compute_requirements_hash(
+                            self._package_versions()
+                        ),
                         stdout=stdout,
                         stderr=f"Worker did not produce results.json. stderr={stderr}",
                         started_at=started_at,
@@ -363,6 +372,9 @@ class SubprocessStatisticsRunner:
                         seed=seed,
                         package_versions=self._package_versions(),
                         environment=self._environment(),
+                        requirements_hash=_compute_requirements_hash(
+                            self._package_versions()
+                        ),
                         stdout=output_data.get("stdout", stdout),
                         stderr=output_data.get("stderr", stderr),
                         started_at=started_at,

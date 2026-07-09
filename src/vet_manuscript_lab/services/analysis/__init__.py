@@ -22,6 +22,11 @@ from vet_manuscript_lab.services.analysis.types import (
     VariableSpec,
     VariableType,
 )
+from vet_manuscript_lab.services.analysis.validator import (
+    ValidationFinding,
+    require_no_blocking_findings,
+    validate_analysis_results,
+)
 
 __all__ = [
     "AnalysisClass",
@@ -36,7 +41,10 @@ __all__ = [
     "RunResult",
     "StatisticsRunner",
     "SubprocessStatisticsRunner",
+    "ValidationFinding",
     "VariableRole",
     "VariableSpec",
     "VariableType",
+    "require_no_blocking_findings",
+    "validate_analysis_results",
 ]

@@ -68,6 +68,18 @@ def _run_to_results_approval(graph: Any, config: dict, initial: dict) -> None:
     graph.invoke(_approve(), config)  # -> results_approval
 
 
+def _run_past_argument_spine(graph: Any, config: dict, initial: dict) -> None:
+    """Run through results_approval AND argument_spine_approval.
+
+    After Phase E, the pipeline inserts an argument_spine interrupt
+    between results_approval and section_writing.  This helper runs
+    through both so tests can proceed to the writing/review stages.
+    """
+    _run_to_results_approval(graph, config, initial)
+    graph.invoke(_approve(), config)  # results -> argument_spine -> spine_approval
+    graph.invoke(_approve(), config)  # spine_approval -> section_writing -> ...
+
+
 # ---------------------------------------------------------------------------
 # Custom test implementations
 # ---------------------------------------------------------------------------
@@ -178,15 +190,16 @@ class WritingPipelineIntegrationTests(unittest.TestCase):
             graph = build_writing_pipeline_graph(saver)
             config = {"configurable": {"thread_id": "happy-path"}}
 
-            _run_to_results_approval(graph, config, self.initial_state("happy-path"))
-            # results_approval interrupt
-            self.assertEqual(
-                interrupt_payloads(graph.get_state(config))[0]["gate"],
-                "results_interpretation",
-            )
+            _run_past_argument_spine(graph, config, self.initial_state("happy-path"))
 
-            # Approve results → writing → claim_audit → review → END
-            result = graph.invoke(_approve(), config)
+            # Verify argument spine was generated
+            snapshot = graph.get_state(config)
+            spine = snapshot.values.get("argument_spine")
+            self.assertIsNotNone(spine)
+            self.assertTrue(spine["must_not_claim"])
+
+            # review interrupt with no findings → END
+            result = graph.get_state(config).values
             self.assertEqual(result["current_stage"], "review")
 
             snapshot = graph.get_state(config)
@@ -212,8 +225,7 @@ class WritingPipelineIntegrationTests(unittest.TestCase):
             )
             graph = build_writing_pipeline_graph(saver)
             config = {"configurable": {"thread_id": "artifacts"}}
-            _run_to_results_approval(graph, config, self.initial_state("artifacts"))
-            graph.invoke(_approve(), config)
+            _run_past_argument_spine(graph, config, self.initial_state("artifacts"))
 
             snapshot = graph.get_state(config)
             vals = snapshot.values
@@ -239,6 +251,8 @@ class WritingPipelineIntegrationTests(unittest.TestCase):
             _run_to_results_approval(
                 graph, config, self.initial_state("resume-writing")
             )
+            # Approve results → argument_spine → argument_spine_approval interrupt
+            graph.invoke(_approve(), config)
             connection.close()
 
             connection, saver = open_sqlite_checkpointer(checkpoint_path)
@@ -246,8 +260,9 @@ class WritingPipelineIntegrationTests(unittest.TestCase):
             snapshot = resumed.get_state(config)
             self.assertEqual(
                 interrupt_payloads(snapshot)[0]["gate"],
-                "results_interpretation",
+                "argument_spine",
             )
+            # Approve spine → writing → claim_audit → review
             result = resumed.invoke(_approve(), config)
             self.assertEqual(result["current_stage"], "review")
             connection.close()
@@ -295,10 +310,9 @@ class WritingPipelineRevisionTests(unittest.TestCase):
             graph = build_writing_pipeline_graph(saver, writing_pipeline=pipeline)
             config = {"configurable": {"thread_id": "revision-cycle"}}
 
-            _run_to_results_approval(
+            _run_past_argument_spine(
                 graph, config, self.initial_state("revision-cycle")
             )
-            graph.invoke(_approve(), config)  # results → writing → audit → review
 
             # review_approval interrupt with findings
             snapshot = graph.get_state(config)
@@ -344,10 +358,9 @@ class WritingPipelineRevisionTests(unittest.TestCase):
             graph = build_writing_pipeline_graph(saver, writing_pipeline=pipeline)
             config = {"configurable": {"thread_id": "reject-findings"}}
 
-            _run_to_results_approval(
+            _run_past_argument_spine(
                 graph, config, self.initial_state("reject-findings")
             )
-            graph.invoke(_approve(), config)
 
             snapshot = graph.get_state(config)
             payloads = interrupt_payloads(snapshot)
@@ -383,10 +396,11 @@ class WritingPipelineRevisionTests(unittest.TestCase):
             config = {"configurable": {"thread_id": "revision-limit"}}
 
             # max_rounds = 1: only one revision allowed
-            _run_to_results_approval(
-                graph, config, self.initial_state("revision-limit", max_rounds=1)
+            _run_past_argument_spine(
+                graph,
+                config,
+                self.initial_state("revision-limit", max_rounds=1),
             )
-            graph.invoke(_approve(), config)  # → writing → audit → review
 
             # First revision
             snapshot = graph.get_state(config)

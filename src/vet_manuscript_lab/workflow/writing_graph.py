@@ -86,6 +86,7 @@ from vet_manuscript_lab.workflow.literature_graph import (
     search_approval_node,
 )
 from vet_manuscript_lab.workflow.state import (
+    ArgumentSpineDraft,
     ManuscriptCitationDraft,
     ManuscriptClaimDraft,
     ManuscriptSectionDraft,
@@ -146,6 +147,233 @@ def _dc_to_section_draft(s: SectionDraft) -> ManuscriptSectionDraft:
 # ---------------------------------------------------------------------------
 
 
+def argument_spine_node(
+    state: WorkflowState,
+) -> dict[str, Any]:
+    """Generate a structured argument skeleton from approved results.
+
+    The spine distils the main finding, clinical relevance, primary
+    evidence IDs, boundary conditions, and ``must_not_claim`` constraints.
+    These constraints are later enforced by ``claim_audit_node`` to
+    prevent overstatement.
+
+    The spine is emitted as a reviewable artifact and routed through
+    ``argument_spine_approval_node`` for human sign-off.
+    """
+
+    result_drafts = list(state.get("result_drafts", []))
+    evidence_summary: dict[str, Any] = dict(state.get("evidence_summary") or {})
+    analysis_plan_summary: dict[str, Any] = dict(
+        state.get("analysis_plan_summary") or {}
+    )
+    study_type = state.get("study_type", "")
+    species_scope = list(state.get("species_scope", []))
+
+    # -- Derive main finding from primary result -------------------------
+    primary_result: dict[str, Any] = {}
+    for r in result_drafts:
+        if r.get("is_primary", False) or r.get("label") == "primary":
+            primary_result = dict(r)
+            break
+    if not primary_result and result_drafts:
+        primary_result = dict(result_drafts[0])
+
+    estimate = primary_result.get("estimate")
+    p_value = primary_result.get("p_value")
+    ci_low = primary_result.get("ci_low")
+    ci_high = primary_result.get("ci_high")
+    variable = primary_result.get("variable", "the primary outcome")
+
+    if estimate is not None and p_value is not None:
+        main_finding = f"{variable}: estimate={estimate}, p={p_value}"
+        if ci_low is not None and ci_high is not None:
+            main_finding += f" (95% CI: {ci_low} to {ci_high})"
+    else:
+        main_finding = "No primary result available for synthesis."
+
+    # -- Clinical relevance -----------------------------------------------
+    species_text = ", ".join(species_scope) if species_scope else "the study population"
+    clinical_relevance = (
+        f"Findings are applicable to {species_text} in a {study_type} context. "
+        "Clinical significance should be judged in light of effect size "
+        "and confidence interval width."
+    )
+
+    # -- Primary evidence IDs ---------------------------------------------
+    evidence_items: list[dict[str, Any]] = list(evidence_summary.get("items", []))
+    primary_evidence = [
+        e.get("evidence_id", "") for e in evidence_items[:5] if e.get("evidence_id")
+    ]
+
+    # -- Boundary conditions ----------------------------------------------
+    boundary_conditions: list[str] = []
+    if analysis_plan_summary:
+        n_groups = analysis_plan_summary.get("n_groups")
+        if n_groups:
+            boundary_conditions.append(
+                f"Analysis includes {n_groups} comparison group(s)"
+            )
+    if primary_result.get("exploratory"):
+        boundary_conditions.append("Primary result is exploratory, not confirmatory")
+    if not boundary_conditions:
+        boundary_conditions.append("Results limited by study design and sample size")
+
+    # -- Must-not-claim constraints ---------------------------------------
+    must_not_claim: list[str] = []
+    if primary_result.get("exploratory"):
+        must_not_claim.append(
+            "Do not claim this result as a definitive or confirmatory finding"
+        )
+    if p_value is not None and float(p_value) > 0.05:
+        must_not_claim.append(
+            "Do not claim statistical significance for a non-significant result"
+        )
+    if ci_low is not None and ci_high is not None:
+        ci_width = abs(float(ci_high) - float(ci_low))
+        if ci_width > 2.0:
+            must_not_claim.append(
+                "Do not claim a precise effect estimate given wide confidence interval"
+            )
+    # Always include at least one constraint
+    if not must_not_claim:
+        must_not_claim.append(
+            "Do not claim causation from an observational study design"
+        )
+
+    # -- Discussion blueprint ---------------------------------------------
+    discussion_blueprint = (
+        "Discuss results in the context of the included evidence, "
+        "acknowledge limitations, and avoid causal language for "
+        "observational findings."
+    )
+
+    # -- Target journal angle ---------------------------------------------
+    target_journal_angle = (
+        f"Frame the manuscript for a {study_type} audience working with {species_text}."
+    )
+
+    spine_id = _stable_id(state["project_id"], "argument_spine")
+    spine: ArgumentSpineDraft = {
+        "spine_id": spine_id,
+        "main_finding": main_finding,
+        "clinical_relevance": clinical_relevance,
+        "primary_evidence": primary_evidence,
+        "boundary_conditions": boundary_conditions,
+        "must_not_claim": must_not_claim,
+        "discussion_blueprint": discussion_blueprint,
+        "target_journal_angle": target_journal_angle,
+    }
+
+    artifact = _make_artifact(
+        state,
+        role="argument_spine",
+        artifact_type="argument_spine",
+        gate="results_interpretation",
+        payload={
+            "spine_id": spine_id,
+            "main_finding": main_finding,
+            "must_not_claim_count": len(must_not_claim),
+        },
+    )
+    artifacts = dict(state.get("artifacts", {}))
+    artifacts["argument_spine"] = artifact
+
+    return {
+        "argument_spine": spine,
+        "artifacts": artifacts,
+        "current_stage": WorkflowStage.ARGUMENT_SPINE.value,
+        "updated_at": utc_now(),
+        "audit_events": [
+            _event(
+                state,
+                "argument_spine.generated",
+                WorkflowStage.ARGUMENT_SPINE,
+            )
+        ],
+    }
+
+
+def argument_spine_approval_node(state: WorkflowState) -> dict[str, Any]:
+    """Interrupt gate for human review of the argument spine.
+
+    The human can approve or request changes to the spine before
+    section writing begins.  The ``must_not_claim`` constraints become
+    binding after approval.
+    """
+
+    spine = state.get("argument_spine")
+    if spine is None:
+        raise PolicyViolation("Argument spine is missing for approval")
+
+    resume = interrupt(
+        {
+            "gate": "argument_spine",
+            "title": "Approve argument spine",
+            "summary": spine.get("main_finding", "Review the argument spine"),
+            "main_finding": spine.get("main_finding", ""),
+            "clinical_relevance": spine.get("clinical_relevance", ""),
+            "must_not_claim": spine.get("must_not_claim", []),
+            "boundary_conditions": spine.get("boundary_conditions", []),
+            "allowed_decisions": ["approved", "changes_requested"],
+        }
+    )
+
+    if not isinstance(resume, dict):
+        raise ValueError("Argument spine resume value must be an object")
+
+    decision = resume.get("decision", "")
+    if decision not in ("approved", "changes_requested"):
+        raise ValueError(f"Invalid argument spine decision: {decision}")
+
+    reviewer_id = resume.get("reviewer_id", "")
+    if not isinstance(reviewer_id, str) or not reviewer_id.strip():
+        raise ValueError("Reviewer identity is required for argument spine approval")
+
+    approval = {
+        "gate": "argument_spine",
+        "decision": decision,
+        "reviewer_id": reviewer_id.strip(),
+        "approved_at": utc_now(),
+    }
+    approvals = dict(state.get("approvals", {}))
+    approvals["argument_spine"] = approval  # type: ignore[assignment]
+
+    # Update artifact status
+    artifacts = dict(state.get("artifacts", {}))
+    spine_artifact = {**artifacts.get("argument_spine", {}), "status": decision}
+    artifacts["argument_spine"] = spine_artifact  # type: ignore[assignment]
+
+    return {
+        "approvals": approvals,
+        "artifacts": artifacts,
+        "current_stage": WorkflowStage.ARGUMENT_SPINE.value,
+        "updated_at": utc_now(),
+        "audit_events": [
+            _event(
+                state,
+                f"argument_spine.{decision}",
+                WorkflowStage.ARGUMENT_SPINE,
+            )
+        ],
+    }
+
+
+def route_argument_spine_decision(state: WorkflowState) -> str:
+    """Route after argument spine approval.
+
+    If approved, proceed to section writing.  If changes requested,
+    loop back to regenerate the spine.
+    """
+
+    approval = state.get("approvals", {}).get("argument_spine")
+    if approval is None:
+        return "argument_spine"
+    decision = approval.get("decision", "")
+    if decision == "approved":
+        return "section_writing"
+    return "argument_spine"
+
+
 def section_writing_node(
     state: WorkflowState,
     *,
@@ -178,6 +406,11 @@ def section_writing_node(
         state.get("analysis_plan_summary") or {}
     )
 
+    # Read ArgumentSpine constraints (Phase E)
+    spine: ArgumentSpineDraft | None = state.get("argument_spine")
+    must_not_claim = tuple(spine.get("must_not_claim", [])) if spine else ()
+    spine_finding = spine.get("main_finding", "") if spine else ""
+
     actual_writer = writer or MockSectionWriter()
 
     # In production mode, the mock writer must not generate formal manuscript
@@ -195,6 +428,8 @@ def section_writing_node(
             result_drafts=[dict(r) for r in result_drafts],
             literature_records=[dict(r) for r in literature_records],
             analysis_plan_summary=dict(analysis_plan_summary),
+            must_not_claim=must_not_claim,
+            argument_spine_finding=spine_finding,
         )
     )
 
@@ -340,6 +575,35 @@ def claim_audit_node(state: WorkflowState) -> dict[str, Any]:
     except PolicyViolation as exc:
         audit_errors.append({"check": "numeric_consistency", "error": str(exc)})
 
+    # Phase F: Check for exploratory results entering Abstract conclusions
+    audit_warnings: list[dict[str, Any]] = []
+    exploratory_result_ids = {
+        r.get("result_id", "")
+        for r in results
+        if r.get("exploratory") or r.get("analysis_class") == "exploratory"
+    }
+    if exploratory_result_ids:
+        for c in claims:
+            section_id = c.get("section_id", "")
+            claim_id = c.get("claim_id", "")
+            # Flag claims in Abstract that reference exploratory results
+            if "abstract" in section_id.lower():
+                claim_supports = [s for s in supports if s.get("claim_id") == claim_id]
+                for s in claim_supports:
+                    if s.get("source_id", "") in exploratory_result_ids:
+                        audit_warnings.append(
+                            {
+                                "check": "exploratory_in_abstract",
+                                "claim_id": claim_id,
+                                "warning": (
+                                    "Exploratory result referenced in "
+                                    "Abstract section. Consider moving "
+                                    "to Results or clearly labelling "
+                                    "as exploratory."
+                                ),
+                            }
+                        )
+
     passed = len(audit_errors) == 0
     artifact = _make_artifact(
         state,
@@ -350,10 +614,14 @@ def claim_audit_node(state: WorkflowState) -> dict[str, Any]:
             "total_claims": len(claims),
             "error_count": len(audit_errors),
             "errors": audit_errors,
+            "warning_count": len(audit_warnings),
+            "warnings": audit_warnings,
             "passed": passed,
         },
     )
     artifact = {**artifact, "status": "audit_passed" if passed else "audit_failed"}
+    artifact["warnings"] = audit_warnings  # type: ignore[typeddict-unknown-key]
+    artifact["warning_count"] = len(audit_warnings)  # type: ignore[typeddict-unknown-key]
     artifacts = dict(state.get("artifacts", {}))
     artifacts["claim_audit"] = artifact
 
@@ -668,7 +936,7 @@ def revision_node(
 
 def route_results_to_writing(state: WorkflowState) -> str:
     decision = state["approvals"]["results_interpretation"]["decision"]
-    return "section_writing" if decision == "approved" else "statistics_execution"
+    return "argument_spine" if decision == "approved" else "statistics_execution"
 
 
 def route_claim_audit_decision(state: WorkflowState) -> str:
@@ -779,6 +1047,8 @@ def _make_writing_builder(
     builder.add_node("results_approval", results_approval_node)
 
     # Writing stage
+    builder.add_node("argument_spine", argument_spine_node)
+    builder.add_node("argument_spine_approval", argument_spine_approval_node)
     builder.add_node(
         "section_writing",
         lambda s: section_writing_node(s, writer=writer, run_mode=effective_run_mode),
@@ -825,6 +1095,10 @@ def _make_writing_builder(
     builder.add_conditional_edges("results_approval", route_results_to_writing)
 
     # Edges: writing + review + revision
+    builder.add_edge("argument_spine", "argument_spine_approval")
+    builder.add_conditional_edges(
+        "argument_spine_approval", route_argument_spine_decision
+    )
     builder.add_edge("section_writing", "claim_audit")
     builder.add_conditional_edges("claim_audit", route_claim_audit_decision)
     builder.add_edge("review", "review_approval")
@@ -861,11 +1135,14 @@ def build_writing_pipeline_graph(
 __all__ = [
     "WritingPipeline",
     "_make_writing_builder",
+    "argument_spine_approval_node",
+    "argument_spine_node",
     "build_writing_pipeline_graph",
     "claim_audit_node",
     "review_approval_node",
     "review_node",
     "revision_node",
+    "route_argument_spine_decision",
     "route_claim_audit_decision",
     "route_results_to_writing",
     "route_review_decision",

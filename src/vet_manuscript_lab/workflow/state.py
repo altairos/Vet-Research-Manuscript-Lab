@@ -27,6 +27,7 @@ class WorkflowStage(StrEnum):
     ANALYSIS_PLAN_LOCK = "analysis_plan_lock"
     STATISTICS_EXECUTION = "statistics_execution"
     RESULTS_APPROVAL = "results_approval"
+    ARGUMENT_SPINE = "argument_spine"
     WRITING = "writing"
     CLAIM_AUDIT = "claim_audit"
     REVIEW = "review"
@@ -259,6 +260,7 @@ class EvidenceDraft(TypedDict, total=False):
 
     evidence_id: Required[str]
     concept: str
+    evidence_type: str
     value: str | None
     units: str | None
     population: str | None
@@ -266,6 +268,25 @@ class EvidenceDraft(TypedDict, total=False):
     source_span_ids: list[str]
     requires_human_review: bool
     extraction_status: str
+    metadata: dict[str, str]
+
+
+class ArgumentSpineDraft(TypedDict, total=False):
+    """Structured argument skeleton that constrains downstream writing.
+
+    The argument spine is generated after results approval and before
+    section writing.  It captures the main narrative arc and defines
+    ``must_not_claim`` constraints that the claim audit will enforce.
+    """
+
+    spine_id: Required[str]
+    main_finding: str
+    clinical_relevance: str
+    primary_evidence: list[str]
+    boundary_conditions: list[str]
+    must_not_claim: list[str]
+    discussion_blueprint: str
+    target_journal_angle: str
 
 
 class AIUsageSummary(TypedDict):
@@ -438,6 +459,7 @@ class WorkflowState(TypedDict, total=False):
     literature_record_drafts: NotRequired[list[LiteratureRecordDraft]]
     source_span_drafts: NotRequired[list[SourceSpanDraft]]
     evidence_drafts: NotRequired[list[EvidenceDraft]]
+    argument_spine: NotRequired[ArgumentSpineDraft | None]
     dataset_summary: NotRequired[DatasetSummary | None]
     analysis_plan_summary: NotRequired[AnalysisPlanSummary | None]
     analysis_run_summary: NotRequired[AnalysisRunSummary | None]
@@ -644,6 +666,7 @@ __all__ = [
     "AnalysisSpecDraft",
     "ApprovalDecision",
     "ApprovalRef",
+    "ArgumentSpineDraft",
     "ArtifactRef",
     "ChecklistSummary",
     "ComplianceFindingEntry",

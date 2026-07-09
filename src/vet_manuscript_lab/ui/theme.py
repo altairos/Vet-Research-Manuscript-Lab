@@ -106,7 +106,7 @@ def apply_theme() -> None:
           font-size:.86rem; line-height:1.45; margin:.36rem 0; color:#53645e;
         }
         .block-container {
-          max-width:1240px; padding-top:3.55rem; padding-bottom:1.2rem;
+          max-width:1700px; padding-top:3.55rem; padding-bottom:1.2rem;
         }
         [data-testid="stMainBlockContainer"] {
           font-size:15px; line-height:1.55;
