@@ -466,7 +466,7 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Next Action Panel — the redesigned right sidebar
+# Next Action Panel — Review Queue (right sidebar)
 # ---------------------------------------------------------------------------
 
 
@@ -481,37 +481,175 @@ def render_next_action_panel(
     snapshot: Any,
     thread_id: str | None,
 ) -> None:
-    """Render the redesigned sticky right sidebar.
+    """Render the sticky right sidebar as a *Review Queue*.
 
-    Combines the classic pipeline bar (start button, phase tracker,
-    approval gates) with a compact *Review Queue* summary so the user
-    always sees risks at a glance.
+    Structure:
+    1. **Pending** — compact gate card + "Open approval" button (primary
+       only when no other primary exists on the dashboard)
+    2. **Start** — when no thread exists, show a friendly start button
+    3. **Readiness** — compact ✓/✗ checklist
+    4. **Phase stepper** — single-row compact indicator
+    5. **Cost** — one-line summary
+    6. **Technical details** — collapsed expander
     """
 
-    # The core pipeline controls (start, phase tracker, approval gates)
-    render_pipeline_bar(
-        app,
-        project_id,
-        intake,
-        ready,
-        state,
-        pending,
-        config,
-        snapshot,
-        thread_id,
+    with st.container(border=True):
+        st.markdown(
+            f"""<div class="pipeline-bar-header">
+            <strong>{translate('rq_header')}</strong>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+        # ── 1. Pending approval ────────────────────────────────────────
+        if pending:
+            _render_pending_gate_compact(pending[0], config, app)
+        elif thread_id is None:
+            # No run yet → start button
+            _render_start_card(app, project_id, intake, ready)
+        elif state.get("run_status") == "complete":
+            st.success(translate("success_pipeline_complete"))
+
+        # ── 2. Readiness checklist ────────────────────────────────────
+        _render_readiness_compact(intake)
+
+        # ── 3. Phase stepper ──────────────────────────────────────────
+        if thread_id is not None:
+            _render_compact_phase_tracker(state.get("current_stage"))
+
+        # ── 4. Cost ───────────────────────────────────────────────────
+        _render_cost_compact(state)
+
+        # ── 5. Review items (if any) ──────────────────────────────────
+        if state:
+            _render_risk_compact(state)
+
+        # ── 6. Technical details ─────────────────────────────────────
+        if thread_id is not None and config is not None:
+            with st.expander(translate("show_details"), expanded=False):
+                render_run_metrics(state, thread_id)
+                render_artifact_summary(state)
+                render_approval_timeline(state)
+
+
+def _render_pending_gate_compact(
+    gate: dict[str, Any],
+    config: dict[str, Any] | None,
+    app: Application,
+) -> None:
+    """Render a compact pending-gate card in the right sidebar.
+
+    Shows the gate title and an *Open approval* button that expands the
+    full approval form inline.
+    """
+
+    import html as _html
+
+    gate_name = gate.get("gate", "")
+    title = gate_field(gate_name, "title") or translate("pending_action_header")
+
+    st.markdown(
+        f"""<div class="vrl-card warning" style="margin-bottom:.5rem;">
+        <div class="vrl-eyebrow">{translate('dash_approval_needed')}</div>
+        <div class="vrl-title" style="font-size:.95rem;margin-bottom:0;">
+        {_html.escape(title)}
+        </div></div>""",
+        unsafe_allow_html=True,
     )
 
-    # Review Queue compact summary
-    if state:
-        render_review_queue_summary(state)
+    # Toggle: show full approval form inline
+    expand_key = f"_expand_gate_{gate_name}"
+    if st.button(
+        translate("button_open_approval"),
+        width="stretch",
+        key=f"open_gate_{gate_name}",
+    ):
+        st.session_state[expand_key] = not st.session_state.get(expand_key, False)
+
+    if st.session_state.get(expand_key) and config is not None:
+        render_pending_approval(app, config, gate)
 
 
-def render_review_queue_summary(state: dict[str, Any]) -> None:
-    """Render a compact Review Queue summary for the right sidebar.
+def _render_start_card(
+    app: Application,
+    project_id: str,
+    intake: dict[str, Any],
+    ready: bool,
+) -> None:
+    """Render the pipeline-start card (only when no thread exists)."""
 
-    Shows critical/warning counts and the top 3 critical items as
-    severity pills so the user always sees risks at a glance.
-    """
+    st.caption(translate("start_disabled_help") if not ready else "")
+    if st.button(
+        translate("button_start_pipeline"),
+        type="primary",
+        disabled=not ready,
+        help=None if ready else translate("start_disabled_help"),
+        width="stretch",
+    ):
+        start_workflow(app, project_id)
+        st.rerun()
+
+
+def _render_readiness_compact(intake: dict[str, Any]) -> None:
+    """Render a compact ✓/✗ readiness checklist."""
+
+    import html as _html
+
+    st.caption(translate("readiness_header"))
+    checks = [
+        (
+            translate("tab_research_question"),
+            bool(intake.get("research_question_input")),
+        ),
+        (
+            translate("readiness_search"),
+            bool(intake.get("search_strategy_input")),
+        ),
+        (
+            translate("readiness_literature"),
+            bool(intake.get("literature_record_drafts")),
+        ),
+        (
+            translate("readiness_dataset"),
+            bool(intake.get("dataset_summary")),
+        ),
+    ]
+    for label, done in checks:
+        icon = "\u2713" if done else "\u25cb"
+        color = "var(--vrl-success)" if done else "var(--vrl-muted)"
+        st.markdown(
+            f'<div class="readiness-line">'
+            f'<span class="rl-icon" style="color:{color};">{icon}</span> '
+            f"{_html.escape(label)}</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_compact_phase_tracker(current_stage: str | None) -> None:
+    """Render the compact phase stepper from theme."""
+
+    from vet_manuscript_lab.ui.theme import render_phase_stepper
+
+    render_phase_stepper(current_stage)
+
+
+def _render_cost_compact(state: dict[str, Any]) -> None:
+    """Render a one-line cost summary."""
+
+    usage = state.get("model_usage_summary")
+    if not isinstance(usage, dict):
+        return
+    total_cents = usage.get("total_cost_cents", 0)
+    cost_str = f"${total_cents / 100:.2f}" if total_cents else "$0.00"
+    total_invocations = usage.get("total_invocations", 0)
+    st.caption(
+        f"{translate('label_total_cost')}: {cost_str} "
+        f"\u00b7 {total_invocations} {translate('label_total_invocations')}"
+    )
+
+
+def _render_risk_compact(state: dict[str, Any]) -> None:
+    """Render a compact risk summary with top items."""
 
     from vet_manuscript_lab.ui.components import severity_pill
     from vet_manuscript_lab.ui.tabs.review_queue import collect_review_items
@@ -521,19 +659,15 @@ def render_review_queue_summary(state: dict[str, Any]) -> None:
         return
 
     st.markdown("---")
-    st.markdown(f"**{translate('rq_header')}**")
     critical = [i for i in items if i.severity in ("critical", "error")]
-    col_c, col_w = st.columns(2)
-    col_c.metric(translate("rq_critical_items"), len(critical))
-    col_w.metric(
-        translate("rq_warning_items"),
-        len(items) - len(critical),
+    st.caption(
+        f"{translate('rq_critical_items')}: {len(critical)} "
+        f"\u00b7 {translate('rq_warning_items')}: "
+        f"{len(items) - len(critical)}"
     )
-    # Show top 3 critical items as compact severity pills
     for item in critical[:3]:
         st.markdown(
-            f"{severity_pill(item.severity)} "
-            f"{item.title[:60]}",
+            f"{severity_pill(item.severity)} {item.title[:55]}",
             unsafe_allow_html=True,
         )
     if len(items) > 3:
@@ -542,3 +676,13 @@ def render_review_queue_summary(state: dict[str, Any]) -> None:
                 shown=min(3, len(critical)), total=len(items)
             )
         )
+
+
+def render_review_queue_summary(state: dict[str, Any]) -> None:
+    """Render a compact Review Queue summary for backward compatibility.
+
+    .. deprecated:: Now integrated into :func:`render_next_action_panel`.
+       Kept for any code that still calls it directly.
+    """
+
+    _render_risk_compact(state)

@@ -1954,6 +1954,64 @@ STRINGS.update(
             "en": "Protocol",
             "zh": "研究方案",
         },
+        # -- Dashboard product polish ----------------------------------------
+        "project_header_type": {
+            "en": "Study type",
+            "zh": "研究类型",
+        },
+        "project_header_guideline": {
+            "en": "Reporting guideline",
+            "zh": "报告规范",
+        },
+        "project_header_status": {
+            "en": "Status",
+            "zh": "状态",
+        },
+        # Next Action hero buttons
+        "button_view_details": {
+            "en": "View details",
+            "zh": "查看详情",
+        },
+        "button_request_changes": {
+            "en": "Request changes",
+            "zh": "要求修改",
+        },
+        "button_approve_continue": {
+            "en": "Approve & continue",
+            "zh": "批准并继续",
+        },
+        "button_open_approval": {
+            "en": "Open approval",
+            "zh": "打开审批",
+        },
+        "button_start_pipeline": {
+            "en": "Run to next approval",
+            "zh": "运行至下一审批点",
+        },
+        # Next Action lock label
+        "next_action_lock_label": {
+            "en": "Will be locked upon approval:",
+            "zh": "提交后将锁定：",
+        },
+        # Readiness compact header
+        "readiness_header": {
+            "en": "Readiness",
+            "zh": "准备进度",
+        },
+        # Artifacts empty state
+        "artifacts_empty_title": {
+            "en": "No artifacts yet",
+            "zh": "暂无产物",
+        },
+        "artifacts_empty_body": {
+            "en": "Artifacts will appear here after the first approval.",
+            "zh": "首次审批通过后，产物将在此显示。",
+        },
+        # Cost compact (right sidebar)
+        "label_budget_total": {
+            "en": "Budget",
+            "zh": "预算",
+        },
     }
 )
 

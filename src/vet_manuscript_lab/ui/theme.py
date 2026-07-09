@@ -247,10 +247,10 @@ def apply_theme() -> None:
 
         /* ---- Hero banner ---- */
         .hero {{
-          padding:1.25rem 1.5rem; border:1px solid var(--vrl-border);
-          border-radius:16px;
+          padding:1.25rem 1.5rem; border:1px solid rgba(216,222,214,.55);
+          border-radius:14px;
           background:linear-gradient(135deg,var(--vrl-surface),var(--vrl-primary-soft));
-          box-shadow:0 1px 3px rgba(16,24,40,.06);
+          box-shadow:0 1px 2px rgba(16,24,40,.03);
           margin-bottom:1rem;
         }}
         .hero h1 {{ margin:0 0 .42rem; font-size:2rem !important; }}
@@ -326,9 +326,9 @@ def apply_theme() -> None:
 
         /* ---- Metric cards (upgraded) ---- */
         div[data-testid="stMetric"] {{
-          background:var(--vrl-surface); border:1px solid var(--vrl-border);
-          padding:1rem; border-radius:16px;
-          box-shadow:0 1px 2px rgba(16,24,40,.04);
+          background:var(--vrl-surface); border:1px solid rgba(216,222,214,.55);
+          padding:.8rem; border-radius:14px;
+          box-shadow:0 1px 2px rgba(16,24,40,.03);
         }}
 
         /* ---- Expander ---- */
@@ -365,9 +365,9 @@ def apply_theme() -> None:
         /* ===== DESIGN-SYSTEM PRIMITIVES (.vrl-*) ===== */
 
         .vrl-card {{
-          background:var(--vrl-surface); border:1px solid var(--vrl-border);
-          border-radius:16px; padding:1rem 1.125rem;
-          box-shadow:0 1px 3px rgba(16,24,40,.06); margin-bottom:.875rem;
+          background:var(--vrl-surface); border:1px solid rgba(216,222,214,.55);
+          border-radius:14px; padding:1rem 1.125rem;
+          box-shadow:0 1px 2px rgba(16,24,40,.03); margin-bottom:.875rem;
         }}
         .vrl-card.success {{ border-left:4px solid var(--vrl-success); }}
         .vrl-card.warning {{ border-left:4px solid var(--vrl-warning); }}
@@ -450,12 +450,176 @@ def apply_theme() -> None:
           background:#c2d1cc; border-radius:4px;
         }}
 
+        /* ---- Project header (compact hero replacement) ---- */
+        .project-header {{
+          display:flex; align-items:center; justify-content:space-between;
+          gap:1rem; padding:.75rem 1.15rem; margin-bottom:.8rem;
+          border:1px solid rgba(216,222,214,.55); border-radius:14px;
+          background:linear-gradient(135deg,var(--vrl-surface),var(--vrl-primary-soft));
+          box-shadow:0 1px 2px rgba(16,24,40,.03);
+        }}
+        .project-header .ph-title-block h2 {{
+          margin:0 0 .15rem; font-size:1.15rem !important; line-height:1.3;
+        }}
+        .project-header .ph-title-block .ph-sub {{
+          color:var(--vrl-muted); font-size:.82rem; line-height:1.4;
+        }}
+        .project-header .ph-status-badge {{
+          display:inline-flex; align-items:center; gap:.3rem;
+          padding:.28rem .65rem; border-radius:999px;
+          font-size:.8rem; font-weight:650; white-space:nowrap;
+          background:var(--vrl-warning-soft); color:var(--vrl-warning);
+          border:1px solid #F3D27A;
+        }}
+        .project-header .ph-status-badge.success {{
+          background:var(--vrl-success-soft); color:var(--vrl-success);
+          border-color:#BFE4CE;
+        }}
+        .project-header .ph-status-badge.neutral {{
+          background:#EEF2F6; color:#475467; border-color:#D0D5DD;
+        }}
+
+        /* ---- Next Action Hero (visual centerpiece) ---- */
+        .next-action-hero {{
+          background:var(--vrl-warning-soft);
+          border:1px solid #F3D27A; border-left:4px solid var(--vrl-warning);
+          border-radius:14px; padding:1.15rem 1.3rem;
+          margin-bottom:.85rem;
+        }}
+        .next-action-hero .vrl-eyebrow {{ color:var(--vrl-warning); }}
+        .next-action-hero .nah-title {{
+          font-size:1.2rem; font-weight:700; color:var(--vrl-text);
+          margin-bottom:.3rem; line-height:1.35;
+        }}
+        .next-action-hero .nah-summary {{
+          color:var(--vrl-text); font-size:.9rem; line-height:1.5; margin-bottom:.5rem;
+        }}
+        .next-action-hero .nah-lock-label {{
+          font-size:.82rem; color:var(--vrl-muted); margin-bottom:.2rem;
+        }}
+        .next-action-hero .nah-lock-item {{
+          font-size:.85rem; color:var(--vrl-text); line-height:1.5;
+        }}
+
+        /* ---- Metric strip (thin horizontal bar) ---- */
+        .vrl-metric-strip {{
+          display:flex; gap:.6rem; margin-bottom:.85rem;
+        }}
+        .vrl-metric-strip .vrl-card {{
+          flex:1; margin-bottom:0; padding:.6rem .85rem; border-radius:12px;
+        }}
+        .vrl-metric-strip .vrl-eyebrow {{ font-size:.7rem; margin-bottom:.1rem; }}
+        .vrl-metric-strip .vrl-title {{
+          font-size:1rem; margin-bottom:0; line-height:1.3;
+        }}
+
+        /* ---- Compact phase stepper (right sidebar) ---- */
+        .phase-stepper {{
+          display:flex; align-items:center; gap:.18rem;
+          margin:.45rem 0 .6rem; flex-wrap:wrap;
+        }}
+        .phase-stepper .ps-step {{
+          display:inline-flex; align-items:center; gap:.22rem;
+          font-size:.78rem; font-weight:600; color:var(--vrl-muted);
+        }}
+        .phase-stepper .ps-dot {{
+          width:10px; height:10px; border-radius:50%;
+          background:var(--vrl-border); flex-shrink:0;
+        }}
+        .phase-stepper .ps-step.done .ps-dot {{ background:var(--vrl-success); }}
+        .phase-stepper .ps-step.active .ps-dot {{
+          background:var(--vrl-primary);
+          box-shadow:0 0 0 3px var(--vrl-primary-soft);
+        }}
+        .phase-stepper .ps-step.active {{ color:var(--vrl-primary); font-weight:700; }}
+        .phase-stepper .ps-sep {{
+          color:var(--vrl-border); font-size:.7rem; flex-shrink:0;
+        }}
+
+        /* ---- Readiness checklist (right sidebar compact) ---- */
+        .readiness-line {{
+          font-size:.82rem; line-height:1.7; color:var(--vrl-text);
+        }}
+        .readiness-line .rl-icon {{
+          font-weight:700; display:inline-block; width:1.1rem;
+        }}
+
         @media(max-width:800px) {{
           .phase-row {{ grid-template-columns:1fr 1fr; }}
           .block-container {{ padding:2.6rem .9rem .9rem; }}
           .hero h1 {{ font-size:1.55rem !important; }}
+          .vrl-metric-strip {{ flex-direction:column; }}
         }}
         </style>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_project_header(
+    title: str,
+    subtitle: str,
+    status_badge: str,
+    status_tone: str = "warning",
+) -> None:
+    """Compact project title bar — replaces large hero when in a project.
+
+    Parameters
+    ----------
+    title
+        Project title (e.g. study title).
+    subtitle
+        Study type + reporting guideline line.
+    status_badge
+        Short status text shown as a pill on the right.
+    status_tone
+        Badge colour: ``warning``, ``success``, or ``neutral``.
+    """
+
+    import html as _html
+
+    tone_cls = status_tone if status_tone in ("success", "neutral") else ""
+    badge_cls = f"ph-status-badge {tone_cls}".strip()
+    st.markdown(
+        f"""<div class="project-header">
+        <div class="ph-title-block">
+          <h2>{_html.escape(title)}</h2>
+          <div class="ph-sub">{_html.escape(subtitle)}</div>
+        </div>
+        <span class="{badge_cls}">{_html.escape(status_badge)}</span>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_phase_stepper(current_stage: str | None) -> None:
+    """Compact single-row phase stepper for the right sidebar.
+
+    Renders ``01●  02○  03○  04○  05○`` instead of the full phase cards.
+    """
+
+    stage = current_stage or "project_init"
+    active = next(
+        (i for i, (_, values) in enumerate(WORKFLOW_PHASES) if stage in values),
+        0,
+    )
+    steps_html: list[str] = []
+    for index, _phase in enumerate(WORKFLOW_PHASES):
+        if index == active:
+            state_cls = "active"
+        elif index < active:
+            state_cls = "done"
+        else:
+            state_cls = ""
+        cls = f" {state_cls}" if state_cls else ""
+        steps_html.append(
+            f'<span class="ps-step{cls}">'
+            f'<span class="ps-dot"></span>'
+            f'{index + 1:02d}</span>'
+        )
+        if index < len(WORKFLOW_PHASES) - 1:
+            steps_html.append('<span class="ps-sep">─</span>')
+    st.markdown(
+        f'<div class="phase-stepper">{ "".join(steps_html)}</div>',
         unsafe_allow_html=True,
     )
 

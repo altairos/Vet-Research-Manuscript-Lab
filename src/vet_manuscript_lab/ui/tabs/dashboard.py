@@ -14,18 +14,18 @@ import streamlit as st
 
 from vet_manuscript_lab.ui.application import Application
 from vet_manuscript_lab.ui.components import (
-    approval_gate_card,
+    Metric,
     artifact_card,
-    finding_card,
+    empty_state_card,
+    metric_strip,
+    next_action_hero,
 )
 from vet_manuscript_lab.ui.i18n import (
     gate_field,
     stage_label,
-    status_label,
     translate,
 )
-from vet_manuscript_lab.ui.tabs.review_queue import collect_review_items
-from vet_manuscript_lab.ui.theme import render_phase_tracker
+from vet_manuscript_lab.ui.tabs.review_queue import _SEVERITY_RANK, collect_review_items
 
 # Mapping of raw artifact role keys to i18n keys.
 _ARTIFACT_ROLE_I18N: dict[str, str] = {
@@ -142,166 +142,156 @@ def render_dashboard(
         st.info(translate("dash_no_thread"))
         return
 
-    # -- Top: status sentence ---------------------------------------------
-    current_stage = stage_label(state.get("current_stage"))
-    run_status = status_label(state.get("run_status"))
-    st.markdown(
-        f"**{translate('dash_project_status')}:** "
-        f"{current_stage or '-'} · {run_status or '-'}"
-    )
-
-    # -- Summary metric strip (flexible widths) --------------------------
+    # -- Metric strip (thin horizontal bar, replaces 4 large metric cards) --
     items = collect_review_items(state)
-    artifacts_count = len(
-        [a for a in state.get("artifacts", {}).values() if isinstance(a, dict)]
+    critical = [i for i in items if i.severity in ("critical", "error")]
+    warnings = [i for i in items if i.severity in ("warning", "high", "medium")]
+    risk_tone = "danger" if critical else "warning" if warnings else "success"
+    risk_value = (
+        f"{len(critical)} {translate('rq_critical_items')} "
+        f"\u00b7 {len(warnings)} {translate('rq_warning_items')}"
     )
-    # Even distribution for all four metric cards.
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric(
-        translate("metric_current_stage"),
-        current_stage or "-",
-    )
-    m2.metric(
-        translate("rq_total_items"),
-        len(items),
-    )
-    m3.metric(
-        translate("dash_recent_artifacts"),
-        artifacts_count,
-    )
-    m4.metric(
-        translate("label_total_cost"),
-        _format_cost(state),
-    )
-
-    st.markdown("")
+    metric_strip([
+        Metric(label=translate("dash_risk_summary"), value=risk_value, tone=risk_tone),
+        Metric(label=translate("rq_total_items"), value=len(items)),
+        Metric(label=translate("label_total_cost"), value=_format_cost(state)),
+    ])
 
     # -- Main two-column area ---------------------------------------------
     main_col, side_col = st.columns([0.65, 0.35], gap="large")
 
     with main_col:
-        # Next action card (or idle)
+        # Next action hero — the visual centerpiece of the page
         if pending:
             gate = pending[0]
             gate_name = gate.get("gate", "")
-            _render_next_action_card(gate, gate_name)
+            _render_next_action_hero(gate, gate_name)
         elif state.get("run_status") == "complete":
             st.success(translate("success_pipeline_complete"))
 
-        # Risk summary
-        _render_risk_summary(items)
+        # Risk summary (actionable)
+        _render_risk_summary_actionable(items)
 
-        # Recent artifacts
-        _render_recent_artifacts(state)
+        # Artifacts (empty-state or list)
+        _render_artifact_list(state)
 
     with side_col:
-        # Stage timeline
-        st.markdown(f"#### {translate('metric_current_stage')}")
-        render_phase_tracker(state.get("current_stage"))
-
-        # Cost summary
-        _render_cost_summary(state)
-
-    # -- Bottom: audit log (collapsed) ------------------------------------
-    _render_audit_log(state)
+        # Audit log (collapsed) — moved here from bottom for better balance
+        _render_audit_log(state)
 
 
-def _render_next_action_card(gate: dict[str, Any], gate_name: str) -> None:
-    """Render the prominent "approval needed" card."""
+def _render_next_action_hero(gate: dict[str, Any], gate_name: str) -> None:
+    """Render the *Next Action* hero card — the page visual centerpiece.
 
+    Displays the gate title, summary, optional lock items, and a three-button
+    action row: ``View details`` / ``Request changes`` / ``Approve & continue``.
+    Only the *Approve* button uses ``type="primary"`` so there is exactly one
+    green button on the page.
+    """
+
+    title = gate_field(gate_name, "title")
+    summary = gate_field(gate_name, "summary")
     next_stage = stage_label(gate.get("proposed_next_stage"))
-    approval_gate_card(
-        title=gate_field(gate_name, "title"),
-        summary=gate_field(gate_name, "summary"),
+
+    # Build lock items from gate data (if available)
+    lock_items: list[str] = []
+    # Common lock-able fields surfaced from state — these are informational
+    # hints so the user understands what they are committing to.
+    proposed_stage = gate.get("proposed_next_stage", "")
+    if proposed_stage:
+        stage_text = stage_label(proposed_stage)
+        if stage_text and stage_text != proposed_stage:
+            lock_items.append(stage_text)
+
+    next_action_hero(
+        title=title,
+        summary=summary,
+        lock_items=lock_items if lock_items else None,
         next_stage=next_stage,
     )
 
+    # Action button row — exactly one primary button
+    col_view, col_modify, col_approve = st.columns([1, 1, 1.4])
+    col_view.button(
+        translate("button_view_details"),
+        width="stretch",
+        key=f"dash_view_{gate_name}",
+    )
+    col_modify.button(
+        translate("button_request_changes"),
+        width="stretch",
+        key=f"dash_modify_{gate_name}",
+    )
+    col_approve.button(
+        translate("button_approve_continue"),
+        type="primary",
+        width="stretch",
+        key=f"dash_approve_{gate_name}",
+    )
 
-def _render_risk_summary(items: list[Any]) -> None:
-    """Render a compact risk-summary section with top findings."""
+
+def _render_risk_summary_actionable(items: list[Any]) -> None:
+    """Render an actionable risk summary: counts + top-2 items inline."""
 
     st.markdown(f"#### {translate('dash_risk_summary')}")
 
     if not items:
-        st.info(translate("dash_risk_none"))
+        st.success(translate("dash_risk_none"))
         return
 
     critical = [i for i in items if i.severity in ("critical", "error")]
-    warning = [i for i in items if i.severity in ("warning", "high", "medium")]
+    warnings = [i for i in items if i.severity in ("warning", "high", "medium")]
 
-    col_c, col_w = st.columns(2)
-    col_c.metric(translate("rq_critical_items"), len(critical))
-    col_w.metric(translate("rq_warning_items"), len(warning))
+    # Inline count (not large metric cards)
+    st.markdown(
+        f"**{len(critical)} {translate('rq_critical_items')} "
+        f"\u00b7 {len(warnings)} {translate('rq_warning_items')}**"
+    )
 
-    # Show top 3 critical items in a compact expander (not full-width cards)
-    if critical:
-        with st.expander(
-            f"{translate('rq_critical_items')} ({len(critical)})",
-            expanded=False,
-        ):
-            for item in critical[:5]:
-                finding_card(
-                    severity=item.severity,
-                    title=item.title,
-                    detail=item.detail,
-                )
+    # Show top-2 highest-priority items inline
+    top = sorted(
+        items, key=lambda i: -_SEVERITY_RANK.get(i.severity, 0)
+    )[:2]
+    for item in top:
+        icon = "\u26a0" if item.severity in ("critical", "error") else "\u2139"
+        st.markdown(
+            f"{icon} **{item.title[:65]}**",
+            help=item.detail if item.detail else None,
+        )
 
-    if len(items) > 5:
+    if len(items) > 2:
         st.caption(
             translate("rq_items_showing").format(
-                shown=min(5, len(critical)), total=len(items)
+                shown=min(2, len(items)), total=len(items)
             )
         )
 
 
-def _render_recent_artifacts(state: dict[str, Any]) -> None:
-    """Render the 3 most recent artifacts as cards."""
+def _render_artifact_list(state: dict[str, Any]) -> None:
+    """Render recent artifacts, or a meaningful empty state when none exist."""
 
     st.markdown(f"#### {translate('dash_recent_artifacts')}")
 
     artifacts = state.get("artifacts", {})
-    if not artifacts:
-        st.caption(translate("label_no_artifacts"))
+    artifact_dicts = {
+        k: v for k, v in artifacts.items() if isinstance(v, dict)
+    }
+    if not artifact_dicts:
+        empty_state_card(
+            icon="\U0001f4c4",
+            title=translate("artifacts_empty_title"),
+            body=translate("artifacts_empty_body"),
+        )
         return
 
     # Show last 3 artifacts as cards
-    recent = list(artifacts.items())[-3:]
+    recent = list(artifact_dicts.items())[-3:]
     for role, art in recent:
-        if not isinstance(art, dict):
-            continue
         artifact_card(
             title=_artifact_role_label(role),
             version=str(art.get("version", "-")),
             status=_artifact_status_label(art.get("status", "")),
             artifact_type=art.get("artifact_type", ""),
-        )
-
-
-def _render_cost_summary(state: dict[str, Any]) -> None:
-    """Render cost and invocation summary."""
-
-    st.markdown(f"#### {translate('dash_cost_summary')}")
-
-    usage = state.get("model_usage_summary")
-    if not isinstance(usage, dict):
-        st.caption(translate("dash_no_cost"))
-        return
-
-    total_cents = usage.get("total_cost_cents", 0)
-    total_invocations = usage.get("total_invocations", 0)
-    fallbacks = usage.get("total_fallbacks", 0)
-    failures = usage.get("total_failures", 0)
-
-    cost_str = f"${total_cents / 100:.2f}" if total_cents else "$0.00"
-
-    col1, col2 = st.columns(2)
-    col1.metric(translate("label_total_cost"), cost_str)
-    col2.metric(translate("label_total_invocations"), total_invocations)
-
-    if fallbacks or failures:
-        st.caption(
-            f"{translate('label_fallbacks')}: {fallbacks} | "
-            f"{translate('label_failures')}: {failures}"
         )
 
 

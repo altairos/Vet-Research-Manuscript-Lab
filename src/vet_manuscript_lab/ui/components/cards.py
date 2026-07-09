@@ -209,6 +209,50 @@ def approval_gate_card(
     )
 
 
+def next_action_hero(
+    title: str,
+    summary: str = "",
+    lock_items: list[str] | None = None,
+    next_stage: str = "",
+) -> None:
+    """Render the prominent *Next Action* card — the page visual centerpiece.
+
+    Unlike ``approval_gate_card`` which is a compact prompt, this is a larger
+    card with amber accent, summary text, and optional *lock items* list so the
+    user immediately understands what will be locked upon approval.
+    """
+
+    lock_html = ""
+    if lock_items:
+        items_html = "".join(
+            f'<div class="nah-lock-item">\u2022 {_esc(item)}</div>'
+            for item in lock_items
+        )
+        lock_html = (
+            f'<div class="nah-lock-label">'
+            f'{translate_safe("next_action_lock_label")}</div>'
+            f"{items_html}"
+        )
+
+    next_html = ""
+    if next_stage:
+        next_html = (
+            f'<div class="nah-lock-label" style="margin-top:.3rem;">'
+            f'{translate_safe("dash_next_stage")}: {_esc(next_stage)}</div>'
+        )
+
+    st.markdown(
+        f"""<div class="next-action-hero">
+        <div class="vrl-eyebrow">{translate_safe("dash_approval_needed")}</div>
+        <div class="nah-title">{_esc(title)}</div>
+        <div class="nah-summary">{_esc(summary)}</div>
+        {lock_html}
+        {next_html}
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def empty_state_card(
     icon: str,
     title: str,
@@ -248,4 +292,5 @@ __all__ = [
     "empty_state_card",
     "finding_card",
     "metric_strip",
+    "next_action_hero",
 ]

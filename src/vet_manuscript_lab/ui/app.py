@@ -72,6 +72,7 @@ from vet_manuscript_lab.ui.theme import (
     apply_theme,
     inject_auto_grow_textareas,
     render_hero,
+    render_project_header,
 )
 
 
@@ -201,6 +202,61 @@ def render_workflow(app: Application, project_id: str) -> None:
                 st.info(translate("info_start_pipeline"))
 
 
+def _render_project_header_bar(app: Application, project_id: str) -> None:
+    """Look up the active project and render the compact project header bar."""
+
+    from vet_manuscript_lab.ui.i18n import stage_label, status_label
+
+    projects = app.repository.list_projects()
+    project = next((p for p in projects if p.id == project_id), None)
+    if project is None:
+        render_hero()
+        return
+
+    # Determine current pipeline status from the graph state.
+    thread_id = get_active_thread(project_id)
+    run_status = ""
+    current_stage = ""
+    if thread_id is not None:
+        config = {"configurable": {"thread_id": thread_id}}
+        snap = app.graph.get_state(config)
+        run_status = snap.values.get("run_status", "")
+        current_stage = snap.values.get("current_stage", "")
+
+    # Build subtitle: study type · reporting guideline
+    study_type_label = translate(f"study_type_{project.study_type}")
+    if study_type_label == f"study_type_{project.study_type}":
+        study_type_label = project.study_type.replace("_", " ").title()
+    guideline_label = "STROBE-Vet"
+    subtitle_parts = [study_type_label]
+    species_str = ", ".join(
+        translate(f"species_{s}") for s in (project.species_scope or [])
+    )
+    if species_str:
+        subtitle_parts.append(species_str)
+    subtitle_parts.append(guideline_label)
+    subtitle = " \u00b7 ".join(subtitle_parts)
+
+    # Determine badge
+    if run_status == "complete":
+        badge = status_label("complete") or translate("success_pipeline_complete")
+        tone = "success"
+    elif run_status:
+        stage_text = stage_label(current_stage) or current_stage
+        badge = f"{stage_text} \u00b7 {status_label(run_status) or run_status}"
+        tone = "warning" if run_status == "interrupted" else "neutral"
+    else:
+        badge = translate("dash_pipeline_idle")
+        tone = "neutral"
+
+    render_project_header(
+        title=project.title,
+        subtitle=subtitle,
+        status_badge=badge,
+        status_tone=tone,
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title=translate("page_title"),
@@ -233,7 +289,12 @@ def main() -> None:
 
     inject_beforeunload(is_intake_dirty(active_project_id))
 
-    render_hero()
+    # Project header: compact bar when a project is active,
+    # large hero only on the landing (no-project) screen.
+    if active_project_id is not None:
+        _render_project_header_bar(app, active_project_id)
+    else:
+        render_hero()
     if active_project_id is not None:
         render_workflow(app, active_project_id)
 
