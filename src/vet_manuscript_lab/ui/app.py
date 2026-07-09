@@ -35,6 +35,7 @@ from vet_manuscript_lab.ui.tabs.compliance import (
     render_compliance_findings,
     render_export,
 )
+from vet_manuscript_lab.ui.tabs.dashboard import render_dashboard
 from vet_manuscript_lab.ui.tabs.intake import (
     bump_search_form_version,
     render_intake_materials,
@@ -54,11 +55,10 @@ from vet_manuscript_lab.ui.tabs.methodology import (
     render_usage_summary,
 )
 from vet_manuscript_lab.ui.tabs.pipeline import (
-    render_pipeline_bar,
+    render_next_action_panel,
 )
 from vet_manuscript_lab.ui.tabs.review_queue import (
     render_provenance_inspector,
-    render_review_queue,
 )
 from vet_manuscript_lab.ui.tabs.writing import (
     render_citations,
@@ -76,7 +76,14 @@ from vet_manuscript_lab.ui.theme import (
 
 
 def render_workflow(app: Application, project_id: str) -> None:
-    """Render the full workspace: pipeline bar + seven content tabs."""
+    """Render the full workspace: five workspaces + sticky action panel.
+
+    Layout:
+    - **Left 68 %** — five top-level workspaces (Dashboard, Study Setup,
+      Evidence & Analysis, Manuscript, Audit & Export)
+    - **Right 32 %** — sticky *Next Action* panel with stage timeline,
+      approval gates, and a compact review-queue summary.
+    """
 
     intake: dict[str, Any] = st.session_state.setdefault(
         f"analysis_intake:{project_id}", {}
@@ -103,18 +110,17 @@ def render_workflow(app: Application, project_id: str) -> None:
         state = snapshot.values
         pending = interrupt_values(snapshot)
 
-    # Two-column layout: main content (tabs) on the left, pipeline control
-    # panel docked as a sticky sidebar on the far right.
-    main_col, pipeline_col = st.columns([0.6, 0.4], gap="medium")
+    # Two-column layout: main content (5 workspace tabs) on the left,
+    # next-action / review-queue panel docked as a sticky sidebar on the right.
+    main_col, panel_col = st.columns([0.68, 0.32], gap="large")
 
-    with pipeline_col:
+    with panel_col:
         # Hidden marker so the CSS ``:has()`` rule can pin this column.
         st.markdown(
             '<div class="pipeline-sidebar-marker"></div>',
             unsafe_allow_html=True,
         )
-        # Pipeline bar (now lives in the right sidebar)
-        render_pipeline_bar(
+        render_next_action_panel(
             app,
             project_id,
             intake,
@@ -128,42 +134,37 @@ def render_workflow(app: Application, project_id: str) -> None:
 
     with main_col:
         (
-            tab_design,
-            tab_data,
-            tab_lit,
-            tab_method,
+            tab_dashboard,
+            tab_setup,
+            tab_evidence,
             tab_manuscript,
-            tab_review,
-            tab_export,
-            tab_review_queue,
+            tab_audit,
         ) = st.tabs(
             [
-                translate("tab_intake_question"),
-                translate("tab_intake_data"),
-                translate("tab_lit_evidence"),
-                translate("tab_method_stats"),
-                translate("tab_manuscript"),
-                translate("tab_review_compliance"),
-                translate("tab_export"),
-                translate("tab_review_queue"),
+                translate("workspace_dashboard"),
+                translate("workspace_setup"),
+                translate("workspace_evidence"),
+                translate("workspace_manuscript"),
+                translate("workspace_audit"),
             ]
         )
 
-        with tab_design:
-            render_intake_question(intake)
+        # ---- 1. Dashboard ------------------------------------------------
+        with tab_dashboard:
+            render_dashboard(state, pending, thread_id)
 
-        with tab_data:
+        # ---- 2. Study Setup ----------------------------------------------
+        with tab_setup:
+            render_intake_question(intake)
+            st.divider()
             render_intake_materials(app, project_id, intake)
 
-        with tab_lit:
+        # ---- 3. Evidence & Analysis --------------------------------------
+        with tab_evidence:
             if state:
                 render_literature_records(state)
                 render_evidence_items(state)
-            else:
-                st.info(translate("info_start_pipeline"))
-
-        with tab_method:
-            if state:
+                st.divider()
                 render_guideline_mapping(state)
                 render_methodology_findings(state)
                 render_analysis_plan(state)
@@ -173,36 +174,29 @@ def render_workflow(app: Application, project_id: str) -> None:
             else:
                 st.info(translate("info_start_pipeline"))
 
+        # ---- 4. Manuscript -----------------------------------------------
         with tab_manuscript:
             if state:
                 render_manuscript(state)
                 render_claim_traceability(state)
                 render_citations(state)
                 render_claim_audit(state)
-            else:
-                st.info(translate("info_start_pipeline"))
-
-        with tab_review:
-            if state:
+                st.divider()
                 render_review(state)
                 render_revision_diff(state)
-                render_compliance_findings(state)
+                # Provenance inspector lives here now
+                render_provenance_inspector(state)
             else:
                 st.info(translate("info_start_pipeline"))
 
-        with tab_export:
+        # ---- 5. Audit & Export -------------------------------------------
+        with tab_audit:
             if state:
-                render_export(state)
+                render_compliance_findings(state)
                 render_usage_summary(state)
                 render_ai_disclosure(state)
-            else:
-                st.info(translate("info_start_pipeline"))
-
-        with tab_review_queue:
-            if state:
-                render_review_queue(state)
                 st.divider()
-                render_provenance_inspector(state)
+                render_export(state)
             else:
                 st.info(translate("info_start_pipeline"))
 

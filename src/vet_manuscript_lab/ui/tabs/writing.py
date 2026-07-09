@@ -6,6 +6,7 @@ from typing import Any
 
 import streamlit as st
 
+from vet_manuscript_lab.ui.components import short_hash
 from vet_manuscript_lab.ui.i18n import translate
 
 
@@ -134,7 +135,9 @@ def render_citations(state: dict[str, Any]) -> None:
     for c in citations:
         rows.append(
             {
-                translate("col_citation_key"): c.get("citation_key", ""),
+                translate("col_citation_key"): short_hash(
+                    c.get("citation_key", ""), length=20
+                ),
                 translate("col_lit_record"): c.get("literature_record_id", "")[:16],
                 translate("col_section"): c.get("section_id", "")[:24],
                 translate("col_claim_type"): c.get("claim_id", "")[:24],
@@ -219,7 +222,7 @@ def render_review(state: dict[str, Any]) -> None:
 
 
 def render_revision_diff(state: dict[str, Any]) -> None:
-    """Display section-level before/after diff."""
+    """Display section-level before/after diff as side-by-side cards."""
 
     import difflib
 
@@ -245,11 +248,12 @@ def render_revision_diff(state: dict[str, Any]) -> None:
         with st.expander(section_id, expanded=False):
             if resolved:
                 st.caption(
-                    f"{translate('label_resolved_findings')}: {', '.join(resolved)}"
+                    f"{translate('label_resolved_findings')}: "
+                    f"{', '.join(resolved)}"
                 )
 
-            col_before, col_after = st.columns(2)
-            with col_before:
+            col_before, col_after = st.columns(2, gap="medium")
+            with col_before, st.container(border=True):
                 st.markdown(f"**{translate('col_before')}**")
                 if before:
                     before_lines = before.splitlines(keepends=False)
@@ -268,7 +272,7 @@ def render_revision_diff(state: dict[str, Any]) -> None:
                 else:
                     st.caption(translate("label_no_changes"))
 
-            with col_after:
+            with col_after, st.container(border=True):
                 st.markdown(f"**{translate('col_after')}**")
                 st.write(after)
 

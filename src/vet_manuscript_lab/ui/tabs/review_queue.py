@@ -22,6 +22,10 @@ from typing import Any
 
 import streamlit as st
 
+from vet_manuscript_lab.ui.components import (
+    finding_card,
+    short_hash,
+)
 from vet_manuscript_lab.ui.i18n import translate
 
 # ---------------------------------------------------------------------------
@@ -342,24 +346,6 @@ _SECTION_WORD_LIMITS: dict[str, int] = {
 
 
 # ---------------------------------------------------------------------------
-# Severity badge helper
-# ---------------------------------------------------------------------------
-
-
-def _severity_badge(severity: str) -> str:
-    """Return an emoji + label for a severity level."""
-
-    rank = _SEVERITY_RANK.get(severity, 0)
-    if rank >= 4:
-        return f"\U0001f534 {severity.upper()}"
-    if rank >= 3:
-        return f"\U0001f7e1 {severity.upper()}"
-    if rank >= 2:
-        return f"\U0001f7e3 {severity.upper()}"
-    return f"\u26aa {severity.upper()}"
-
-
-# ---------------------------------------------------------------------------
 # Streamlit rendering
 # ---------------------------------------------------------------------------
 
@@ -399,19 +385,25 @@ def render_review_queue(state: dict[str, Any]) -> None:
         translate("rq_items_showing").format(shown=len(visible), total=len(items))
     )
 
-    # Render items grouped by severity
+    # Render items as finding-card style with collapsible details
     for item in visible:
         cat_label = translate(_CATEGORY_I18N.get(item.category, "rq_category_other"))
-        header = f"{_severity_badge(item.severity)}  `{cat_label}`  — {item.title}"
-        with st.expander(header, expanded=False):
-            st.write(item.detail)
+        finding_card(
+            severity=item.severity,
+            title=item.title,
+            location=cat_label,
+            detail=item.detail,
+        )
+        with st.expander(translate("show_details"), expanded=False):
             meta_parts = [
                 f"**{translate('rq_source_type')}:** `{item.source_type}`",
-                f"**{translate('rq_source_id')}:** `{item.source_id}`",
+                f"**{translate('rq_source_id')}:** "
+                f"`{short_hash(item.source_id)}`",
             ]
             if item.related_ids:
                 meta_parts.append(
-                    f"**{translate('rq_related')}:** {', '.join(item.related_ids[:5])}"
+                    f"**{translate('rq_related')}:** "
+                    f"{', '.join(short_hash(rid) for rid in item.related_ids[:5])}"
                 )
             st.caption(" | ".join(meta_parts))
 
@@ -510,11 +502,13 @@ def _provenance_for_claim(
         return
 
     claim = options[selected_id]
-    st.write(claim.get("text", ""))
-    st.caption(
-        f"{translate('col_certainty')}: {claim.get('certainty', '')} "
-        f"| {translate('col_section_type')}: {claim.get('section_id', '')}"
-    )
+    with st.container(border=True):
+        st.markdown(f"**{translate('rq_provenance_claim_card')}**")
+        st.write(claim.get("text", ""))
+        st.caption(
+            f"{translate('col_certainty')}: {claim.get('certainty', '')} "
+            f"| {translate('col_section_type')}: {claim.get('section_id', '')}"
+        )
 
     # Find support links
     claim_supports = [s for s in supports if s.get("claim_id") == selected_id]
@@ -526,39 +520,66 @@ def _provenance_for_claim(
             stype = sp.get("support_type", "")
             source_id = sp.get("source_id", "")
             relation = sp.get("relation", "")
-            st.markdown(
-                f"**{translate('label_support_type')}:** {stype} "
-                f"| **{translate('label_relation')}:** {relation}"
-            )
 
             if stype == "evidence_item":
                 ev = evidence_by_id.get(source_id, {})
                 if ev:
-                    concept = ev.get("concept", "")
-                    st.markdown(f"  - **{translate('col_concept')}:** {concept}")
-                    _render_span_chain(
-                        ev.get("source_span_ids", []), span_by_id, record_by_id
-                    )
+                    with st.container(border=True):
+                        st.markdown(
+                            f"**{translate('rq_provenance_evidence_card')}:** "
+                            f"{ev.get('concept', '')}"
+                        )
+                        st.caption(
+                            f"{translate('label_support_type')}: {stype} "
+                            f"| {translate('label_relation')}: {relation}"
+                        )
+                        _render_span_chain(
+                            ev.get("source_span_ids", []),
+                            span_by_id,
+                            record_by_id,
+                        )
             elif stype == "statistical_result":
                 res = result_by_id.get(source_id, {})
                 if res:
-                    est = res.get("estimate", "")
-                    st.markdown(f"  - **{translate('col_estimate')}:** {est}")
-                    ci = res.get("uncertainty_lower")
-                    cj = res.get("uncertainty_upper")
-                    if ci is not None and cj is not None:
-                        st.markdown(f"  - **{translate('col_ci')}:** {ci} - {cj}")
-                    pval = res.get("p_value", "")
-                    st.markdown(f"  - **{translate('col_p_value')}:** {pval}")
-                    method = res.get("method", "")
-                    st.markdown(f"  - **{translate('col_method')}:** {method}")
-                    if analysis_run:
-                        st.caption(
-                            f"{translate('rq_provenance_analysis_run')}: "
-                            f"`{analysis_run.get('run_id', '')}` "
-                            f"({translate('rq_provenance_status')}: "
-                            f"{analysis_run.get('status', '')})"
+                    with st.container(border=True):
+                        st.markdown(
+                            f"**{translate('rq_provenance_result_card')}:** "
+                            f"{res.get('estimand', '')}"
                         )
+                        est = res.get("estimate", "")
+                        ci = res.get("uncertainty_lower")
+                        cj = res.get("uncertainty_upper")
+                        ci_str = (
+                            f"{ci} - {cj}"
+                            if ci is not None and cj is not None
+                            else "-"
+                        )
+                        st.write(
+                            f"{translate('col_estimate')}: **{est}** "
+                            f"| {translate('col_ci')}: {ci_str} "
+                            f"| {translate('col_p_value')}: {res.get('p_value', '')}"
+                        )
+                        st.caption(
+                            f"{translate('col_method')}: {res.get('method', '')}"
+                        )
+                        if analysis_run:
+                            with st.expander(
+                                translate("rq_provenance_analysis_card"),
+                                expanded=False,
+                            ):
+                                st.write(
+                                    f"{translate('rq_run_id')}: "
+                                    f"`{short_hash(analysis_run.get('run_id', ''))}`"
+                                )
+                                st.write(
+                                    f"{translate('rq_provenance_status')}: "
+                                    f"{analysis_run.get('status', '')}"
+                                )
+                                seed = analysis_run.get("seed")
+                                if seed is not None:
+                                    st.caption(
+                                        f"{translate('label_seed')}: {seed}"
+                                    )
 
     # Citations
     claim_citations = [c for c in citations if c.get("claim_id") == selected_id]
@@ -567,13 +588,16 @@ def _provenance_for_claim(
         for cit in claim_citations:
             rec_id = cit.get("literature_record_id", "")
             rec = record_by_id.get(rec_id, {})
-            st.markdown(
-                f"- **{translate('col_citation_key')}:** "
-                f"`{cit.get('citation_key', '')}`"
-            )
-            if rec:
-                st.markdown(f"  - {translate('col_title')}: {rec.get('title', '')}")
-                st.markdown(f"  - DOI: {rec.get('doi', '') or '-'}")
+            with st.container(border=True):
+                st.write(
+                    f"**{translate('col_citation_key')}:** "
+                    f"`{cit.get('citation_key', '')}`"
+                )
+                if rec:
+                    st.caption(
+                        f"{translate('col_title')}: {rec.get('title', '')} | "
+                        f"DOI: {rec.get('doi', '') or '-'}"
+                    )
 
 
 def _render_span_chain(
@@ -581,26 +605,39 @@ def _render_span_chain(
     span_by_id: dict[str, dict[str, Any]],
     record_by_id: dict[str, dict[str, Any]],
 ) -> None:
-    """Render the source-span → literature-record sub-chain."""
+    """Render the source-span → literature-record sub-chain as nested cards."""
 
     for sid in span_ids:
         span = span_by_id.get(sid, {})
         if not span:
-            st.markdown(f"  - `{sid}` ({translate('rq_provenance_span_missing')})")
+            st.caption(
+                f"{translate('rq_provenance_span_card')}: "
+                f"`{short_hash(sid)}` ({translate('rq_provenance_span_missing')})"
+            )
             continue
         rec_id = span.get("literature_record_id", "")
         rec = record_by_id.get(rec_id, {})
-        st.markdown(
-            f"  - {translate('label_span_page')}: {span.get('page', '')} "
-            f"| {translate('label_span_section')}: "
-            f"{span.get('section_label', '')}"
-        )
-        if rec:
-            st.markdown(f"  - {translate('col_title')}: {rec.get('title', '')}")
-            st.markdown(f"  - DOI: {rec.get('doi', '') or '-'}")
-        qh = span.get("quote_hash", "")
-        if qh:
-            st.caption(f"{translate('label_quote_hash')}: {str(qh)[:24]}...")
+        with st.container(border=True):
+            st.write(
+                f"**{translate('rq_provenance_span_card')}:** "
+                f"{translate('label_span_page')} {span.get('page', '')} "
+                f"| {translate('label_span_section')}: "
+                f"{span.get('section_label', '')}"
+            )
+            if rec:
+                st.caption(
+                    f"{translate('col_title')}: {rec.get('title', '')} | "
+                    f"DOI: {rec.get('doi', '') or '-'}"
+                )
+            qh = span.get("quote_hash", "")
+            if qh:
+                with st.expander(
+                    translate("show_provenance_details"), expanded=False
+                ):
+                    st.code(
+                        f"{translate('label_quote_hash')}: {qh}",
+                        language="text",
+                    )
 
 
 def _provenance_for_evidence(

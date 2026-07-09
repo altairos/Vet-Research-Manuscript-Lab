@@ -63,7 +63,7 @@ def render_intake_question(intake: dict[str, Any]) -> None:
             translate("field_hypothesis"),
             value=question.get("hypothesis", ""),
         )
-        if st.form_submit_button(translate("button_save_question"), type="primary"):
+        if st.form_submit_button(translate("button_save_question")):
             required = (objective, population, exposure, outcome)
             if not all(value.strip() for value in required):
                 st.error(translate("error_required_fields"))
@@ -129,7 +129,7 @@ def render_intake_materials(
         )
         save_col, reset_col = st.columns(2)
         submitted = save_col.form_submit_button(
-            translate("button_save_search"), type="primary"
+            translate("button_save_search")
         )
         reset_clicked = reset_col.form_submit_button(translate("button_reset_search"))
         if submitted:
@@ -167,7 +167,7 @@ def render_intake_materials(
     with col_zotero:
         st.markdown("##### Zotero")
         if app.settings.zotero_enabled:
-            if st.button(translate("button_sync_zotero"), type="primary"):
+            if st.button(translate("button_sync_zotero")):
                 try:
                     client = ZoteroClient(
                         ZoteroConfig(
@@ -278,7 +278,7 @@ def render_intake_materials(
                 translate("field_id_variable"),
                 [translate("option_none"), *columns],
             )
-            if st.button(translate("button_save_dataset"), type="primary"):
+            if st.button(translate("button_save_dataset")):
                 dataset_id = str(uuid.uuid4())
                 intake["dataset_summary"] = {
                     "dataset_id": dataset_id,
@@ -374,7 +374,7 @@ def render_intake_materials(
             hide_index=True,
             key=f"var_editor_{project_id}",
         )
-        if st.button(translate("button_save_variables"), type="primary"):
+        if st.button(translate("button_save_variables")):
             updated_specs = []
             for _, r in edited.iterrows():
                 updated_specs.append(

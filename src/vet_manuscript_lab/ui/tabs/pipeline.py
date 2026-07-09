@@ -8,6 +8,10 @@ import streamlit as st
 from langgraph.types import Command
 
 from vet_manuscript_lab.ui.application import Application
+from vet_manuscript_lab.ui.components import (
+    collapsible_details,
+    short_hash,
+)
 from vet_manuscript_lab.ui.i18n import (
     gate_field,
     gate_stage_label,
@@ -408,8 +412,8 @@ def _artifact_status_label(status: str) -> str:
 def render_artifact_summary(state: dict[str, Any]) -> None:
     """Render artifact references as a clean, readable table.
 
-    Replaces the previous ``st.json()`` dump with a compact table showing
-    only the columns a user cares about: role, type, version, and status.
+    Shows role, type, version, and status. Technical details (content_hash,
+    version_id) are collapsed into a sub-expander per artifact.
     """
 
     artifacts = state.get("artifacts", {})
@@ -418,6 +422,7 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
 
     with st.expander(translate("expander_artifact_refs"), expanded=False):
         rows: list[dict[str, Any]] = []
+        tech_details: dict[str, Any] = {}
         for role, art in artifacts.items():
             if not isinstance(art, dict):
                 continue
@@ -433,7 +438,95 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
                     ),
                 }
             )
+            # Collect technical details for collapsible display
+            version_id = art.get("version_id", "")
+            content_hash = art.get("content_hash", "")
+            if version_id or content_hash:
+                tech_details[role] = {
+                    "version_id": short_hash(version_id) if version_id else "-",
+                    "content_hash": (
+                        short_hash(content_hash) if content_hash else "-"
+                    ),
+                }
         if rows:
             st.dataframe(rows, use_container_width=True, hide_index=True)
         else:
             st.caption(translate("label_no_artifacts"))
+
+        # Collapsed technical details
+        if tech_details:
+            collapsible_details(
+                translate("show_technical_info"),
+                tech_details,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Next Action Panel — the redesigned right sidebar
+# ---------------------------------------------------------------------------
+
+
+def render_next_action_panel(
+    app: Application,
+    project_id: str,
+    intake: dict[str, Any],
+    ready: bool,
+    state: dict[str, Any],
+    pending: list[dict[str, Any]],
+    config: dict[str, Any] | None,
+    snapshot: Any,
+    thread_id: str | None,
+) -> None:
+    """Render the redesigned sticky right sidebar.
+
+    Combines the classic pipeline bar (start button, phase tracker,
+    approval gates) with a compact *Review Queue* summary so the user
+    always sees risks at a glance.
+    """
+
+    # The core pipeline controls (start, phase tracker, approval gates)
+    render_pipeline_bar(
+        app,
+        project_id,
+        intake,
+        ready,
+        state,
+        pending,
+        config,
+        snapshot,
+        thread_id,
+    )
+
+    # Review Queue compact summary
+    if state:
+        from vet_manuscript_lab.ui.components import severity_pill
+        from vet_manuscript_lab.ui.tabs.review_queue import collect_review_items
+
+        items = collect_review_items(state)
+        if items:
+            st.markdown("---")
+            st.markdown(f"**{translate('rq_header')}**")
+            critical = [
+                i for i in items if i.severity in ("critical", "error")
+            ]
+            col_c, col_w = st.columns(2)
+            col_c.metric(
+                translate("rq_critical_items"), len(critical)
+            )
+            col_w.metric(
+                translate("rq_warning_items"),
+                len(items) - len(critical),
+            )
+            # Show top 3 critical items as compact severity pills
+            for item in critical[:3]:
+                st.markdown(
+                    f"{severity_pill(item.severity)} "
+                    f"{item.title[:60]}",
+                    unsafe_allow_html=True,
+                )
+            if len(items) > 3:
+                st.caption(
+                    translate("rq_items_showing").format(
+                        shown=min(3, len(critical)), total=len(items)
+                    )
+                )

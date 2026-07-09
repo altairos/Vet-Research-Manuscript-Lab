@@ -6,6 +6,12 @@ from typing import Any
 
 import streamlit as st
 
+from vet_manuscript_lab.ui.components import (
+    Metric,
+    clean_table,
+    metric_strip,
+    short_hash,
+)
 from vet_manuscript_lab.ui.i18n import translate
 
 
@@ -38,17 +44,17 @@ def render_guideline_mapping(state: dict[str, Any]) -> None:
         if status:
             st.caption(f"{translate('label_manuscript_status')}: {status}")
 
-    with st.expander(translate("expander_artifact_refs"), expanded=False):
+    with st.expander(translate("show_technical_info"), expanded=False):
         detail = {}
         if guideline:
             detail["guideline_mapping"] = {
-                "version_id": guideline.get("version_id", ""),
-                "content_hash": guideline.get("content_hash", ""),
+                "version_id": short_hash(guideline.get("version_id", "")),
+                "content_hash": short_hash(guideline.get("content_hash", "")),
             }
         if protocol:
             detail["protocol"] = {
-                "version_id": protocol.get("version_id", ""),
-                "content_hash": protocol.get("content_hash", ""),
+                "version_id": short_hash(protocol.get("version_id", "")),
+                "content_hash": short_hash(protocol.get("content_hash", "")),
             }
         if detail:
             st.json(detail)
@@ -290,23 +296,37 @@ def render_usage_summary(state: dict[str, Any]) -> None:
 
     st.subheader(translate("section_usage"))
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(
-        translate("label_total_invocations"),
-        usage.get("total_invocations", 0),
-    )
-    col2.metric(
-        translate("label_total_cost"),
-        f"${usage.get('total_cost_cents', 0) / 100:.2f}",
-    )
-    col3.metric(
-        translate("label_input_tokens"),
-        usage.get("total_input_tokens", 0),
-    )
-    col4.metric(
-        translate("label_output_tokens"),
-        usage.get("total_output_tokens", 0),
-    )
+    total_cost = usage.get("total_cost_cents", 0) / 100
+    metric_strip([
+        Metric(
+            label=translate("label_total_cost"),
+            value=f"${total_cost:.2f}",
+            tone="primary",
+        ),
+        Metric(
+            label=translate("label_total_invocations"),
+            value=usage.get("total_invocations", 0),
+        ),
+        Metric(
+            label=translate("label_input_tokens"),
+            value=usage.get("total_input_tokens", 0),
+        ),
+        Metric(
+            label=translate("label_output_tokens"),
+            value=usage.get("total_output_tokens", 0),
+        ),
+    ])
+
+    # Budget progress bar (shown only when a budget is tracked in usage).
+    budget_cents = usage.get("budget_cents")
+    if budget_cents and budget_cents > 0:
+        used_cents = usage.get("total_cost_cents", 0)
+        ratio = min(1.0, used_cents / budget_cents)
+        budget_text = translate("dash_budget_used").format(
+            used=f"${used_cents / 100:.2f}",
+            budget=f"${budget_cents / 100:.2f}",
+        )
+        st.progress(ratio, text=f"{translate('dash_budget')}: {budget_text}")
 
     fallback = usage.get("fallback_count", 0)
     failure = usage.get("failure_count", 0)
@@ -324,15 +344,21 @@ def render_usage_summary(state: dict[str, Any]) -> None:
                 continue
             stage_rows.append(
                 {
-                    translate("col_task_kind"): task_kind,
-                    translate("col_invocations"): data.get("invocations", 0),
-                    translate("col_cost_cents"): (
-                        f"${data.get('cost_cents', 0) / 100:.2f}"
-                    ),
-                    translate("col_tokens"): (
+                    "task_kind": task_kind,
+                    "invocations": data.get("invocations", 0),
+                    "cost": f"${data.get('cost_cents', 0) / 100:.2f}",
+                    "tokens": (
                         data.get("input_tokens", 0) + data.get("output_tokens", 0)
                     ),
                 }
             )
         if stage_rows:
-            st.dataframe(stage_rows, use_container_width=True, hide_index=True)
+            clean_table(
+                stage_rows,
+                {
+                    "task_kind": translate("col_task_kind"),
+                    "invocations": translate("col_invocations"),
+                    "cost": translate("col_cost_cents"),
+                    "tokens": translate("col_tokens"),
+                },
+            )

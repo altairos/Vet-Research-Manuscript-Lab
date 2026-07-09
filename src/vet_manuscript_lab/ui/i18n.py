@@ -1498,6 +1498,196 @@ STRINGS.update(
 )
 
 
+# ---------------------------------------------------------------------------
+# Phase H3: Clinical-research-workbench UI strings
+# ---------------------------------------------------------------------------
+STRINGS.update(
+    {
+        # -- Five top-level workspaces ---------------------------------------
+        "workspace_dashboard": {
+            "en": "Dashboard",
+            "zh": "仪表盘",
+        },
+        "workspace_setup": {
+            "en": "Study Setup",
+            "zh": "研究设置",
+        },
+        "workspace_evidence": {
+            "en": "Evidence & Analysis",
+            "zh": "证据与分析",
+        },
+        "workspace_manuscript": {
+            "en": "Manuscript",
+            "zh": "稿件",
+        },
+        "workspace_audit": {
+            "en": "Audit & Export",
+            "zh": "审计与导出",
+        },
+        # -- Dashboard --------------------------------------------------------
+        "dash_project_status": {
+            "en": "Project status",
+            "zh": "项目状态",
+        },
+        "dash_next_action": {
+            "en": "Next action",
+            "zh": "下一步动作",
+        },
+        "dash_next_stage": {
+            "en": "Submit to continue toward",
+            "zh": "提交后进入",
+        },
+        "dash_risk_summary": {
+            "en": "Risk summary",
+            "zh": "风险摘要",
+        },
+        "dash_cost_summary": {
+            "en": "Cost summary",
+            "zh": "成本摘要",
+        },
+        "dash_recent_artifacts": {
+            "en": "Recent artifacts",
+            "zh": "最近产物",
+        },
+        "dash_audit_log": {
+            "en": "Audit log",
+            "zh": "审计日志",
+        },
+        "dash_approval_needed": {
+            "en": "Approval required",
+            "zh": "需要审批",
+        },
+        "dash_artifact": {
+            "en": "Artifact",
+            "zh": "产物",
+        },
+        "dash_no_thread": {
+            "en": "No pipeline run yet. Start one to see results here.",
+            "zh": "尚未运行流水线。启动后结果将显示在此。",
+        },
+        "dash_continue_pipeline": {
+            "en": "Continue pipeline",
+            "zh": "继续流水线",
+        },
+        "dash_pipeline_idle": {
+            "en": "Pipeline is idle. Set up your study and start the analysis.",
+            "zh": "流水线尚未启动。请完成研究设置并启动分析。",
+        },
+        "dash_risk_none": {
+            "en": "No risks detected.",
+            "zh": "未检测到风险。",
+        },
+        "dash_open_review_queue": {
+            "en": "Open review queue",
+            "zh": "打开待审队列",
+        },
+        # -- Onboarding / empty state ----------------------------------------
+        "onboard_welcome": {
+            "en": "Welcome to Vet Research Manuscript Lab",
+            "zh": "欢迎使用兽医科研稿件实验室",
+        },
+        "onboard_golden_title": {
+            "en": "Try the Golden Project",
+            "zh": "体验 Golden Project",
+        },
+        "onboard_golden_body": {
+            "en": (
+                "Use built-in synthetic data to experience the full pipeline "
+                "in one click."
+            ),
+            "zh": "使用内置合成数据，一键体验完整流程。",
+        },
+        "onboard_golden_button": {
+            "en": "Run Golden Project",
+            "zh": "运行 Golden Project",
+        },
+        "onboard_new_title": {
+            "en": "Create a new project",
+            "zh": "创建新项目",
+        },
+        "onboard_new_body": {
+            "en": "Start from a research question, case data, and Zotero library.",
+            "zh": "从研究问题、病例数据和 Zotero 文献库开始。",
+        },
+        "onboard_new_button": {
+            "en": "New project",
+            "zh": "新建项目",
+        },
+        "onboard_import_title": {
+            "en": "Import existing project",
+            "zh": "导入已有项目",
+        },
+        "onboard_import_body": {
+            "en": "Load a previous artifact / provenance package.",
+            "zh": "载入已有的产物/溯源包。",
+        },
+        # -- Collapsible details / technical noise ---------------------------
+        "show_details": {
+            "en": "Show details",
+            "zh": "展开详情",
+        },
+        "hide_details": {
+            "en": "Hide details",
+            "zh": "收起详情",
+        },
+        "show_provenance_details": {
+            "en": "Show provenance details",
+            "zh": "展开溯源详情",
+        },
+        "show_technical_info": {
+            "en": "Technical information",
+            "zh": "技术信息",
+        },
+        "copy": {
+            "en": "Copy",
+            "zh": "复制",
+        },
+        "label_copied": {
+            "en": "Copied",
+            "zh": "已复制",
+        },
+        # -- Cost / budget ----------------------------------------------------
+        "dash_budget": {
+            "en": "Budget",
+            "zh": "预算",
+        },
+        "dash_budget_used": {
+            "en": "{used} / {budget}",
+            "zh": "{used} / {budget}",
+        },
+        "dash_no_cost": {
+            "en": "No cost recorded yet.",
+            "zh": "尚无成本记录。",
+        },
+        # -- Provenance inspector enhanced ------------------------------------
+        "rq_provenance_claim_card": {
+            "en": "Claim",
+            "zh": "论点",
+        },
+        "rq_provenance_evidence_card": {
+            "en": "Evidence item",
+            "zh": "证据条目",
+        },
+        "rq_provenance_result_card": {
+            "en": "Statistical result",
+            "zh": "统计结果",
+        },
+        "rq_provenance_span_card": {
+            "en": "Source span",
+            "zh": "来源段落",
+        },
+        "rq_provenance_analysis_card": {
+            "en": "Analysis run",
+            "zh": "分析运行",
+        },
+        "rq_provenance_no_analysis": {
+            "en": "No analysis run recorded.",
+            "zh": "未记录分析运行。",
+        },
+    }
+)
+
+
 def _resolve_language(lang: str | None) -> str:
     if lang is not None:
         if lang not in SUPPORTED_LANGUAGES:
