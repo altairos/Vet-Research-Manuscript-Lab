@@ -1642,6 +1642,10 @@ STRINGS.update(
             "en": "Copy",
             "zh": "复制",
         },
+        "copy_to_clipboard": {
+            "en": "Copy to clipboard",
+            "zh": "复制到剪贴板",
+        },
         "label_copied": {
             "en": "Copied",
             "zh": "已复制",
