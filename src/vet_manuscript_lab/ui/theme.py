@@ -112,6 +112,10 @@ def apply_theme() -> None:
           'Noto Sans SC','Source Han Sans','Microsoft YaHei',
           system-ui, sans-serif !important;
         }}
+        /* Restore icon font (global * rule above overrides it) */
+        [data-testid="stIconMaterial"] {{
+          font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+        }}
         /* Material Icons: let Streamlit handle natively, don't override font */
         .stApp {{
           background:var(--vrl-bg); color:var(--vrl-text);
@@ -123,6 +127,7 @@ def apply_theme() -> None:
         }}
         [data-testid="stMainBlockContainer"] {{
           font-size:15px; line-height:1.55;
+          overflow-wrap: anywhere; word-break: break-word;
         }}
         [data-testid="stMainBlockContainer"] p {{
           font-size:.94rem; line-height:1.58;
@@ -334,7 +339,8 @@ def apply_theme() -> None:
 
         /* ---- Phase tracker ---- */
         .phase-row {{
-          display:grid; grid-template-columns:repeat(5,1fr);
+          display:grid;
+          grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
           gap:6px; margin:.4rem 0 .65rem;
         }}
         .phase {{
@@ -425,7 +431,16 @@ def apply_theme() -> None:
           max-height: calc(100vh - 6rem);
           overflow-y: auto; overflow-x: hidden;
           padding-right: .3rem;
-          word-break: break-word;
+          word-break: break-word; overflow-wrap: anywhere;
+        }}
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker)
+          [data-testid="stMetricLabel"] p {{
+          font-size:.78rem; line-height:1.3; white-space: normal;
+          overflow-wrap: anywhere;
+        }}
+        [data-testid="stColumn"]:has(.pipeline-sidebar-marker)
+          [data-testid="stMetricValue"] {{
+          font-size:.95rem; white-space: normal;
         }}
         [data-testid="stColumn"]:has(.pipeline-sidebar-marker)::-webkit-scrollbar {{
           width: 6px;
@@ -433,9 +448,6 @@ def apply_theme() -> None:
         [data-testid="stColumn"]:has(.pipeline-sidebar-marker
         )::-webkit-scrollbar-thumb {{
           background:#c2d1cc; border-radius:4px;
-        }}
-        [data-testid="stColumn"]:has(.pipeline-sidebar-marker) .phase-row {{
-          grid-template-columns: repeat(2, 1fr);
         }}
 
         @media(max-width:800px) {{
@@ -513,7 +525,9 @@ def inject_auto_grow_textareas() -> None:
   var doc = window.parent.document;
   function autoGrow(el) {
     el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
+    var sh = el.scrollHeight;
+    if (sh < 20) sh = 44; /* fallback when scrollHeight is 0 */
+    el.style.height = sh + 'px';
   }
   function setup() {
     doc.querySelectorAll('textarea').forEach(function(ta) {
@@ -523,6 +537,12 @@ def inject_auto_grow_textareas() -> None:
       ta.style.resize = 'none';
       autoGrow(ta);
       ta.addEventListener('input', function() { autoGrow(ta); });
+    });
+    /* Re-measure after the browser finishes layout */
+    requestAnimationFrame(function() {
+      doc.querySelectorAll('textarea[data-autogrow]').forEach(function(ta) {
+        autoGrow(ta);
+      });
     });
   }
   setup();

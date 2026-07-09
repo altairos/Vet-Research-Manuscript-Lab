@@ -17,6 +17,19 @@ _DIFF_TONES: dict[str, str] = {
 }
 
 
+def _enum_label(prefix: str, value: str) -> str:
+    """Translate an enum value via ``{prefix}_{value}`` i18n key.
+
+    Falls back to the raw value if no translation entry exists.
+    """
+
+    if not value:
+        return ""
+    key = f"{prefix}_{value}"
+    translated = translate(key)
+    return translated if translated != key else value
+
+
 def _render_highlighted_lines(lines: list[str], *, tone: str) -> None:
     """Render diff lines with a coloured background (green=added, red=removed)."""
 
@@ -62,7 +75,9 @@ def render_manuscript(state: dict[str, Any]) -> None:
         )
         col4.metric(
             translate("label_manuscript_status"),
-            summary.get("status", ""),
+            _enum_label(
+                "artifact_status", summary.get("status", "")
+            ),
         )
 
     total_words = sum(s.get("word_count", 0) for s in sections)
@@ -107,7 +122,7 @@ def render_manuscript(state: dict[str, Any]) -> None:
                     else:
                         sl = translate("label_claim_status_unsupported")
                         icon = "\u26a0\ufe0f"
-                    badges.append(f"{icon} {sl}: {c.get('text', '')[:80]}")
+                    badges.append(f"{icon} {sl}: {c.get('text', '')[:120]}")
                 for badge in badges:
                     st.markdown(f"- {badge}")
 
@@ -134,14 +149,20 @@ def render_claims(state: dict[str, Any]) -> None:
         count = support_counts.get(cid, 0)
         rows.append(
             {
-                translate("col_claim_type"): c.get("claim_type", ""),
+                translate("col_claim_type"): _enum_label(
+                    "claim_type", c.get("claim_type", "")
+                ),
                 translate("col_claim_text"): c.get("text", "")[:200],
-                translate("col_certainty"): c.get("certainty", ""),
+                translate("col_certainty"): _enum_label(
+                    "certainty", c.get("certainty", "")
+                ),
                 translate("col_has_support"): (
                     translate("label_yes") if count else translate("label_no")
                 ),
                 translate("col_support_count"): count,
-                translate("col_ref_numbers"): str(c.get("referenced_numbers", [])),
+                translate("col_ref_numbers"): str(
+                    c.get("referenced_numbers", [])
+                ),
             }
         )
     st.dataframe(rows, width="stretch", hide_index=True)
@@ -158,13 +179,19 @@ def render_citations(state: dict[str, Any]) -> None:
     st.subheader(translate("section_citations"))
     rows = []
     for c in citations:
+        sid = c.get("section_id", "")
+        section_short = sid.split("-")[-1] if sid else ""
         rows.append(
             {
                 translate("col_citation_key"): short_hash(
                     c.get("citation_key", ""), length=20
                 ),
-                translate("col_lit_record"): c.get("literature_record_id", "")[:16],
-                translate("col_section"): c.get("section_id", "")[:24],
+                translate("col_lit_record"): c.get(
+                    "literature_record_id", ""
+                )[:16],
+                translate("col_section"): _enum_label(
+                    "section_type", section_short
+                ),
                 translate("col_claim_type"): c.get("claim_id", "")[:24],
             }
         )
@@ -192,7 +219,8 @@ def render_claim_audit(state: dict[str, Any]) -> None:
         translate("label_audit_errors"),
         "0" if "passed" in status else ">0",
     )
-    st.caption(f"status: {status}")
+    status_label = _enum_label("artifact_status", status)
+    st.caption(f"{translate('label_status')}: {status_label}")
 
 
 def render_review(state: dict[str, Any]) -> None:
@@ -215,12 +243,20 @@ def render_review(state: dict[str, Any]) -> None:
         for f in findings:
             rows.append(
                 {
-                    translate("col_category"): f.get("category", ""),
-                    translate("col_severity"): f.get("severity", ""),
+                    translate("col_category"): _enum_label(
+                        "finding_category", f.get("category", "")
+                    ),
+                    translate("col_severity"): _enum_label(
+                        "finding_severity", f.get("severity", "")
+                    ),
                     translate("col_location"): f.get("location", ""),
                     translate("col_rationale"): f.get("rationale", ""),
-                    translate("col_recommendation"): f.get("recommendation", ""),
-                    translate("col_status"): f.get("status", ""),
+                    translate("col_recommendation"): f.get(
+                        "recommendation", ""
+                    ),
+                    translate("col_status"): _enum_label(
+                        "finding_status", f.get("status", "")
+                    ),
                 }
             )
         st.dataframe(rows, width="stretch", hide_index=True)
@@ -368,16 +404,22 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
         has_support = len(claim_supports) > 0
         is_factual = ctype in ("factual", "result", "statistical")
 
-        header = f"`{cid}` [{ctype}]"
+        ctype_label = _enum_label("claim_type", ctype)
+        header = f"[{ctype_label}] {text}"
         if not has_support and is_factual:
             header += " \u26a0\ufe0f"
 
         with st.expander(header, expanded=False):
             st.write(text)
+            certainty_label = _enum_label("certainty", certainty)
+            # Show only the descriptive suffix of section_id
+            section_short = (
+                section_id.split("-")[-1] if section_id else ""
+            )
             st.caption(
-                f"{translate('col_certainty')}: {certainty} "
+                f"{translate('col_certainty')}: {certainty_label} "
                 f"| {translate('col_section_type')}: "
-                f"{section_id}"
+                f"{section_short}"
             )
 
             if not has_support and is_factual:
@@ -390,14 +432,20 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
                     relation = s.get("relation", "")
                     audit_status = s.get("audit_status", "")
 
+                    stype_label = _enum_label("support_type", stype)
+                    relation_label = _enum_label("relation", relation)
+                    audit_label = _enum_label(
+                        "audit_status", audit_status
+                    )
+
                     st.markdown(
                         f"**{translate('label_support_type')}:** "
-                        f"{stype} "
+                        f"{stype_label} "
                         f"| **{translate('label_relation')}:** "
-                        f"{relation} "
+                        f"{relation_label} "
                         f"| **"
                         f"{translate('label_audit_status')}:** "
-                        f"{audit_status}"
+                        f"{audit_label}"
                     )
 
                     if stype == "evidence_item":

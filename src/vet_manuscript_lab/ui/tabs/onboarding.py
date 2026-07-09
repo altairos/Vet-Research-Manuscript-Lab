@@ -74,7 +74,7 @@ def render_onboarding(app: Application) -> None:
             body=translate("onboard_import_body"),
         )
         st.button(
-            translate("onboard_import_title"),
+            translate("onboard_import_button"),
             width="stretch",
             disabled=True,
             key="onboard_import",

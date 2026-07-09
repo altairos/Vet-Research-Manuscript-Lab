@@ -126,6 +126,82 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Approved",
         "zh": "已批准",
     },
+    "artifact_status_audit_passed": {
+        "en": "Audit passed",
+        "zh": "审计通过",
+    },
+    "artifact_status_revised": {
+        "en": "revised",
+        "zh": "已修订",
+    },
+    "artifact_status_complete": {
+        "en": "complete",
+        "zh": "已完成",
+    },
+    "artifact_status_draft": {
+        "en": "Draft",
+        "zh": "草稿",
+    },
+    "artifact_type_research_question": {
+        "en": "Research question",
+        "zh": "研究问题",
+    },
+    "artifact_type_protocol": {
+        "en": "Protocol",
+        "zh": "研究方案",
+    },
+    "artifact_type_guideline_mapping": {
+        "en": "Guideline mapping",
+        "zh": "指南映射",
+    },
+    "artifact_type_search_strategy": {
+        "en": "Search strategy",
+        "zh": "检索策略",
+    },
+    "artifact_type_screening_result": {
+        "en": "Screening result",
+        "zh": "筛选结果",
+    },
+    "artifact_type_evidence_ledger": {
+        "en": "Evidence ledger",
+        "zh": "证据台账",
+    },
+    "artifact_type_citation_audit": {
+        "en": "Citation audit",
+        "zh": "引文审计",
+    },
+    "artifact_type_methodology_findings": {
+        "en": "Methodology findings",
+        "zh": "方法学评估",
+    },
+    "artifact_type_analysis_plan": {
+        "en": "Analysis plan",
+        "zh": "分析计划",
+    },
+    "artifact_type_analysis_result": {
+        "en": "Analysis result",
+        "zh": "分析结果",
+    },
+    "artifact_type_argument_spine": {
+        "en": "Argument spine",
+        "zh": "论证骨架",
+    },
+    "artifact_type_manuscript": {
+        "en": "Manuscript",
+        "zh": "稿件",
+    },
+    "artifact_type_claim_audit": {
+        "en": "Claim audit",
+        "zh": "论点审计",
+    },
+    "artifact_type_compliance_audit": {
+        "en": "Compliance audit",
+        "zh": "合规审计",
+    },
+    "artifact_type_export_package": {
+        "en": "Export package",
+        "zh": "导出包",
+    },
     "label_no_artifacts": {
         "en": "No artifacts generated yet.",
         "zh": "尚未生成任何产物。",
@@ -304,6 +380,56 @@ STRINGS: dict[str, dict[str, str]] = {
     "section_results": {"en": "Statistical results", "zh": "统计结果"},
     "col_category": {"en": "Category", "zh": "类别"},
     "col_severity": {"en": "Severity", "zh": "严重度"},
+    # FindingCategory enum values
+    "finding_category_unsupported_claim": {
+        "en": "unsupported claim",
+        "zh": "无支撑论点",
+    },
+    "finding_category_numeric_mismatch": {
+        "en": "numeric mismatch",
+        "zh": "数值不一致",
+    },
+    "finding_category_causal_overreach": {
+        "en": "causal overreach",
+        "zh": "因果过度推断",
+    },
+    "finding_category_missing_citation": {
+        "en": "missing citation",
+        "zh": "缺少引用",
+    },
+    "finding_category_overstatement": {
+        "en": "overstatement",
+        "zh": "夸大",
+    },
+    "finding_category_scope_drift": {
+        "en": "scope drift",
+        "zh": "范围偏移",
+    },
+    "finding_category_checklist": {
+        "en": "checklist",
+        "zh": "清单项",
+    },
+    # FindingSeverity enum values
+    "finding_severity_info": {"en": "info", "zh": "信息"},
+    "finding_severity_warning": {
+        "en": "warning",
+        "zh": "警告",
+    },
+    "finding_severity_error": {"en": "error", "zh": "错误"},
+    # FindingStatus enum values
+    "finding_status_open": {"en": "open", "zh": "待处理"},
+    "finding_status_accepted": {
+        "en": "accepted",
+        "zh": "已采纳",
+    },
+    "finding_status_rejected": {
+        "en": "rejected",
+        "zh": "已拒绝",
+    },
+    "finding_status_deferred": {
+        "en": "deferred",
+        "zh": "已延期",
+    },
     "col_rationale": {"en": "Rationale", "zh": "理由"},
     "col_recommendation": {"en": "Recommendation", "zh": "建议"},
     "col_analysis_name": {"en": "Analysis", "zh": "分析名称"},
@@ -555,6 +681,30 @@ STRINGS: dict[str, dict[str, str]] = {
     "label_manuscript_status": {"en": "Status", "zh": "状态"},
     "label_revision_round": {"en": "Revision round", "zh": "修订轮次"},
     "col_section_type": {"en": "Section", "zh": "章节"},
+    # section_type enum values
+    "section_type_title": {"en": "title", "zh": "标题"},
+    "section_type_abstract": {"en": "abstract", "zh": "摘要"},
+    "section_type_introduction": {
+        "en": "introduction",
+        "zh": "引言",
+    },
+    "section_type_methods": {"en": "methods", "zh": "方法"},
+    "section_type_results": {
+        "en": "results",
+        "zh": "结果",
+    },
+    "section_type_discussion": {
+        "en": "discussion",
+        "zh": "讨论",
+    },
+    "section_type_conclusion": {
+        "en": "conclusion",
+        "zh": "结论",
+    },
+    "section_type_references": {
+        "en": "references",
+        "zh": "参考文献",
+    },
     "col_claim_type": {"en": "Type", "zh": "类型"},
     "col_claim_text": {"en": "Claim text", "zh": "论点文本"},
     "col_certainty": {"en": "Certainty", "zh": "确信度"},
@@ -971,6 +1121,64 @@ STRINGS.update(
         "label_relation": {"en": "Relation", "zh": "关系"},
         "label_audit_status": {"en": "Audit status", "zh": "审计状态"},
         "label_quote_hash": {"en": "Quote hash", "zh": "引用哈希"},
+        # claim_type enum values
+        "claim_type_factual": {"en": "factual", "zh": "事实性"},
+        "claim_type_statistical": {
+            "en": "statistical",
+            "zh": "统计性",
+        },
+        "claim_type_interpretation": {
+            "en": "interpretation",
+            "zh": "解释性",
+        },
+        "claim_type_recommendation": {
+            "en": "recommendation",
+            "zh": "建议性",
+        },
+        # certainty enum values
+        "certainty_high": {"en": "high", "zh": "高"},
+        "certainty_medium": {"en": "medium", "zh": "中"},
+        "certainty_low": {"en": "low", "zh": "低"},
+        # support_type enum values
+        "support_type_statistical_result": {
+            "en": "statistical result",
+            "zh": "统计结果",
+        },
+        "support_type_evidence_item": {
+            "en": "evidence item",
+            "zh": "证据项",
+        },
+        "support_type_literature": {
+            "en": "literature",
+            "zh": "文献",
+        },
+        # relation enum values
+        "relation_supports": {"en": "supports", "zh": "支持"},
+        "relation_contradicts": {
+            "en": "contradicts",
+            "zh": "反对",
+        },
+        "relation_partially_supports": {
+            "en": "partially supports",
+            "zh": "部分支持",
+        },
+        # audit_status enum values
+        "audit_status_verified": {
+            "en": "verified",
+            "zh": "已验证",
+        },
+        "audit_status_unverified": {
+            "en": "unverified",
+            "zh": "未验证",
+        },
+        "audit_status_flagged": {
+            "en": "flagged",
+            "zh": "已标记",
+        },
+        "audit_status_pending": {
+            "en": "pending",
+            "zh": "待审核",
+        },
         # additional role labels for new gate types
         "role_reviewer": {"en": "reviewer", "zh": "审阅人"},
         "role_principal_investigator": {
@@ -1620,6 +1828,10 @@ STRINGS.update(
         "onboard_import_body": {
             "en": "Load a previous artifact / provenance package.",
             "zh": "载入已有的产物/溯源包。",
+        },
+        "onboard_import_button": {
+            "en": "Import project",
+            "zh": "导入项目",
         },
         # -- Collapsible details / technical noise ---------------------------
         "show_details": {

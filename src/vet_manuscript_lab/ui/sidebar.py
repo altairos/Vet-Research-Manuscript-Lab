@@ -262,7 +262,6 @@ def render_sidebar_project_management(app: Application) -> None:
         if st.sidebar.button(
             "\u2192",
             key=f"select_{project.id}",
-            width="stretch",
             disabled=is_active,
         ):
             if is_intake_dirty(current_pid) and project.id != current_pid:

@@ -63,8 +63,6 @@ def render_export(state: dict[str, Any]) -> None:
         translate("label_manuscript_status"),
         package.get("status", ""),
     )
-    st.caption(f"{translate('col_package_uri')}: `{package.get('package_uri', '')}`")
-
     from vet_manuscript_lab.services.export import (
         ExportInput,
         MockExportGenerator,

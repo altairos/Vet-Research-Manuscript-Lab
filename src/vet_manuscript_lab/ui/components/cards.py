@@ -96,10 +96,16 @@ def artifact_card(
 
     parts: list[str] = []
     if artifact_type:
-        parts.append(badge(artifact_type, tone="neutral"))
+        type_key = f"artifact_type_{artifact_type}"
+        type_text = translate_safe(type_key)
+        type_label = type_text if type_text != type_key else artifact_type
+        parts.append(badge(type_label, tone="neutral"))
     status_tone = status_to_tone(status) if status else "neutral"
     if status:
-        parts.append(badge(status, tone=status_tone))
+        status_key = f"artifact_status_{status}"
+        status_text = translate_safe(status_key)
+        status_label = status_text if status_text != status_key else status
+        parts.append(badge(status_label, tone=status_tone))
     if version:
         parts.append(f'<span class="vrl-muted">v{_esc(version)}</span>')
     badges_html = " ".join(parts)
@@ -211,7 +217,8 @@ def empty_state_card(
     """Render a friendly empty-state placeholder card."""
 
     st.markdown(
-        f"""<div class="vrl-card" style="text-align:center;padding:2.5rem 1.5rem;">
+        f"""<div class="vrl-card" style="text-align:center;padding:2.5rem 1.5rem;
+        min-height:11rem;display:flex;flex-direction:column;justify-content:center;">
         <div style="font-size:2.5rem;margin-bottom:.5rem;">{_esc(icon)}</div>
         <div class="vrl-title">{_esc(title)}</div>
         <div class="vrl-muted">{_esc(body)}</div>

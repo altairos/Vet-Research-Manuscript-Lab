@@ -17,7 +17,6 @@ from vet_manuscript_lab.ui.components import (
     approval_gate_card,
     artifact_card,
     finding_card,
-    short_hash,
 )
 from vet_manuscript_lab.ui.i18n import (
     gate_field,
@@ -41,6 +40,7 @@ _ARTIFACT_ROLE_I18N: dict[str, str] = {
     "revision_plan": "section_revision",
     "ai_usage_log": "section_usage",
     "audit_report": "dash_audit_log",
+    "compliance_audit": "section_compliance",
     "export_package": "section_export",
     "argument_spine": "label_argument_spine",
 }
@@ -155,9 +155,8 @@ def render_dashboard(
     artifacts_count = len(
         [a for a in state.get("artifacts", {}).values() if isinstance(a, dict)]
     )
-    # Use st.metric directly with custom column widths so the
-    # "current stage" card (long text) gets more room.
-    m1, m2, m3, m4 = st.columns([1.4, 0.8, 0.8, 0.8])
+    # Even distribution for all four metric cards.
+    m1, m2, m3, m4 = st.columns(4)
     m1.metric(
         translate("metric_current_stage"),
         current_stage or "-",
@@ -274,7 +273,6 @@ def _render_recent_artifacts(state: dict[str, Any]) -> None:
             title=_artifact_role_label(role),
             version=str(art.get("version", "-")),
             status=_artifact_status_label(art.get("status", "")),
-            hash_short=short_hash(art.get("content_hash", "")),
             artifact_type=art.get("artifact_type", ""),
         )
 

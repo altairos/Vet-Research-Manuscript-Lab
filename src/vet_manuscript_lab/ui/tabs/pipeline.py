@@ -54,9 +54,12 @@ def render_pipeline_bar(
             ),
             translate("readiness_dataset"): bool(intake.get("dataset_summary")),
         }
-        status_cols = st.columns(4)
+        req_items = list(requirements.items())
+        row1 = st.columns(2)
+        row2 = st.columns(2)
+        status_cols = [*row1, *row2]
         for col, (label, complete) in zip(
-            status_cols, requirements.items(), strict=True
+            status_cols, req_items, strict=True
         ):
             col.metric(
                 label,

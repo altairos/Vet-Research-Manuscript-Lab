@@ -14,6 +14,16 @@ from vet_manuscript_lab.ui.components import (
 from vet_manuscript_lab.ui.i18n import translate
 
 
+def _enum_label(prefix: str, value: str) -> str:
+    """Translate an enum value via ``{prefix}_{value}`` i18n key."""
+
+    if not value:
+        return ""
+    key = f"{prefix}_{value}"
+    translated = translate(key)
+    return translated if translated != key else value
+
+
 def render_guideline_mapping(state: dict[str, Any]) -> None:
     """Display the reporting guideline mapping and protocol scope."""
 
@@ -79,10 +89,16 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
     for f in findings:
         rows.append(
             {
-                translate("col_category"): f.get("category", ""),
-                translate("col_severity"): f.get("severity", ""),
+                translate("col_category"): _enum_label(
+                    "finding_category", f.get("category", "")
+                ),
+                translate("col_severity"): _enum_label(
+                    "finding_severity", f.get("severity", "")
+                ),
                 translate("col_rationale"): f.get("rationale", ""),
-                translate("col_recommendation"): f.get("recommendation", ""),
+                translate("col_recommendation"): f.get(
+                    "recommendation", ""
+                ),
             }
         )
     st.dataframe(rows, width="stretch", hide_index=True)
@@ -213,7 +229,42 @@ def render_effect_plots(state: dict[str, Any]) -> None:
     import pandas as pd  # type: ignore[import-untyped]
 
     df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
-    st.bar_chart(df[translate("col_estimate")])
+
+    # Use Altair directly so we can control axis label orientation
+    import altair as alt  # type: ignore[import-untyped]
+
+    chart_df = df.reset_index()
+    chart_df["short_label"] = chart_df[translate("col_analysis_name")].apply(
+        lambda x: x if len(str(x)) <= 20 else str(x)[:17] + "…"
+    )
+    bars = alt.Chart(chart_df).mark_bar().encode(
+        x=alt.X(
+            "short_label:N",
+            title=translate("col_analysis_name"),
+            axis=alt.Axis(labelAngle=0, labelLimit=200),
+            sort=None,
+        ),
+        y=alt.Y(
+            f"{translate('col_estimate')}:Q",
+            title=translate("col_estimate"),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                f"{translate('col_analysis_name')}:N",
+                title=translate("col_analysis_name"),
+            ),
+            alt.Tooltip(
+                f"{translate('col_estimate')}:Q",
+                title=translate("col_estimate"),
+            ),
+        ],
+    )
+    text = bars.mark_text(
+        align="center", baseline="bottom", dy=-2
+    ).encode(
+        text=f"{translate('col_estimate')}:Q"
+    )
+    st.altair_chart(bars + text, use_container_width=True)
     st.dataframe(
         df.drop(columns=[translate("col_estimate")]),
         width="stretch",

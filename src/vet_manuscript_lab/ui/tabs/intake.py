@@ -42,26 +42,30 @@ def render_intake_question(intake: dict[str, Any]) -> None:
             value=question.get("objective", ""),
             height=68,
         )
-        peco_cols = st.columns(4)
-        population = peco_cols[0].text_input(
+        population = st.text_area(
             translate("field_population"),
             value=question.get("population", ""),
+            height=68,
         )
-        exposure = peco_cols[1].text_input(
+        exposure = st.text_area(
             translate("field_exposure"),
             value=question.get("exposure", ""),
+            height=68,
         )
-        comparator = peco_cols[2].text_input(
+        comparator = st.text_area(
             translate("field_comparator"),
             value=question.get("comparator", ""),
+            height=68,
         )
-        outcome = peco_cols[3].text_input(
+        outcome = st.text_area(
             translate("field_outcome"),
             value=question.get("outcome", ""),
+            height=68,
         )
-        hypothesis = st.text_input(
+        hypothesis = st.text_area(
             translate("field_hypothesis"),
             value=question.get("hypothesis", ""),
+            height=68,
         )
         if st.form_submit_button(translate("button_save_question")):
             required = (objective, population, exposure, outcome)
