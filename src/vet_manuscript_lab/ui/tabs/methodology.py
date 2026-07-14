@@ -10,6 +10,7 @@ from vet_manuscript_lab.ui.components import (
     Metric,
     clean_table,
     metric_strip,
+    section_header,
 )
 from vet_manuscript_lab.ui.i18n import translate
 
@@ -33,7 +34,7 @@ def render_guideline_mapping(state: dict[str, Any]) -> None:
     if guideline is None and protocol is None:
         return
 
-    st.subheader(translate("section_guideline"))
+    section_header(translate("section_guideline"))
 
     if guideline:
         guideline_type = guideline.get("guideline", "STROBE-Vet")
@@ -78,7 +79,7 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
         st.info(translate("info_no_methodology"))
         return
 
-    st.subheader(translate("section_methodology"))
+    section_header(translate("section_methodology"))
 
     warning_count = sum(1 for f in findings if f.get("severity") == "warning")
     col1, col2 = st.columns(2)
@@ -112,7 +113,7 @@ def render_analysis_plan(state: dict[str, Any]) -> None:
         st.info(translate("info_no_analysis_plan"))
         return
 
-    st.subheader(translate("section_analysis_plan"))
+    section_header(translate("section_analysis_plan"))
 
     col1, col2, col3 = st.columns(3)
     col1.metric(
@@ -157,7 +158,7 @@ def render_statistical_results(state: dict[str, Any]) -> None:
         st.info(translate("info_no_results"))
         return
 
-    st.subheader(translate("section_results"))
+    section_header(translate("section_results"))
 
     if run_summary:
         col1, col2, col3 = st.columns(3)
@@ -225,7 +226,7 @@ def render_effect_plots(state: dict[str, Any]) -> None:
         st.info(translate("info_no_plot_data"))
         return
 
-    st.subheader(translate("section_figures"))
+    section_header(translate("section_figures"))
     import pandas as pd  # type: ignore[import-untyped]
 
     df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
@@ -284,7 +285,7 @@ def render_analysis_provenance(state: dict[str, Any]) -> None:
     if not isinstance(payload, dict):
         return
 
-    st.subheader(translate("section_provenance"))
+    section_header(translate("section_provenance"))
 
     col1, col2 = st.columns(2)
     col1.metric(
@@ -345,7 +346,7 @@ def render_usage_summary(state: dict[str, Any]) -> None:
     if not usage:
         return
 
-    st.subheader(translate("section_usage"))
+    section_header(translate("section_usage"))
 
     total_cost = usage.get("total_cost_cents", 0) / 100
     metric_strip([

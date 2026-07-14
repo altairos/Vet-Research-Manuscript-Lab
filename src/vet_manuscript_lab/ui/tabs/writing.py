@@ -7,7 +7,7 @@ from typing import Any
 
 import streamlit as st
 
-from vet_manuscript_lab.ui.components import short_hash
+from vet_manuscript_lab.ui.components import section_header, short_hash
 from vet_manuscript_lab.ui.i18n import translate
 
 # Background colours for diff highlighting.
@@ -57,7 +57,7 @@ def render_manuscript(state: dict[str, Any]) -> None:
         st.info(translate("info_no_manuscript"))
         return
 
-    st.subheader(translate("section_manuscript"))
+    section_header(translate("section_manuscript"))
 
     if summary:
         col1, col2, col3, col4 = st.columns(4)
@@ -176,7 +176,7 @@ def render_citations(state: dict[str, Any]) -> None:
         st.info(translate("info_no_citations"))
         return
 
-    st.subheader(translate("section_citations"))
+    section_header(translate("section_citations"))
     rows = []
     for c in citations:
         sid = c.get("section_id", "")
@@ -207,7 +207,7 @@ def render_claim_audit(state: dict[str, Any]) -> None:
         st.info(translate("info_no_claim_audit"))
         return
 
-    st.subheader(translate("section_claim_audit"))
+    section_header(translate("section_claim_audit"))
 
     status = audit.get("status", "")
     col1, col2 = st.columns(2)
@@ -233,7 +233,7 @@ def render_review(state: dict[str, Any]) -> None:
         st.info(translate("info_no_review"))
         return
 
-    st.subheader(translate("section_review"))
+    section_header(translate("section_review"))
 
     if findings:
         decision_map = {  # noqa: F841
@@ -295,7 +295,7 @@ def render_revision_diff(state: dict[str, Any]) -> None:
     if not diffs:
         return
 
-    st.subheader(translate("section_revision_diff"))
+    section_header(translate("section_revision_diff"))
 
     for d in diffs:
         section_id = d.get("section_id", "")
@@ -391,7 +391,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
         if cid:
             citation_by_claim.setdefault(cid, []).append(c)
 
-    st.subheader(translate("section_traceability"))
+    section_header(translate("section_traceability"))
 
     for c in claims:
         cid = c.get("claim_id", "")

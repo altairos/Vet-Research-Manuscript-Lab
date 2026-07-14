@@ -179,7 +179,9 @@ def inject_context_menu_js() -> None:
       '[data-testid="stSidebar"] button'
     ).forEach(function(btn) {{
       var t = btn.textContent || '';
-      if (t.indexOf('rn:') !== -1 || t.indexOf('dl:') !== -1) {{
+      if (t.indexOf('rn:') !== -1
+          || t.indexOf('dl:') !== -1
+          || t.indexOf('select:') !== -1) {{
         var c = btn.closest('[data-testid="stElementContainer"]')
               || btn.closest('.stButton');
         if (c) {{
@@ -198,6 +200,19 @@ def inject_context_menu_js() -> None:
       function(el) {{
         if (el.getAttribute('data-ctx-bound')) return;
         el.setAttribute('data-ctx-bound', '1');
+        el.addEventListener('click', function(e) {{
+          e.preventDefault();
+          var pid = el.getAttribute('data-project-id');
+          var buttons = parent.querySelectorAll(
+            '[data-testid="stSidebar"] button'
+          );
+          for (var i = 0; i < buttons.length; i++) {{
+            if (buttons[i].textContent.indexOf('select:' + pid) !== -1) {{
+              buttons[i].click();
+              return;
+            }}
+          }}
+        }});
         el.addEventListener('contextmenu', function(e) {{
           e.preventDefault();
           e.stopPropagation();
@@ -260,7 +275,7 @@ def render_sidebar_project_management(app: Application) -> None:
         )
 
         if st.sidebar.button(
-            "\u2192",
+            f"select:{project.id}",
             key=f"select_{project.id}",
             disabled=is_active,
         ):

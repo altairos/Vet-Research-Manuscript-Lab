@@ -17,6 +17,7 @@ from vet_manuscript_lab.services.zotero import (
     ZoteroSynchroniser,
 )
 from vet_manuscript_lab.ui.application import Application
+from vet_manuscript_lab.ui.components import section_header, step_card
 from vet_manuscript_lab.ui.i18n import translate
 
 
@@ -36,38 +37,71 @@ def render_intake_question(intake: dict[str, Any]) -> None:
     """Render the PECO research-question form."""
 
     question = dict(intake.get("research_question_input", {}))
+    section_header(
+        translate("tab_research_question"),
+        translate("start_disabled_help"),
+        eyebrow="01",
+    )
+    status_cols = st.columns(4)
+    status_items = [
+        (translate("field_objective"), "objective"),
+        (translate("field_population"), "population"),
+        (translate("field_exposure"), "exposure"),
+        (translate("field_outcome"), "outcome"),
+    ]
+    for index, (label, key) in enumerate(status_items, start=1):
+        with status_cols[index - 1]:
+            status_text = (
+                translate("label_ready")
+                if question.get(key)
+                else translate("label_incomplete")
+            )
+            step_card(
+                label.replace(" *", ""),
+                status_text,
+                done=bool(question.get(key)),
+                index=index,
+            )
+
     with st.form("analysis-question"):
-        objective = st.text_area(
-            translate("field_objective"),
-            value=question.get("objective", ""),
-            height=68,
-        )
-        population = st.text_area(
-            translate("field_population"),
-            value=question.get("population", ""),
-            height=68,
-        )
-        exposure = st.text_area(
-            translate("field_exposure"),
-            value=question.get("exposure", ""),
-            height=68,
-        )
-        comparator = st.text_area(
-            translate("field_comparator"),
-            value=question.get("comparator", ""),
-            height=68,
-        )
-        outcome = st.text_area(
-            translate("field_outcome"),
-            value=question.get("outcome", ""),
-            height=68,
-        )
-        hypothesis = st.text_area(
-            translate("field_hypothesis"),
-            value=question.get("hypothesis", ""),
-            height=68,
-        )
-        if st.form_submit_button(translate("button_save_question")):
+        left, right = st.columns(2, gap="large")
+        with left:
+            objective = st.text_area(
+                translate("field_objective"),
+                value=question.get("objective", ""),
+                height=86,
+            )
+            population = st.text_area(
+                translate("field_population"),
+                value=question.get("population", ""),
+                height=86,
+            )
+            exposure = st.text_area(
+                translate("field_exposure"),
+                value=question.get("exposure", ""),
+                height=86,
+            )
+        with right:
+            comparator = st.text_area(
+                translate("field_comparator"),
+                value=question.get("comparator", ""),
+                height=86,
+            )
+            outcome = st.text_area(
+                translate("field_outcome"),
+                value=question.get("outcome", ""),
+                height=86,
+            )
+            hypothesis = st.text_area(
+                translate("field_hypothesis"),
+                value=question.get("hypothesis", ""),
+                height=86,
+            )
+        if st.form_submit_button(
+            translate("button_save_question"),
+            type="primary",
+            width="stretch",
+        ):
             required = (objective, population, exposure, outcome)
             if not all(value.strip() for value in required):
                 st.error(translate("error_required_fields"))
@@ -98,7 +132,11 @@ def render_intake_materials(
     # ---- Literature / search strategy ----------------------------------
     search = dict(intake.get("search_strategy_input", {}))
 
-    st.markdown(f"##### {translate('edit_strategy_header')}")
+    section_header(
+        translate("edit_strategy_header"),
+        translate("readiness_search"),
+        eyebrow="02",
+    )
 
     search_version = st.session_state.get(f"search_form_version:{project_id}", 0)
     ss_query_key = f"ss_query:{project_id}:{search_version}"
@@ -169,7 +207,7 @@ def render_intake_materials(
 
     col_zotero, col_manual = st.columns(2)
     with col_zotero:
-        st.markdown("##### Zotero")
+        section_header("Zotero", translate("readiness_literature"))
         if app.settings.zotero_enabled:
             if st.button(translate("button_sync_zotero")):
                 try:
@@ -196,7 +234,10 @@ def render_intake_materials(
         else:
             st.info(translate("info_zotero_config"))
     with col_manual:
-        st.markdown(f"##### {translate('manual_entry_header')}")
+        section_header(
+            translate("manual_entry_header"),
+            translate("readiness_literature"),
+        )
         with st.form("manual-literature", clear_on_submit=True):
             lit_title = st.text_input(translate("field_literature_title"))
             lit_doi = st.text_input("DOI", placeholder="10.1038/...")
@@ -255,7 +296,11 @@ def render_intake_materials(
         st.warning(translate("warning_no_literature"))
 
     # ---- Dataset -------------------------------------------------------
-    st.markdown(f"##### {translate('tab_dataset_variables')}")
+    section_header(
+        translate("tab_dataset_variables"),
+        translate("readiness_dataset"),
+        eyebrow="03",
+    )
     uploaded = st.file_uploader(
         translate("field_upload_csv"),
         type=["csv"],
@@ -327,7 +372,7 @@ def render_intake_materials(
     if var_specs:
         import pandas as pd  # type: ignore[import-untyped]
 
-        st.markdown(f"###### {translate('tab_dataset_variables')}")
+        section_header(translate("tab_dataset_variables"))
         var_types = [
             translate("label_var_continuous"),
             translate("label_var_categorical"),

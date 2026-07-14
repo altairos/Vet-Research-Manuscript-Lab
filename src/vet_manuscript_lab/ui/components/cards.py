@@ -63,6 +63,53 @@ def card(
     )
 
 
+def section_header(
+    title: str,
+    body: str = "",
+    eyebrow: str | None = None,
+) -> None:
+    """Render a compact workspace section header."""
+
+    eyebrow_html = (
+        f'<div class="vrl-section-eyebrow">{_esc(eyebrow)}</div>' if eyebrow else ""
+    )
+    body_html = f'<div class="vrl-section-body">{_esc(body)}</div>' if body else ""
+    st.markdown(
+        f"""<div class="vrl-section-header">
+        <div>
+          {eyebrow_html}
+          <div class="vrl-section-title">{_esc(title)}</div>
+          {body_html}
+        </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def step_card(
+    title: str,
+    body: str = "",
+    *,
+    done: bool = False,
+    index: int | None = None,
+) -> None:
+    """Render a small workflow step card with a clear completion state."""
+
+    state_class = "done" if done else "todo"
+    marker = "?" if done else str(index or "")
+    body_html = f'<div class="vrl-step-body">{_esc(body)}</div>' if body else ""
+    st.markdown(
+        f"""<div class="vrl-step-card {state_class}">
+        <div class="vrl-step-marker">{_esc(marker)}</div>
+        <div>
+          <div class="vrl-step-title">{_esc(title)}</div>
+          {body_html}
+        </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def metric_strip(metrics: list[Metric]) -> None:
     """Render a horizontal strip of metric cards."""
 
@@ -261,9 +308,8 @@ def empty_state_card(
     """Render a friendly empty-state placeholder card."""
 
     st.markdown(
-        f"""<div class="vrl-card" style="text-align:center;padding:2.5rem 1.5rem;
-        min-height:11rem;display:flex;flex-direction:column;justify-content:center;">
-        <div style="font-size:2.5rem;margin-bottom:.5rem;">{_esc(icon)}</div>
+        f"""<div class="vrl-card vrl-empty-state">
+        <div class="vrl-empty-icon">{_esc(icon)}</div>
         <div class="vrl-title">{_esc(title)}</div>
         <div class="vrl-muted">{_esc(body)}</div>
         </div>""",
@@ -293,4 +339,6 @@ __all__ = [
     "finding_card",
     "metric_strip",
     "next_action_hero",
+    "section_header",
+    "step_card",
 ]

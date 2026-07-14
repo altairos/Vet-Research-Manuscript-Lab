@@ -7,6 +7,7 @@ glanceable layout so the researcher immediately knows "what to do next".
 
 from __future__ import annotations
 
+import html
 from datetime import datetime
 from typing import Any
 
@@ -19,6 +20,7 @@ from vet_manuscript_lab.ui.components import (
     empty_state_card,
     metric_strip,
     next_action_hero,
+    severity_pill,
 )
 from vet_manuscript_lab.ui.i18n import (
     gate_field,
@@ -253,10 +255,11 @@ def _render_risk_summary_actionable(items: list[Any]) -> None:
         items, key=lambda i: -_SEVERITY_RANK.get(i.severity, 0)
     )[:2]
     for item in top:
-        icon = "\u26a0" if item.severity in ("critical", "error") else "\u2139"
         st.markdown(
-            f"{icon} **{item.title[:65]}**",
+            f"{severity_pill(item.severity)} "
+            f'<span class="risk-inline-title">{html.escape(item.title[:65])}</span>',
             help=item.detail if item.detail else None,
+            unsafe_allow_html=True,
         )
 
     if len(items) > 2:

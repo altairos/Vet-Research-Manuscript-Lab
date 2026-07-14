@@ -22,6 +22,8 @@ from vet_manuscript_lab.ui.components.cards import (
     finding_card,
     metric_strip,
     next_action_hero,
+    section_header,
+    step_card,
 )
 from vet_manuscript_lab.ui.components.tables import (
     clean_table,
@@ -45,8 +47,10 @@ __all__ = [
     "inject_copy_js",
     "metric_strip",
     "next_action_hero",
+    "section_header",
     "severity_pill",
     "short_hash",
     "status_badge",
     "status_to_tone",
+    "step_card",
 ]

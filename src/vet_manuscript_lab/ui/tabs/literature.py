@@ -6,7 +6,31 @@ from typing import Any
 
 import streamlit as st
 
+from vet_manuscript_lab.ui.components import badge, section_header
 from vet_manuscript_lab.ui.i18n import translate
+
+
+def _rows_to_html(rows: list[dict[str, Any]]) -> str:
+    """Render simple HTML table so badges can display inside cells."""
+
+    import html
+
+    if not rows:
+        return ""
+    headers = list(rows[0].keys())
+    head = "".join(f"<th>{html.escape(str(h))}</th>" for h in headers)
+    body_rows = []
+    for row in rows:
+        cells = []
+        for header in headers:
+            value = str(row.get(header, ""))
+            if "vrl-badge" in value:
+                cells.append(f"<td>{value}</td>")
+            else:
+                cells.append(f"<td>{html.escape(value)}</td>")
+        body_rows.append(f"<tr>{''.join(cells)}</tr>")
+    body = "".join(body_rows)
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
 
 
 def render_literature_records(state: dict[str, Any]) -> None:
@@ -17,7 +41,7 @@ def render_literature_records(state: dict[str, Any]) -> None:
         st.info(translate("info_no_literature"))
         return
 
-    st.subheader(translate("section_literature"))
+    section_header(translate("section_literature"))
 
     summary = state.get("literature_summary", {})
     if summary:
@@ -36,21 +60,25 @@ def render_literature_records(state: dict[str, Any]) -> None:
     rows = []
     for rec in records:
         decision = rec.get("screening_decision", "pending")
-        if decision == "included":
-            icon = "\u2705"
-        elif decision == "excluded":
-            icon = "\u274c"
-        else:
-            icon = "\u23f3"
+        tone = (
+            "success"
+            if decision == "included"
+            else "danger"
+            if decision == "excluded"
+            else "neutral"
+        )
         rows.append(
             {
                 translate("col_record_id"): rec.get("record_id", "")[:12],
                 translate("col_title"): rec.get("title", ""),
                 translate("col_doi"): rec.get("doi", ""),
-                translate("label_screening_auto"): f"{icon} {decision}",
+                translate("label_screening_auto"): badge(decision, tone=tone),
             }
         )
-    st.dataframe(rows, width="stretch", hide_index=True)
+    st.markdown(
+        '<div class="vrl-html-table">' + _rows_to_html(rows) + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_evidence_items(state: dict[str, Any]) -> None:
@@ -62,7 +90,7 @@ def render_evidence_items(state: dict[str, Any]) -> None:
         st.info(translate("info_no_evidence"))
         return
 
-    st.subheader(translate("section_evidence"))
+    section_header(translate("section_evidence"))
 
     summary = state.get("evidence_summary", {})
     if summary:
