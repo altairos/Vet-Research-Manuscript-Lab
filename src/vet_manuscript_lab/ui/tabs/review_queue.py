@@ -397,8 +397,7 @@ def render_review_queue(state: dict[str, Any]) -> None:
         with st.expander(translate("show_details"), expanded=False):
             meta_parts = [
                 f"**{translate('rq_source_type')}:** `{item.source_type}`",
-                f"**{translate('rq_source_id')}:** "
-                f"`{short_hash(item.source_id)}`",
+                f"**{translate('rq_source_id')}:** `{short_hash(item.source_id)}`",
             ]
             if item.related_ids:
                 meta_parts.append(
@@ -550,9 +549,7 @@ def _provenance_for_claim(
                         ci = res.get("uncertainty_lower")
                         cj = res.get("uncertainty_upper")
                         ci_str = (
-                            f"{ci} - {cj}"
-                            if ci is not None and cj is not None
-                            else "-"
+                            f"{ci} - {cj}" if ci is not None and cj is not None else "-"
                         )
                         st.write(
                             f"{translate('col_estimate')}: **{est}** "
@@ -577,19 +574,19 @@ def _provenance_for_claim(
                                 )
                                 seed = analysis_run.get("seed")
                                 if seed is not None:
-                                    st.caption(
-                                        f"{translate('label_seed')}: {seed}"
-                                    )
-                                pkg_versions = analysis_run.get(
-                                    "package_versions", {}
-                                )
+                                    st.caption(f"{translate('label_seed')}: {seed}")
+                                pkg_versions = analysis_run.get("package_versions", {})
                                 if isinstance(pkg_versions, dict) and pkg_versions:
                                     st.caption(
                                         f"{translate('label_package_versions')}: "
-                                        f"{', '.join(
-                                            f'{k}=={v}'
-                                            for k, v in list(pkg_versions.items())[:6]
-                                        )}"
+                                        f"{
+                                            ', '.join(
+                                                f'{k}=={v}'
+                                                for k, v in list(pkg_versions.items())[
+                                                    :6
+                                                ]
+                                            )
+                                        }"
                                     )
 
     # Citations
@@ -642,9 +639,7 @@ def _render_span_chain(
                 )
             qh = span.get("quote_hash", "")
             if qh:
-                with st.expander(
-                    translate("show_provenance_details"), expanded=False
-                ):
+                with st.expander(translate("show_provenance_details"), expanded=False):
                     st.code(
                         f"{translate('label_quote_hash')}: {qh}",
                         language="text",

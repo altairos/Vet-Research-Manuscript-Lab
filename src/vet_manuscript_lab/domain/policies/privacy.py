@@ -192,9 +192,7 @@ def redact_secrets(text: str) -> RedactionResult:
 
     findings = scan_for_secrets(text)
     if not findings:
-        return RedactionResult(
-            redacted_text=text, findings=(), redaction_count=0
-        )
+        return RedactionResult(redacted_text=text, findings=(), redaction_count=0)
 
     # Redact from end to start so offsets stay valid
     result = text
@@ -268,9 +266,7 @@ def redact_pii(text: str) -> RedactionResult:
 
     findings = scan_for_pii(text)
     if not findings:
-        return RedactionResult(
-            redacted_text=text, findings=(), redaction_count=0
-        )
+        return RedactionResult(redacted_text=text, findings=(), redaction_count=0)
 
     result = text
     for f in reversed(findings):

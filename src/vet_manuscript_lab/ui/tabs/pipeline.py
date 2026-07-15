@@ -58,9 +58,7 @@ def render_pipeline_bar(
         row1 = st.columns(2)
         row2 = st.columns(2)
         status_cols = [*row1, *row2]
-        for col, (label, complete) in zip(
-            status_cols, req_items, strict=True
-        ):
+        for col, (label, complete) in zip(status_cols, req_items, strict=True):
             col.metric(
                 label,
                 translate("label_ready") if complete else translate("label_incomplete"),
@@ -78,9 +76,7 @@ def render_pipeline_bar(
         if thread_id is not None and config is not None:
             render_phase_tracker(state.get("current_stage"))
             if snapshot.next:
-                next_labels = ", ".join(
-                    stage_label(n) for n in snapshot.next
-                )
+                next_labels = ", ".join(stage_label(n) for n in snapshot.next)
             else:
                 next_labels = "-"
             st.caption(f"{translate('label_next')}: {next_labels}")
@@ -173,9 +169,7 @@ def render_review_disposition(
                 )
 
         submitted = st.form_submit_button(
-            translate("button_submit_review"),
-            type="primary",
-            width="stretch"
+            translate("button_submit_review"), type="primary", width="stretch"
         )
 
     if submitted:
@@ -234,9 +228,7 @@ def render_sign_off_approval(
         )
         reason = st.text_area(translate("field_comment"))
         submitted = st.form_submit_button(
-            translate("button_submit_decision"),
-            type="primary",
-            width="stretch"
+            translate("button_submit_decision"), type="primary", width="stretch"
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -280,18 +272,13 @@ def render_pending_approval(
     # Standard approval gates
     st.markdown('<div class="approval-card">', unsafe_allow_html=True)
     st.subheader(translate("pending_action_header"))
-    st.caption(
-        translate("pending_action_caption", stage=gate_stage_label(gate_name))
-    )
+    st.caption(translate("pending_action_caption", stage=gate_stage_label(gate_name)))
     st.markdown(
-        f"**{translate('pending_action_gate')}:** "
-        f"{gate_field(gate_name, 'title')}"
+        f"**{translate('pending_action_gate')}:** {gate_field(gate_name, 'title')}"
     )
     next_stage = stage_label(gate.get("proposed_next_stage"))
     if next_stage:
-        st.markdown(
-            f"**{translate('pending_action_next')}:** {next_stage}"
-        )
+        st.markdown(f"**{translate('pending_action_next')}:** {next_stage}")
     st.caption(gate_field(gate_name, "summary"))
 
     role_options = ["investigator", "statistician"]
@@ -317,9 +304,7 @@ def render_pending_approval(
         )
         comment = st.text_area(translate("field_comment"))
         submitted = st.form_submit_button(
-            translate("button_submit_decision"),
-            type="primary",
-            width="stretch"
+            translate("button_submit_decision"), type="primary", width="stretch"
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -386,9 +371,7 @@ def render_approval_timeline(state: dict[str, Any]) -> None:
                 translate("col_decision"): translate("label_passed"),
                 translate("col_reviewer"): lk.get("locked_by", ""),
                 translate("col_decided_at"): lk.get("locked_at", ""),
-                translate("col_message"): (
-                    f"v{lk.get('subject_version_id', '')[:8]}"
-                ),
+                translate("col_message"): (f"v{lk.get('subject_version_id', '')[:8]}"),
             }
         )
 
@@ -433,9 +416,7 @@ def render_artifact_summary(state: dict[str, Any]) -> None:
             rows.append(
                 {
                     translate("col_artifact_role"): role,
-                    translate("col_artifact_type"): art.get(
-                        "artifact_type", "-"
-                    ),
+                    translate("col_artifact_type"): art.get("artifact_type", "-"),
                     translate("col_artifact_version"): art.get("version", "-"),
                     translate("col_artifact_status"): _artifact_status_label(
                         art.get("status", "")
@@ -496,7 +477,7 @@ def render_next_action_panel(
     with st.container(border=True):
         st.markdown(
             f"""<div class="pipeline-bar-header">
-            <strong>{translate('rq_header')}</strong>
+            <strong>{translate("rq_header")}</strong>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -550,7 +531,7 @@ def _render_pending_gate_compact(
 
     st.markdown(
         f"""<div class="vrl-card warning" style="margin-bottom:.5rem;">
-        <div class="vrl-eyebrow">{translate('dash_approval_needed')}</div>
+        <div class="vrl-eyebrow">{translate("dash_approval_needed")}</div>
         <div class="vrl-title" style="font-size:.95rem;margin-bottom:0;">
         {_html.escape(title)}
         </div></div>""",

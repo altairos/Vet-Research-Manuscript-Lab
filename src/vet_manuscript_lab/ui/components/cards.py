@@ -46,12 +46,8 @@ def card(
         ``primary``, ``accent``.
     """
 
-    eyebrow_html = (
-        f'<div class="vrl-eyebrow">{_esc(eyebrow)}</div>' if eyebrow else ""
-    )
-    body_html = (
-        f'<div class="vrl-muted">{_esc(body)}</div>' if body else ""
-    )
+    eyebrow_html = f'<div class="vrl-eyebrow">{_esc(eyebrow)}</div>' if eyebrow else ""
+    body_html = f'<div class="vrl-muted">{_esc(body)}</div>' if body else ""
     tone_class = f" {tone}" if tone else ""
     st.markdown(
         f"""<div class="vrl-card{tone_class}">
@@ -199,15 +195,13 @@ def finding_card(
     tone = tone_map.get(severity, "")
 
     loc_html = (
-        f'<div class="vrl-muted" style="margin-bottom:.2rem;">'
-        f"{_esc(location)}</div>"
+        f'<div class="vrl-muted" style="margin-bottom:.2rem;">{_esc(location)}</div>'
         if location
         else ""
     )
     detail_html = f'<div class="vrl-body">{_esc(detail)}</div>' if detail else ""
     rec_html = (
-        f'<div class="vrl-muted" style="margin-top:.3rem;">'
-        f"{_esc(recommendation)}</div>"
+        f'<div class="vrl-muted" style="margin-top:.3rem;">{_esc(recommendation)}</div>'
         if recommendation
         else ""
     )
@@ -242,7 +236,7 @@ def approval_gate_card(
     if next_stage:
         next_html = (
             f'<div class="vrl-muted" style="margin-top:.2rem;">'
-            f'{translate_safe("dash_next_stage")}: {_esc(next_stage)}</div>'
+            f"{translate_safe('dash_next_stage')}: {_esc(next_stage)}</div>"
         )
 
     st.markdown(
@@ -277,7 +271,7 @@ def next_action_hero(
         )
         lock_html = (
             f'<div class="nah-lock-label">'
-            f'{translate_safe("next_action_lock_label")}</div>'
+            f"{translate_safe('next_action_lock_label')}</div>"
             f"{items_html}"
         )
 
@@ -285,7 +279,7 @@ def next_action_hero(
     if next_stage:
         next_html = (
             f'<div class="nah-lock-label" style="margin-top:.3rem;">'
-            f'{translate_safe("dash_next_stage")}: {_esc(next_stage)}</div>'
+            f"{translate_safe('dash_next_stage')}: {_esc(next_stage)}</div>"
         )
 
     st.markdown(

@@ -170,9 +170,7 @@ def render_intake_materials(
             key=ss_dbs_key,
         )
         save_col, reset_col = st.columns(2)
-        submitted = save_col.form_submit_button(
-            translate("button_save_search")
-        )
+        submitted = save_col.form_submit_button(translate("button_save_search"))
         reset_clicked = reset_col.form_submit_button(translate("button_reset_search"))
         if submitted:
             if not query.strip():

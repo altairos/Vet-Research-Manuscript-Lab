@@ -39,11 +39,11 @@ def _render_highlighted_lines(lines: list[str], *, tone: str) -> None:
         safe = html.escape(line)
         blocks.append(
             f'<div style="background:{bg};'
-            f'border-radius:4px;padding:.15rem .5rem;'
+            f"border-radius:4px;padding:.15rem .5rem;"
             f'margin-bottom:.15rem;font-size:.85rem;">{safe}</div>'
         )
     st.markdown(
-        f'<div>{"".join(blocks)}</div>',
+        f"<div>{''.join(blocks)}</div>",
         unsafe_allow_html=True,
     )
 
@@ -75,9 +75,7 @@ def render_manuscript(state: dict[str, Any]) -> None:
         )
         col4.metric(
             translate("label_manuscript_status"),
-            _enum_label(
-                "artifact_status", summary.get("status", "")
-            ),
+            _enum_label("artifact_status", summary.get("status", "")),
         )
 
     total_words = sum(s.get("word_count", 0) for s in sections)
@@ -160,9 +158,7 @@ def render_claims(state: dict[str, Any]) -> None:
                     translate("label_yes") if count else translate("label_no")
                 ),
                 translate("col_support_count"): count,
-                translate("col_ref_numbers"): str(
-                    c.get("referenced_numbers", [])
-                ),
+                translate("col_ref_numbers"): str(c.get("referenced_numbers", [])),
             }
         )
     st.dataframe(rows, width="stretch", hide_index=True)
@@ -186,12 +182,8 @@ def render_citations(state: dict[str, Any]) -> None:
                 translate("col_citation_key"): short_hash(
                     c.get("citation_key", ""), length=20
                 ),
-                translate("col_lit_record"): c.get(
-                    "literature_record_id", ""
-                )[:16],
-                translate("col_section"): _enum_label(
-                    "section_type", section_short
-                ),
+                translate("col_lit_record"): c.get("literature_record_id", "")[:16],
+                translate("col_section"): _enum_label("section_type", section_short),
                 translate("col_claim_type"): c.get("claim_id", "")[:24],
             }
         )
@@ -251,9 +243,7 @@ def render_review(state: dict[str, Any]) -> None:
                     ),
                     translate("col_location"): f.get("location", ""),
                     translate("col_rationale"): f.get("rationale", ""),
-                    translate("col_recommendation"): f.get(
-                        "recommendation", ""
-                    ),
+                    translate("col_recommendation"): f.get("recommendation", ""),
                     translate("col_status"): _enum_label(
                         "finding_status", f.get("status", "")
                     ),
@@ -309,8 +299,7 @@ def render_revision_diff(state: dict[str, Any]) -> None:
         with st.expander(section_id, expanded=False):
             if resolved:
                 st.caption(
-                    f"{translate('label_resolved_findings')}: "
-                    f"{', '.join(resolved)}"
+                    f"{translate('label_resolved_findings')}: {', '.join(resolved)}"
                 )
 
             col_before, col_after = st.columns(2, gap="medium")
@@ -321,15 +310,9 @@ def render_revision_diff(state: dict[str, Any]) -> None:
                     after_lines = after.splitlines(keepends=False)
                     # Use ndiff to identify removed/changed lines
                     diff = difflib.ndiff(before_lines, after_lines)
-                    removed_lines = [
-                        line[2:]
-                        for line in diff
-                        if line.startswith("- ")
-                    ]
+                    removed_lines = [line[2:] for line in diff if line.startswith("- ")]
                     if removed_lines:
-                        _render_highlighted_lines(
-                            removed_lines, tone="danger"
-                        )
+                        _render_highlighted_lines(removed_lines, tone="danger")
                     else:
                         st.write(before)
                 else:
@@ -341,15 +324,9 @@ def render_revision_diff(state: dict[str, Any]) -> None:
                     before_lines = before.splitlines(keepends=False)
                     after_lines = after.splitlines(keepends=False)
                     diff = difflib.ndiff(before_lines, after_lines)
-                    added_lines = [
-                        line[2:]
-                        for line in diff
-                        if line.startswith("+ ")
-                    ]
+                    added_lines = [line[2:] for line in diff if line.startswith("+ ")]
                     if added_lines:
-                        _render_highlighted_lines(
-                            added_lines, tone="success"
-                        )
+                        _render_highlighted_lines(added_lines, tone="success")
                     else:
                         st.write(after)
                 else:
@@ -413,9 +390,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
             st.write(text)
             certainty_label = _enum_label("certainty", certainty)
             # Show only the descriptive suffix of section_id
-            section_short = (
-                section_id.split("-")[-1] if section_id else ""
-            )
+            section_short = section_id.split("-")[-1] if section_id else ""
             st.caption(
                 f"{translate('col_certainty')}: {certainty_label} "
                 f"| {translate('col_section_type')}: "
@@ -434,9 +409,7 @@ def render_claim_traceability(state: dict[str, Any]) -> None:
 
                     stype_label = _enum_label("support_type", stype)
                     relation_label = _enum_label("relation", relation)
-                    audit_label = _enum_label(
-                        "audit_status", audit_status
-                    )
+                    audit_label = _enum_label("audit_status", audit_status)
 
                     st.markdown(
                         f"**{translate('label_support_type')}:** "

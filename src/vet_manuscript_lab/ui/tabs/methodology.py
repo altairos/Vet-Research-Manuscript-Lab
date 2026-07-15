@@ -97,9 +97,7 @@ def render_methodology_findings(state: dict[str, Any]) -> None:
                     "finding_severity", f.get("severity", "")
                 ),
                 translate("col_rationale"): f.get("rationale", ""),
-                translate("col_recommendation"): f.get(
-                    "recommendation", ""
-                ),
+                translate("col_recommendation"): f.get("recommendation", ""),
             }
         )
     st.dataframe(rows, width="stretch", hide_index=True)
@@ -238,31 +236,33 @@ def render_effect_plots(state: dict[str, Any]) -> None:
     chart_df["short_label"] = chart_df[translate("col_analysis_name")].apply(
         lambda x: x if len(str(x)) <= 20 else str(x)[:17] + "…"
     )
-    bars = alt.Chart(chart_df).mark_bar().encode(
-        x=alt.X(
-            "short_label:N",
-            title=translate("col_analysis_name"),
-            axis=alt.Axis(labelAngle=0, labelLimit=200),
-            sort=None,
-        ),
-        y=alt.Y(
-            f"{translate('col_estimate')}:Q",
-            title=translate("col_estimate"),
-        ),
-        tooltip=[
-            alt.Tooltip(
-                f"{translate('col_analysis_name')}:N",
+    bars = (
+        alt.Chart(chart_df)
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "short_label:N",
                 title=translate("col_analysis_name"),
+                axis=alt.Axis(labelAngle=0, labelLimit=200),
+                sort=None,
             ),
-            alt.Tooltip(
+            y=alt.Y(
                 f"{translate('col_estimate')}:Q",
                 title=translate("col_estimate"),
             ),
-        ],
+            tooltip=[
+                alt.Tooltip(
+                    f"{translate('col_analysis_name')}:N",
+                    title=translate("col_analysis_name"),
+                ),
+                alt.Tooltip(
+                    f"{translate('col_estimate')}:Q",
+                    title=translate("col_estimate"),
+                ),
+            ],
+        )
     )
-    text = bars.mark_text(
-        align="center", baseline="bottom", dy=-2
-    ).encode(
+    text = bars.mark_text(align="center", baseline="bottom", dy=-2).encode(
         text=f"{translate('col_estimate')}:Q"
     )
     st.altair_chart(bars + text, use_container_width=True)
@@ -349,25 +349,27 @@ def render_usage_summary(state: dict[str, Any]) -> None:
     section_header(translate("section_usage"))
 
     total_cost = usage.get("total_cost_cents", 0) / 100
-    metric_strip([
-        Metric(
-            label=translate("label_total_cost"),
-            value=f"${total_cost:.2f}",
-            tone="primary",
-        ),
-        Metric(
-            label=translate("label_total_invocations"),
-            value=usage.get("total_invocations", 0),
-        ),
-        Metric(
-            label=translate("label_input_tokens"),
-            value=usage.get("total_input_tokens", 0),
-        ),
-        Metric(
-            label=translate("label_output_tokens"),
-            value=usage.get("total_output_tokens", 0),
-        ),
-    ])
+    metric_strip(
+        [
+            Metric(
+                label=translate("label_total_cost"),
+                value=f"${total_cost:.2f}",
+                tone="primary",
+            ),
+            Metric(
+                label=translate("label_total_invocations"),
+                value=usage.get("total_invocations", 0),
+            ),
+            Metric(
+                label=translate("label_input_tokens"),
+                value=usage.get("total_input_tokens", 0),
+            ),
+            Metric(
+                label=translate("label_output_tokens"),
+                value=usage.get("total_output_tokens", 0),
+            ),
+        ]
+    )
 
     # Budget progress bar (shown only when a budget is tracked in usage).
     budget_cents = usage.get("budget_cents")

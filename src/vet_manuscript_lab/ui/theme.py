@@ -95,15 +95,15 @@ def apply_theme() -> None:
         f"""<style>
         /* ---- CSS custom properties from THEME tokens ---- */
         :root {{
-          --vrl-bg:{t['bg']}; --vrl-surface:{t['surface']};
-          --vrl-surface-alt:{t['surface_alt']};
-          --vrl-text:{t['text']}; --vrl-muted:{t['muted']};
-          --vrl-border:{t['border']};
-          --vrl-primary:{t['primary']}; --vrl-primary-soft:{t['primary_soft']};
-          --vrl-accent:{t['accent']};
-          --vrl-warning:{t['warning']}; --vrl-warning-soft:{t['warning_soft']};
-          --vrl-danger:{t['danger']}; --vrl-danger-soft:{t['danger_soft']};
-          --vrl-success:{t['success']}; --vrl-success-soft:{t['success_soft']};
+          --vrl-bg:{t["bg"]}; --vrl-surface:{t["surface"]};
+          --vrl-surface-alt:{t["surface_alt"]};
+          --vrl-text:{t["text"]}; --vrl-muted:{t["muted"]};
+          --vrl-border:{t["border"]};
+          --vrl-primary:{t["primary"]}; --vrl-primary-soft:{t["primary_soft"]};
+          --vrl-accent:{t["accent"]};
+          --vrl-warning:{t["warning"]}; --vrl-warning-soft:{t["warning_soft"]};
+          --vrl-danger:{t["danger"]}; --vrl-danger-soft:{t["danger_soft"]};
+          --vrl-success:{t["success"]}; --vrl-success-soft:{t["success_soft"]};
           --vrl-shadow-sm:0 1px 2px rgba(16,24,40,.06);
           --vrl-shadow-md:0 8px 24px rgba(16,24,40,.08);
           --vrl-radius:8px;
@@ -822,12 +822,12 @@ def render_phase_stepper(current_stage: str | None) -> None:
         steps_html.append(
             f'<span class="ps-step{cls}">'
             f'<span class="ps-dot"></span>'
-            f'{index + 1:02d}</span>'
+            f"{index + 1:02d}</span>"
         )
         if index < len(WORKFLOW_PHASES) - 1:
             steps_html.append('<span class="ps-sep">─</span>')
     st.markdown(
-        f'<div class="phase-stepper">{ "".join(steps_html)}</div>',
+        f'<div class="phase-stepper">{"".join(steps_html)}</div>',
         unsafe_allow_html=True,
     )
 

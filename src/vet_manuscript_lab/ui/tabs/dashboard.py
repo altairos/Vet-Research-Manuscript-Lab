@@ -153,11 +153,15 @@ def render_dashboard(
         f"{len(critical)} {translate('rq_critical_items')} "
         f"\u00b7 {len(warnings)} {translate('rq_warning_items')}"
     )
-    metric_strip([
-        Metric(label=translate("dash_risk_summary"), value=risk_value, tone=risk_tone),
-        Metric(label=translate("rq_total_items"), value=len(items)),
-        Metric(label=translate("label_total_cost"), value=_format_cost(state)),
-    ])
+    metric_strip(
+        [
+            Metric(
+                label=translate("dash_risk_summary"), value=risk_value, tone=risk_tone
+            ),
+            Metric(label=translate("rq_total_items"), value=len(items)),
+            Metric(label=translate("label_total_cost"), value=_format_cost(state)),
+        ]
+    )
 
     # -- Main two-column area ---------------------------------------------
     main_col, side_col = st.columns([0.65, 0.35], gap="large")
@@ -251,9 +255,7 @@ def _render_risk_summary_actionable(items: list[Any]) -> None:
     )
 
     # Show top-2 highest-priority items inline
-    top = sorted(
-        items, key=lambda i: -_SEVERITY_RANK.get(i.severity, 0)
-    )[:2]
+    top = sorted(items, key=lambda i: -_SEVERITY_RANK.get(i.severity, 0))[:2]
     for item in top:
         st.markdown(
             f"{severity_pill(item.severity)} "
@@ -276,9 +278,7 @@ def _render_artifact_list(state: dict[str, Any]) -> None:
     st.markdown(f"#### {translate('dash_recent_artifacts')}")
 
     artifacts = state.get("artifacts", {})
-    artifact_dicts = {
-        k: v for k, v in artifacts.items() if isinstance(v, dict)
-    }
+    artifact_dicts = {k: v for k, v in artifacts.items() if isinstance(v, dict)}
     if not artifact_dicts:
         empty_state_card(
             icon="\U0001f4c4",
@@ -305,9 +305,7 @@ def _render_audit_log(state: dict[str, Any]) -> None:
     if not events:
         return
 
-    with st.expander(
-        f"{translate('dash_audit_log')} ({len(events)})", expanded=False
-    ):
+    with st.expander(f"{translate('dash_audit_log')} ({len(events)})", expanded=False):
         rows: list[dict[str, Any]] = []
         for ev in events[-20:]:  # last 20 events
             if not isinstance(ev, dict):
