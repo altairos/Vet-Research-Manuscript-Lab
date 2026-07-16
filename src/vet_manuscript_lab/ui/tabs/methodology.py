@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 from typing import Any
 
 import streamlit as st
@@ -225,7 +226,7 @@ def render_effect_plots(state: dict[str, Any]) -> None:
         return
 
     section_header(translate("section_figures"))
-    import pandas as pd
+    pd = import_module("pandas")
 
     df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
 

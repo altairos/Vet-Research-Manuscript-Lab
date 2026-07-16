@@ -7,6 +7,8 @@ needed, keeping the base installation free of PostgreSQL dependencies.
 from __future__ import annotations
 
 import logging
+from importlib import import_module
+from importlib.util import find_spec
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -20,14 +22,12 @@ def open_postgres_checkpointer(url: str) -> tuple[Any, Any]:
     not installed; callers should catch this and fall back to SQLite.
     """
 
-    import psycopg
-    from langgraph.checkpoint.postgres import (
-        PostgresSaver,
-    )
+    psycopg = import_module("psycopg")
+    postgres = import_module("langgraph.checkpoint.postgres")
 
     logger.info("Opening PostgreSQL checkpointer at %s", _redact_url(url))
     connection = psycopg.connect(url, autocommit=True)
-    checkpointer = PostgresSaver(connection)
+    checkpointer = postgres.PostgresSaver(connection)
     checkpointer.setup()
     return connection, checkpointer
 
@@ -36,11 +36,11 @@ def is_postgres_checkpoint_available() -> bool:
     """Return ``True`` when the optional PostgreSQL checkpoint package is installed."""
 
     try:
-        import langgraph.checkpoint.postgres  # noqa: F401
-        import psycopg  # noqa: F401
-
-        return True
-    except ImportError:
+        return (
+            find_spec("psycopg") is not None
+            and find_spec("langgraph.checkpoint.postgres") is not None
+        )
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
