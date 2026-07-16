@@ -20,8 +20,8 @@ def open_postgres_checkpointer(url: str) -> tuple[Any, Any]:
     not installed; callers should catch this and fall back to SQLite.
     """
 
-    import psycopg  # type: ignore[import-not-found]
-    from langgraph.checkpoint.postgres import (  # type: ignore[import-not-found]
+    import psycopg
+    from langgraph.checkpoint.postgres import (
         PostgresSaver,
     )
 

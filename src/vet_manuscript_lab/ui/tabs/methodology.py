@@ -225,12 +225,12 @@ def render_effect_plots(state: dict[str, Any]) -> None:
         return
 
     section_header(translate("section_figures"))
-    import pandas as pd  # type: ignore[import-untyped]
+    import pandas as pd
 
     df = pd.DataFrame(plot_data).set_index(translate("col_analysis_name"))
 
     # Use Altair directly so we can control axis label orientation
-    import altair as alt  # type: ignore[import-untyped]
+    import altair as alt
 
     chart_df = df.reset_index()
     chart_df["short_label"] = chart_df[translate("col_analysis_name")].apply(
