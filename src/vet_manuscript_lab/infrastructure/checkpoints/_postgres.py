@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from importlib.util import find_spec
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -36,12 +35,11 @@ def is_postgres_checkpoint_available() -> bool:
     """Return ``True`` when the optional PostgreSQL checkpoint package is installed."""
 
     try:
-        return (
-            find_spec("psycopg") is not None
-            and find_spec("langgraph.checkpoint.postgres") is not None
-        )
+        import_module("psycopg")
+        import_module("langgraph.checkpoint.postgres")
     except (ImportError, ModuleNotFoundError):
         return False
+    return True
 
 
 def _redact_url(url: str) -> str:
